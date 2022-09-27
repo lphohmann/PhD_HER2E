@@ -5,15 +5,13 @@
 ################################################################################
 
 # function
-processing <- function(cn.data) {
+processing <- function(cn.data,chr.lengths) {
     
     # rename X chromosome to 23
-    cn.data$Chr[cn.data$Chr == "X"] <- "23" 
-    cn.data$Chr <- as.numeric(cn.data$Chr)
-    
-    # get chromosome lengths (i simply take the last pos on each)
-    chr.lengths <- cn.data %>% group_by(Chr) %>% summarise(length = max(Position)) %>% as.data.frame()
-    chr.lengths <- chr.lengths[with(chr.lengths, order(Chr)),] %>% mutate(genome = cumsum(as.numeric(length)))
+    if (!is.numeric(cn.data$Chr)) {
+        cn.data$Chr[cn.data$Chr == "X"] <- "23" 
+        cn.data$Chr <- as.numeric(cn.data$Chr)
+    }
     
     # add chr lengths to df
     cn.data <- cn.data %>% group_by(Chr) %>% 
@@ -43,13 +41,13 @@ processing <- function(cn.data) {
                              Chr==23 ~ chr.lengths$genome[23])) %>% 
         relocate(chr_genomelengths, .after=Position) %>% ungroup()
     
-    # add up position + chr length to get genome position
+    # add up position + chr length to get genome position 
     cn.data$genome_pos <- cn.data$Position + cn.data$chr_genomelengths 
     cn.data <- cn.data %>% relocate(genome_pos, .after=chr_genomelengths)
     cn.data$chr_genomelengths <- NULL
     cn.data$genome <- NULL
     
-    return(list(cn.data,chr.lengths))
+    return(cn.data)
 }
 
 ################################################################################

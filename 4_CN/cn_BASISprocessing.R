@@ -1,4 +1,4 @@
-# Script: Copy number alterations in intrinsic subtypes (SCANB + BASIS)
+# Script: Process BASIS CN data to prepare for plotting (incl. Liftover)
 
 # TODO:
 # - 
@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run (for plot naming)
-cohort <- "COMBINED" 
+cohort <- "BASIS" 
 
 # set/create output directory for plots
 output.path <- "output/plots/4_CN/"
@@ -42,8 +42,6 @@ load("data/BASIS/4_CN/processed/LumB_CollectedFrequencyData.RData")
 cn.lumb <- my.frequency.list
 load("data/BASIS/4_CN/processed/ERpHER2p_CollectedFrequencyData.RData")
 cn.her2p <- my.frequency.list
-load("data/BASIS/4_CN/processed/")
-cn.her2e <- my.frequency.list
 
 # l <- list(cn.luma,cn.lumb,cn.her2p)
 # for (i in 1:3) {
@@ -86,7 +84,29 @@ hg38.pos.df$chr <- as.numeric(gsub("X",23,gsub('^.{3}','',hg38.pos.df$chr)))
 # use liftover results to convert positions
 ################################################################################
 
-cn.her2p.postlift <- postliftprocess(hg38.pos.df,cn.her2p$fData,cn.her2p$CN_Gain,cn.her2p$CN_Loss)
-cn.luma.postlift <- postliftprocess(hg38.pos.df,cn.luma$fData,cn.luma$CN_Gain,cn.luma$CN_Loss)
-cn.lumb.postlift <- postliftprocess(hg38.pos.df,cn.lumb$fData,cn.lumb$CN_Gain,cn.lumb$CN_Loss)
+cn.her2p.postlift <- postliftprocess(hg38.pos.df,cn.her2p$fData,cn.her2p$CN_Gain,cn.her2p$CN_Loss) %>% dplyr::rename(freqloss.HER2p = Loss, freqgain.HER2p = Gain, Position = position, Chr = chr, ProbeID = reporterId) 
+cn.luma.postlift <- postliftprocess(hg38.pos.df,cn.luma$fData,cn.luma$CN_Gain,cn.luma$CN_Loss) %>% dplyr::rename(freqloss.LUMA = Loss, freqgain.LUMA = Gain, Position = position, Chr = chr, ProbeID = reporterId) %>% dplyr::select(-c(Chr,Position))
+cn.lumb.postlift <- postliftprocess(hg38.pos.df,cn.lumb$fData,cn.lumb$CN_Gain,cn.lumb$CN_Loss) %>% dplyr::rename(freqloss.LUMB = Loss, freqgain.LUMB = Gain, Position = position, Chr = chr, ProbeID = reporterId) %>% dplyr::select(-c(Chr,Position))
+
+# merge
+cn.basis.subtypes <- merge(cn.her2p.postlift,cn.luma.postlift, by = "ProbeID")
+cn.basis.subtypes <- as.data.frame(merge(cn.basis.subtypes,cn.lumb.postlift, by = "ProbeID"))
+
+# process to get genome positions
+# 1. load the chr lengths
+destfile <- "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv"
+chr.lengths <- as.data.frame(read.table(file = destfile, sep = '\t', header = FALSE))[1:23,] %>% 
+    dplyr::rename(Chr=V1,length=V2) %>% mutate(genome = cumsum(as.numeric(length))) %>% 
+    mutate(genome = lag(genome,default = 0)) # ALWAYS HAS TO BE ADDED TO THE PREVIOUS CHR LENGTH so i move the colum 1 down
+chr.lengths$Chr <- as.numeric(gsub("X",23,gsub('^.{3}','',chr.lengths$Chr)))
+
+# 2. process
+cn.basis.subtypes <- as.data.frame(processing(cn.basis.subtypes, chr.lengths)) %>% 
+    relocate(c(Chr,Position,genome_pos), .after = ProbeID)
+
+# save
+save(cn.basis.subtypes, file = paste(data.path,"subtypes_GLmatrix_HG38",sep=""))
+
+head(cn.basis.subtypes)
+
 
