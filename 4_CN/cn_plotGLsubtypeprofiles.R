@@ -54,73 +54,11 @@ chr.lengths <- as.data.frame(read.table(file = destfile, sep = '\t', header = FA
     dplyr::rename(Chr=V1,length=V2) %>% mutate(genome = cumsum(as.numeric(length))) # dont shift by 1 here
 chr.lengths$Chr <- as.numeric(gsub("X",23,gsub('^.{3}','',chr.lengths$Chr)))
 
+# vector that has always the middle value for each chromosome (for plotting)
+chr.lengths <- chr.lengths %>% mutate(chrbreaks = genome - length/2)
 ################################################################################
 # plot
 ################################################################################
-
-
-# plot <- ggplot(cn.data, aes(x=genome_pos)) +
-#     ggtitle("frequency of gain/loss cn alterations in luminal her2e bc") +
-#     geom_line(aes(y = freqgain.her2e, color = "red"),size=6) +
-#     geom_line(aes(y = freqloss.her2e, color = "darkgreen"),size=6) +
-#     scale_colour_manual(name = null, values = c("#d72e2b","#07a109")) + # get corect colors +
-#     #scale_colour_manual(name = "pam50", values = c("#d72e2b", "#07a109", "#2176d5"), labels = c("her2", "luma", "lumb")) + # get corect colors
-
-#     geom_vline(xintercept = chr.lengths$genome, linetype="dotted",size=2) +
-#     scale_x_continuous(name = "genome position (chromosome)",
-#                        breaks = chr.lengths$genome,
-#                        labels = c(as.character(1:22),"x"),
-#                        limits = c(min(gainloss.cn.scanb$genome_pos),max(gainloss.cn.scanb$genome_pos)+50000000),
-#                        expand = c(0, 0)) +
-#     scale_y_continuous(name="alteration frequency (%)", # \n loss          gain", # \n loss & g
-#                        breaks = c(seq(-100,100,25)),
-#                        labels = c(100,75,50,25,0,25,50,75,100),
-#                        expand = c(0, 0),
-#                        limits = c(-100,100)) +
-#     theme(text=element_text(size=35),
-#           legend.title = element_blank(),
-#           axis.title.y = element_text(vjust = 0.5),
-#           legend.position = "none") +
-#     annotate(x=min(gainloss.cn.scanb$genome_pos)+30000000,y=c(-50,50), label=c("loss","gain"),
-#              geom="text", angle=90, hjust=0.5, size=15, colour=c("black","black"))
-# 
-# 
-# print(plot)
-# 
-# dev.off()
-
-
-# combined
-# plot <- ggplot(cn.data, aes(x=genome_pos)) + 
-#     ggtitle("Genome-wide frequency of gain/loss CN alterations") +
-#     geom_line(aes(y = freqgain.HER2E, color = "#d72e2b"),size=4) + 
-#     geom_line(aes(y = freqloss.HER2E, color = "#d72e2b"),size=4) + 
-#     geom_line(aes(y = freqgain.LUMA, color = "#07a109"),size=4) + 
-#     geom_line(aes(y = freqloss.LUMA, color = "#07a109"),size=4) + 
-#     geom_line(aes(y = freqgain.LUMB, color = "#2176d5"),size=4) + 
-#     geom_line(aes(y = freqloss.LUMB, color = "#2176d5"),size=4) + 
-#     geom_line(aes(y = freqgain.HER2p, color = "#fcba03"),size=4) + 
-#     geom_line(aes(y = freqloss.HER2p, color = "#fcba03"),size=4) + 
-#     #scale_colour_manual(name="Subtype", values = c("#d72e2b", "#07a109", "#2176d5", "#fcba03"), labels = c("HER2", "LUMA", "LUMB", "HER2p")) + 
-#     geom_vline(xintercept = chr.lengths$genome, linetype="dotted",size=2) +
-#     scale_x_continuous(name="Genome position (chromosome)",
-#                        breaks=chr.lengths$genome,
-#                        labels=c(as.character(1:22),"X"),
-#                        limits = c(0,max(chr.lengths$genome)), #+50000000
-#                        expand = c(0, 0)) +
-#     scale_y_continuous(name="Alteration frequency (%)", # \n Loss          Gain", # \n Loss & G
-#                        breaks=c(seq(-100,100,25)),
-#                        labels=c(100,75,50,25,0,25,50,75,100),
-#                        expand = c(0, 0),
-#                        limits = c(-100,100)) +
-#     theme(text=element_text(size=30),
-#           legend.title = element_blank(),
-#           axis.title.y = element_text(vjust = 0.5),
-#           legend.position = c(0.97, 0.90)) + #legend.position = "none") +
-#     annotate(x=min(cn.data$genome_pos)+30000000,y=c(-50,50), label=c("Loss","Gain"), 
-#              geom="text", angle=90, hjust=0.5, size=9, colour=c("black","black")) 
-
-
 
 pdf(file = paste(output.path,cohort,"_GLsubtypeprofiles.pdf", sep =""), height = 21.0, width = 72.0)
 
@@ -157,10 +95,11 @@ plot <- ggplot() + #, aes(x=genome_pos)
     geom_line(aes(
         x = cn.data[which(!is.na(cn.data$freqloss.HER2p)),]$genome_pos, 
         y = cn.data[!is.na(cn.data$freqloss.HER2p),]$freqloss.HER2p, 
-        color = "HER2p"),size=4) + #scale_colour_manual(name="Subtype", values = c("HER2E"="#42f5ef", "LUMA"="#d72e2b", "LUMB"="#07a109", "HER2p"="#2176d5")) + 
+        color = "HER2p"),size=4) + 
+    scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb", "HER2p"="#d72e2b")) + 
     geom_vline(xintercept = chr.lengths$genome, linetype="dotted",size=2) +
     scale_x_continuous(name="Genome position (chromosome)",
-                       breaks=chr.lengths$genome,
+                       breaks=chr.lengths$chrbreaks, 
                        labels=c(as.character(1:22),"X"),
                        limits = c(0,max(chr.lengths$genome)), #+50000000
                        expand = c(0, 0)) +
@@ -172,7 +111,7 @@ plot <- ggplot() + #, aes(x=genome_pos)
     theme(text=element_text(size=30),
           legend.title = element_blank(),
           axis.title.y = element_text(vjust = 0.5),
-          legend.position = c(0.97, 0.90)) + #legend.position = "none") +
+          legend.position = c(0.97, 0.95)) + #legend.position = "none") +
     annotate(x=min(cn.data$genome_pos)+30000000,
              y=c(-50,50), label=c("Loss","Gain"), 
              geom="text", angle=90, hjust=0.5, 
