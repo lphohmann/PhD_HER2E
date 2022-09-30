@@ -1,7 +1,7 @@
 # Script: Process BASIS CN data to prepare for plotting (incl. Liftover)
 
 # TODO:
-# - 
+# - convert count to % by dividing by # of samples
 
 # empty environment
 rm(list=ls())
@@ -33,15 +33,21 @@ library(rtracklayer)
 library(Repitools)
 
 ################################################################################
-# loading all CN data
+# loading all CN data and convert GL freq. to %
 ################################################################################
 
 load("data/BASIS/4_CN/processed/LumA_CollectedFrequencyData.RData")
-cn.luma <- my.frequency.list
+cn.luma <- my.frequency.list %>% 
+    mutate(CN_Gain = (CN_Gain/length(my.frequency.list$Samples))*100) %>% 
+    mutate(CN_Loss = (CN_Loss/length(my.frequency.list$Samples))*100)
 load("data/BASIS/4_CN/processed/LumB_CollectedFrequencyData.RData")
-cn.lumb <- my.frequency.list
+cn.lumb <- my.frequency.list %>% 
+    mutate(CN_Gain = (CN_Gain/length(my.frequency.list$Samples))*100) %>% 
+    mutate(CN_Loss = (CN_Loss/length(my.frequency.list$Samples))*100)
 load("data/BASIS/4_CN/processed/ERpHER2p_CollectedFrequencyData.RData")
-cn.her2p <- my.frequency.list
+cn.her2p <- my.frequency.list %>% 
+    mutate(CN_Gain = (CN_Gain/length(my.frequency.list$Samples))*100) %>% 
+    mutate(CN_Loss = (CN_Loss/length(my.frequency.list$Samples))*100)
 
 # l <- list(cn.luma,cn.lumb,cn.her2p)
 # for (i in 1:3) {
@@ -107,6 +113,6 @@ cn.basis.subtypes <- as.data.frame(processing(cn.basis.subtypes, chr.lengths)) %
 # save
 save(cn.basis.subtypes, file = paste(data.path,"subtypes_GLmatrix_HG38",sep=""))
 
-head(cn.basis.subtypes)
+#head(cn.basis.subtypes)
 
 
