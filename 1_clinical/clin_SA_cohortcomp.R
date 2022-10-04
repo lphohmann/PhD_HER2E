@@ -16,7 +16,7 @@ setwd("~/PhD_Workspace/Project_HER2E/")
 cohort <- "SCANB" # SCANB 
 
 # set/create output directory for plots
-output.path <- "output/plots/1_clinical/"
+output.path <- "output/plots/1_clinical/SCANB_release_comparison/"
 dir.create(output.path)
 
 # set/create output directory for processed data
@@ -72,19 +72,19 @@ clin.rev2 <- clin.rev2 %>%
     mutate(OSbin_rev2 = ifelse(OSbin_rev2 == 0,0,1)) # this is weird, why does the event have 3 levels
 
 clin.rel4 <- clin.rel4 %>% 
-    dplyr::rename(OS_all = OS_days,
-                  OSbin_all = OS_event,
-                  RFI_all = RFi_days,
-                  RFIbin_all = RFi_event,
-                  DRFI_all = DRFi_days,
-                  DRFIbin_all = DRFi_event,
+    dplyr::rename(OS_rel4 = OS_days,
+                  OSbin_rel4 = OS_event,
+                  RFI_rel4 = RFi_days,
+                  RFIbin_rel4 = RFi_event,
+                  DRFI_rel4 = DRFi_days,
+                  DRFIbin_rel4 = DRFi_event,
                   PAM50 = NCN.PAM50) %>% 
     dplyr::select(Case,ER,HER2, 
                   TreatGroup, PAM50,
                   Follow.up.cohort,
-                  OS_all, OSbin_all, 
-                  RFI_all, RFIbin_all, 
-                  DRFI_all, DRFIbin_all) %>% 
+                  OS_rel4, OSbin_rel4, 
+                  RFI_rel4, RFIbin_rel4, 
+                  DRFI_rel4, DRFIbin_rel4) %>% 
     filter(Follow.up.cohort==TRUE) %>% dplyr::select(-c(Follow.up.cohort))
 
 # checking
@@ -122,23 +122,95 @@ for(i in 6:ncol(comb.surv.data)) {
 }
 
 #######################################################################
-# 4. Plot for Endo treatment group
+# KM plots for complete SCANB rel4 
 #######################################################################
+source("scripts/1_clinical/src/clin_functions.R")
+pdf(file = paste(output.path,cohort,"_releases_KMplots.pdf", sep=""), onefile = TRUE, width = 21, height = 14.8) 
 
+# OS
 # ET OS rel4
 KMplot(group.cohort.version = "ET (cohort: rel4)",
        OMstring = "Overall survival",
-       OM = E.data$OS_all,
-       OMbin = E.data$OSbin_all,
+       OM = E.data$OS_rel4,
+       OMbin = E.data$OSbin_rel4,
        sdata = E.data)
-
-# ET OS rev1
-KMplot(group.cohort.version = "ET (cohort: rev2)",
+#dev.off()
+# CT+ET OS rel4
+KMplot(group.cohort.version = "CT+ET (cohort: rel4)",
        OMstring = "Overall survival",
-       OM = E.data$OS_rev2,
-       OMbin = E.data$OSbin_rev2,
+       OM = CE.data$OS_rel4,
+       OMbin = CE.data$OSbin_rel4,
+       sdata = CE.data)
+
+# RFI
+# ET RFI rel4
+KMplot(group.cohort.version = "ET (cohort: rel4)",
+       OMstring = "Recurrence-free interval",
+       OM = E.data$RFI_rel4,
+       OMbin = E.data$RFIbin_rel4,
        sdata = E.data)
 
+# CT+ET RFI rel4
+KMplot(group.cohort.version = "CT+ET (cohort: rel4)",
+       OMstring = "Recurrence-free interval",
+       OM = CE.data$RFI_rel4,
+       OMbin = CE.data$RFIbin_rel4,
+       sdata = CE.data)
+
+# DRFI
+# ET DRFI rel4
+KMplot(group.cohort.version = "ET (cohort: rel4)",
+       OMstring = "Distant recurrence-free interval",
+       OM = E.data$DRFI_rel4,
+       OMbin = E.data$DRFIbin_rel4,
+       sdata = E.data)
+
+# CT+ET DRFI rel4
+KMplot(group.cohort.version = "CT+ET (cohort: rel4)",
+       OMstring = "Distant recurrence-free interval",
+       OM = CE.data$DRFI_rel4,
+       OMbin = CE.data$DRFIbin_rel4,
+       sdata = CE.data)
+
+#######################################################################
+# KM plots for complete SCANB clinical review 1 
+#######################################################################
+
+# OS
+# ET OS rev1
+KMplot(group.cohort.version = "ET (cohort: rev1)",
+       OMstring = "Overall survival",
+       OM = E.data$OS_rev1,
+       OMbin = E.data$OSbin_rev1,
+       sdata = E.data)
+
+# CT+ET OS rev1
+KMplot(group.cohort.version = "CT+ET (cohort: rev1)",
+       OMstring = "Overall survival",
+       OM = CE.data$OS_rev1,
+       OMbin = CE.data$OSbin_rev1,
+       sdata = CE.data)
+
+# RFI
+# ET RFI rev1
+KMplot(group.cohort.version = "ET (cohort: rev1)",
+       OMstring = "Recurrence-free interval",
+       OM = E.data$RFI_rev1,
+       OMbin = E.data$RFIbin_rev1,
+       sdata = E.data)
+
+# CT+ET RFI rev1
+KMplot(group.cohort.version = "CT+ET (cohort: rev1)",
+       OMstring = "Recurrence-free interval",
+       OM = CE.data$RFI_rev1,
+       OMbin = CE.data$RFIbin_rev1,
+       sdata = CE.data)
+
+#######################################################################
+# KM plots for complete SCANB clinical review 2
+#######################################################################
+
+# OS
 # ET OS rev2
 KMplot(group.cohort.version = "ET (cohort: rev2)",
        OMstring = "Overall survival",
@@ -146,138 +218,30 @@ KMplot(group.cohort.version = "ET (cohort: rev2)",
        OMbin = E.data$OSbin_rev2,
        sdata = E.data)
 
+# CT+ET OS rev2
+KMplot(group.cohort.version = "CT+ET (cohort: rev2)",
+       OMstring = "Overall survival",
+       OM = CE.data$OS_rev2,
+       OMbin = CE.data$OSbin_rev2,
+       sdata = CE.data)
+
+# RFI
+# ET RFI rev2
+KMplot(group.cohort.version = "ET (cohort: rev2)",
+       OMstring = "Recurrence-free interval",
+       OM = E.data$RFI_rev2,
+       OMbin = E.data$RFIbin_rev2,
+       sdata = E.data)
+
+# CT+ET RFI rev2
+KMplot(group.cohort.version = "CT+ET (cohort: rev2)",
+       OMstring = "Recurrence-free interval",
+       OM = CE.data$RFI_rev2,
+       OMbin = CE.data$RFIbin_rev2,
+       sdata = CE.data)
+
 
 # save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_EC.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
+dev.off()
 
 
-##########################
-
-# 5.2 Multivariate Cox proportional hazards model
-
-# 5.2.1 Model construction 
-# parameters to incl: PAM50, Age, Grade, TumSize
-EC_main.all <- coxph(EC_group.surv~PAM50+Age+LN+TumSize+Grade, data=EC_group) 
-
-# 5.2.2 Checking assumptions
-# Check for violation of proportional hazard (constant HR over time)
-cox.zph(EC_main.all, transform="km", global=TRUE) 
-plot(cox.zph(EC_main.all, transform="km", global=TRUE))
-
-# 5.2.3 Result
-summary(EC_main.all) 
-
-# 5.2.4 Plot forest 
-ggforest(EC_main.all,fontsize = 3,cpositions = c(0.01,0.13,0.35))
-
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_EC.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
-
-#######################################################################
-# 7. Investigate the Endo treatment group
-#######################################################################
-
-# define the group
-E_group <- survdata %>% filter(Treatment == "E")
-E_group.surv <- Surv(E_group[["RFI"]], E_group[["RFIbin"]])
-table(E_group$PAM50)
-
-##########################
-
-# 7.1 Univariate Cox proportional hazards model
-
-# 7.1.1 Model construction
-E_main.pam50 <- coxph(E_group.surv~PAM50, data=E_group)
-
-# 7.1.2 Checking assumptions
-cox.zph(E_main.pam50, transform="km", global=TRUE)
-
-# 7.1.3 Result
-cres <- summary(E_main.pam50)
-#cres
-round(cres$coefficients[9],5) #luma
-round(cres$coefficients[10],5) #lumb
-
-# 7.1.4 Plots
-
-# add column n with counts for each group
-E_group <- E_group %>% add_count(PAM50) #%>% mutate(PAM50_count = paste0(PAM50, ' (', n, ')'))
-
-fit <- survfit(E_group.surv~PAM50, data=E_group, conf.type="log-log")
-survdiff(E_group.surv ~ PAM50, data = E_group) # p<0.00001 scanb, p= 0.0004 metabric
-
-####################
-plot <- ggsurvplot(
-    fit,
-    censor.size = 6,
-    censor.shape = "|",
-    size = 3,
-    risk.table = FALSE,       
-    pval = TRUE,
-    pval.size = 6,
-    pval.coord = c(0,0.45),
-    conf.int = FALSE,         
-    xlim = c(0,max(E_group$RFI[is.finite(E_group$RFI)])),     #3500    
-    xlab = "Relapse-free interval (days)",
-    ylab = "Relapse-free interval probability",
-    ylim = c(0.4,1),
-    palette = c("#d334eb", "#2176d5", "#34c6eb"), 
-    legend = c(0.85,0.90),
-    break.time.by = 500,     # break X axis in time intervals by 500.
-    ggtheme = theme(legend.title = element_text(size=20), #20
-                    legend.key.size = unit(0.5,"cm"), 
-                    legend.text = element_text(size = 20), #20
-                    axis.text.x = element_text(size = 20), #20
-                    axis.title.x = element_text(size = 25), #25
-                    axis.text.y = element_text(size = 20), #20
-                    axis.title.y = element_text(size = 25),
-                    plot.title = element_text(size=22)),
-    title="Survival analysis in the endocrine therapy treatment group",
-    legend.title = "Subtypes",
-    legend.labs = c(paste("HER2E"," (",(table(E_group$PAM50)[1]),")",sep = ""),
-                    paste("LUMA"," (",(table(E_group$PAM50)[2]),")",sep = ""),
-                    paste("LUMB"," (",(table(E_group$PAM50)[3]),")",sep = "")),
-    break.x.by = 500,
-    break.y.by = 0.1)
-
-plot
-
-#save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_E.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
-
-# forest 
-ggforest(E_main.pam50,fontsize = 1)
-
-##########################
-
-# 7.2 Multivariate Cox proportional hazards model
-# 7.2.1 Model construction
-# parameters to incl: PAM50, Age, NHG, LN, Size
-E_main.all <- coxph(E_group.surv~PAM50+Age+LN+TumSize+Grade, data=E_group) 
-
-# 7.2.2 Checking assumptions
-# Check for violation of proportional hazard (constant HR over time)
-cox.zph(E_main.all, transform="km", global=TRUE) 
-plot(cox.zph(E_main.all, transform="km", global=TRUE))
-
-# 7.2.3 Result
-summary(E_main.all) 
-
-# 7.2.4 Plot forest 
-ggforest(E_main.all,fontsize = 3,cpositions = c(0.01,0.13,0.35))
-# save
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_E.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
-
-#######################################################################
-#######################################################################

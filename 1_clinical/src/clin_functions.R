@@ -16,28 +16,28 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
     
     plot <- ggsurvplot(
         fit,
-        censor.size = 6,
+        censor.size = 8,
         censor.shape = "|",
-        size = 3,
+        size = 5,
         risk.table = FALSE,       
         pval = TRUE,
-        pval.size = 6,
+        pval.size = 8,
         pval.coord = c(0,0.1),
         conf.int = FALSE,         
         xlim = c(0,max(OM[is.finite(OM)])),         
         xlab = paste(OMstring," (days)", sep = ""),
-        ylab = paste(OMstring," event probability", sep = ""),
+        ylab = paste(OMstring," event probability", sep = ""), # ggf just label as "event probability"
         ylim = c(0,1),
         palette = c("#d334eb", "#2176d5", "#34c6eb"), 
-        legend = c(0.85,0.90),
-        ggtheme = theme(legend.title = element_text(size=20), #20
+        legend = c(0.92,0.98),
+        ggtheme = theme(legend.title = element_text(size=25), #20
                         legend.key.size = unit(0.5,"cm"), 
-                        legend.text = element_text(size = 20), #20
-                        axis.text.x = element_text(size = 20), #20
-                        axis.title.x = element_text(size = 25), #25
-                        axis.text.y = element_text(size = 20), #20
-                        axis.title.y = element_text(size = 25),
-                        plot.title = element_text(size=22)),
+                        legend.text = element_text(size = 25), #20
+                        axis.text.x = element_text(size = 25), #20
+                        axis.title.x = element_text(size = 30), #25
+                        axis.text.y = element_text(size = 25), #20
+                        axis.title.y = element_text(size = 30),
+                        plot.title = element_text(size=30)),
         title= paste(OMstring, ": ",group.cohort.version, sep = ""),
         legend.title = "Subtypes",
         legend.labs = c(paste("HER2E"," (",(table(sdata[!is.na(OM),]$PAM50)[1]),")",sep = ""),
