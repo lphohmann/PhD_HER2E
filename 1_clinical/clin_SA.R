@@ -165,7 +165,7 @@ plot <- ggsurvplot(
     pval.size = 6,
     pval.coord = c(0,0.45),
     conf.int = FALSE,         
-    xlim = c(0,max(EC_group$RFI[is.finite(E_group$RFI)])),         
+    xlim = c(0,max(EC_group$RFI[is.finite(EC_group$RFI)])),         
     xlab = "Relapse-free interval (days)",
     ylab = "Relapse-free interval probability",
     ylim = c(0.4,1),
