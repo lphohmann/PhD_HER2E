@@ -1,10 +1,7 @@
 # Script: SA comparison in different SCANB data releases
 
 # TODO: 
-# - map release data 1 and 2 to NPJ file (add outcome data as extra columns)
-# - select only NPJ follow up TRUE cases for SA
-# - do DRFI/OS/RFI for NPJ and OS/RFI for the review data 1&2
-# - 
+# - no endpoints fro release 2 rfi??
 
 # empty environment
 rm(list=ls())
@@ -40,12 +37,19 @@ library(readxl)
 # SCANB review release 1
 load("data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_with_ExternalReview_Bosch_data.RData")
 clin.rev1 <- pam50.frame
+
 # SCANB review release 2
 clin.rev2 <- read.table("data/SCANB/1_clinical/raw/Project51_ERp_AB_transformed_SPSSselection.txt",sep="\t",fill=TRUE, header = TRUE) %>% filter(str_detect(Case_selected, "^C")) # weird import bug which imported cells with invis characters
 
+# I HAVE NO ENDPOINTS FOR REL2 SO I SET THEM MYSELF, IS THAT THE CORRECT APPRACH?
+#sum(is.na(clin.rev2$Relapse))
+clin.rev2$Days_until_relapse[is.na(clin.rev2$Days_until_relapse)] <- max(clin.rev2$Days_until_relapse[is.finite(clin.rev2$Days_until_relapse)]) # ATTENTION THiS MAY BE WRONG
+#View(clin.rev2)
+
+
 # SCANB NPJ release (full)
 clin.rel4 <- as.data.frame(read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
-#s <- clin.rel4 %>% filter(Case=="C006808") # checking a sample that was in review file but not follow up NPJ cohort
+#s <- clin.rel4 %>% filter(Case=="C006808") # checking a sample that was in review file but not in  follow up NPJ cohort
 
 # add outcome columns to npj
 clin.rev1 <- clin.rev1 %>%  
@@ -124,7 +128,6 @@ for(i in 6:ncol(comb.surv.data)) {
 #######################################################################
 # KM plots for complete SCANB rel4 
 #######################################################################
-source("scripts/1_clinical/src/clin_functions.R")
 pdf(file = paste(output.path,cohort,"_releases_KMplots.pdf", sep=""), onefile = TRUE, width = 21, height = 14.8) 
 
 # OS
@@ -134,7 +137,7 @@ KMplot(group.cohort.version = "ET (cohort: rel4)",
        OM = E.data$OS_rel4,
        OMbin = E.data$OSbin_rel4,
        sdata = E.data)
-#dev.off()
+
 # CT+ET OS rel4
 KMplot(group.cohort.version = "CT+ET (cohort: rel4)",
        OMstring = "Overall survival",
@@ -244,4 +247,7 @@ KMplot(group.cohort.version = "CT+ET (cohort: rev2)",
 # save
 dev.off()
 
-
+# problem: ONLY EVENTS GET PLOTTED FOR REL2 RFI BUT WHY??
+# BECAUSE IF NO EVENT THEN THE TIME IS NA, BASICALLY TEHRE ARE NO NON-EVENT END POINTS
+# ALSO NOT SURE THAT THIS IS PLOTTING THE CORRECT NUMBER (ALL SAMPLES INSTEAD OF ONLY THE EVENT=1 ONES)
+#table(sdata[!is.na(OM),]$PAM50)[1])
