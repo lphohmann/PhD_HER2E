@@ -41,11 +41,10 @@ clin.rev1 <- pam50.frame
 # SCANB review release 2
 clin.rev2 <- read.table("data/SCANB/1_clinical/raw/Project51_ERp_AB_transformed_SPSSselection.txt",sep="\t",fill=TRUE, header = TRUE) %>% filter(str_detect(Case_selected, "^C")) # weird import bug which imported cells with invis characters
 
-# I HAVE NO ENDPOINTS FOR REL2 SO I SET THEM MYSELF, IS THAT THE CORRECT APPRACH?
+# I HAVE NO ENDPOINTS FOR REL2 RFI WITHOUT EVENTS SO I SET THEM MYSELF TO THE OS ENDPOINT
 #sum(is.na(clin.rev2$Relapse))
-clin.rev2$Days_until_relapse[is.na(clin.rev2$Days_until_relapse)] <- max(clin.rev2$Days_until_relapse[is.finite(clin.rev2$Days_until_relapse)]) # ATTENTION THiS MAY BE WRONG
-#View(clin.rev2)
-
+clin.rev2 <- clin.rev2 %>% mutate(Days_until_relapse = if_else(Relapse,Days_until_relapse,Days_to_OS))
+#clin.rev2$Days_until_relapse[is.na(clin.rev2$Days_until_relapse)] <- max(clin.rev2$Days_until_relapse[is.finite(clin.rev2$Days_until_relapse)]) 
 
 # SCANB NPJ release (full)
 clin.rel4 <- as.data.frame(read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
@@ -246,8 +245,3 @@ KMplot(group.cohort.version = "CT+ET (cohort: rev2)",
 
 # save
 dev.off()
-
-# problem: ONLY EVENTS GET PLOTTED FOR REL2 RFI BUT WHY??
-# BECAUSE IF NO EVENT THEN THE TIME IS NA, BASICALLY TEHRE ARE NO NON-EVENT END POINTS
-# ALSO NOT SURE THAT THIS IS PLOTTING THE CORRECT NUMBER (ALL SAMPLES INSTEAD OF ONLY THE EVENT=1 ONES)
-#table(sdata[!is.na(OM),]$PAM50)[1])

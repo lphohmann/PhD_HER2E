@@ -40,9 +40,9 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
                         plot.title = element_text(size=30)),
         title= paste(OMstring, ": ",group.cohort.version, sep = ""),
         legend.title = "Subtypes",
-        legend.labs = c(paste("HER2E"," (",(table(sdata[!is.na(OM),]$PAM50)[1]),")",sep = ""),
-                        paste("LUMA"," (",(table(sdata[!is.na(OM),]$PAM50)[2]),")",sep = ""),
-                        paste("LUMB"," (",(table(sdata[!is.na(OM),]$PAM50)[3]),")",sep = "")),
+        legend.labs = c(paste("HER2E"," (",table(sdata[!is.na(OM),]$PAM50)[1],")",sep = ""),
+                        paste("LUMA"," (",table(sdata[!is.na(OM),]$PAM50)[2],")",sep = ""),
+                        paste("LUMB"," (",table(sdata[!is.na(OM),]$PAM50)[3],")",sep = "")),
         break.x.by = 500, # break X axis in time intervals of x (what is nicest here? maybe 365)
         break.y.by = 0.1)
     
