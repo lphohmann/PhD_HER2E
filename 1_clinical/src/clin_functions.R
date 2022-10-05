@@ -29,7 +29,7 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
         ylab = paste(OMstring," event probability", sep = ""), # ggf just label as "event probability"
         ylim = c(0,1),
         palette = c("#d334eb", "#2176d5", "#34c6eb"), 
-        legend = c(0.92,0.98),
+        legend = c(0.9,0.96),
         ggtheme = theme(legend.title = element_text(size=25), #20
                         legend.key.size = unit(0.5,"cm"), 
                         legend.text = element_text(size = 25), #20
@@ -50,4 +50,29 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
     
 }
 
+# function that created univariate Cox proportional hazards model forest plot
+unicox <- function(data,surv) {
+    
+    # Model construction
+    main.pam50 <- coxph(surv~PAM50, data=data)
+    
+    # Result
+    print(summary(main.pam50))
 
+    # forest 
+    ggforest(main.pam50,fontsize = 1,data=data)
+}
+
+# function that created multivariate Cox proportional hazards model forest plot
+mvcox <- function(data,surv) {
+    
+    # Model construction 
+    # parameters to incl: PAM50, Age, Grade, TumSize
+    main.all <- coxph(surv~PAM50+Age+LN+TumSize+Grade, data=data) 
+    
+    # Result
+    print(summary(main.all))
+    
+    # Plot forest 
+    ggforest(main.all,fontsize = 3,cpositions = c(0.01,0.13,0.35),data=data)
+}
