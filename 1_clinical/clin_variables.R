@@ -3,6 +3,7 @@
 
 # TODO: - create final matrix directly
 # - check that percentage is logical and pvalue
+# - exclude cases that dont have all variables?
 
 # empty environment
 rm(list=ls())
@@ -11,7 +12,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # Metabric or SCANB 
+cohort <- "Metabric" # Metabric or SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -81,7 +82,6 @@ anno$Age <- as.numeric(anno$Age)
 anno$LN <- as.factor(anno$LN)
 anno$HER2_Low <- as.factor(anno$HER2_Low)
 
-
 # filter to only include subjects that are PAM50 == Her2 | LumA | LumB
 anno <- anno %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) # basal
 anno$PAM50 <- droplevels(anno$PAM50) # drop empty levels
@@ -95,11 +95,63 @@ LumB_samp <- anno %>% filter(PAM50=="LumB") %>% pull(sampleID)
 anno <- anno %>% column_to_rownames(var = "sampleID")
 
 #######################################################################
-# Age
+# initialize storing matrix
 #######################################################################
 
-# initialize storing object
-age_matrix <- data.frame(matrix(ncol = 0, nrow = 1))
+# get desired format
+final_matrix <- data.frame(matrix(ncol = 9, nrow = 11))
+colnames(final_matrix) <- c("Variable","HER2E(ref)","HER2E.%","LUMA","LUMA.%","LUMA.pval","LUMB","LUMB.%","LUMB.pval")
+final_matrix$Variable <- c("N","HER2-low (count)","Age in years (mean)","Tumor Size in mm (mean)","Tumor grade (count):","grade 1","grade 2", "grade 3","Lymph node status (count):","N0","N+")
+
+t <- table(anno$PAM50)
+
+# add count data
+final_matrix$`HER2E(ref)`[1] <- t[1]
+final_matrix$LUMA[1] <- t[2]
+final_matrix$LUMB[1] <- t[3]
+
+# add % data
+final_matrix$`HER2E.%`[1] <- (t[1]/length(anno$PAM50))*100
+final_matrix$`LUMA.%`[1] <- (t[2]/length(anno$PAM50))*100
+final_matrix$`LUMB.%`[1] <- (t[3]/length(anno$PAM50))*100
+
+final_matrix
+#######################################################################
+# HER2low frequency (2x2 contingency table)
+#######################################################################
+
+# for Her2 vs LumA
+a_hl <- subset(anno,PAM50 %in% c("Her2","LumA")) %>% droplevels()
+a_cont_table <- table(a_hl$PAM50,a_hl$HER2_Low)
+a_result <- fisher.test(a_cont_table)
+
+# for Her2 vs LumB
+b_hl <- subset(anno,PAM50 %in% c("Her2","LumB")) %>% droplevels()
+b_cont_table <- table(b_hl$PAM50,b_hl$HER2_Low)
+b_result <- fisher.test(b_cont_table) 
+
+H_tot <- a_cont_table[1] + a_cont_table[3]
+A_tot <- a_cont_table[2] + a_cont_table[4]
+B_tot <- b_cont_table[2] + b_cont_table[4]
+
+#her2e
+final_matrix$`HER2E(ref)`[2] <- a_cont_table[3]
+final_matrix$`HER2E.%`[2] <- round(a_cont_table[3]/H_tot*100)
+
+#luma
+final_matrix$LUMA[2] <- a_cont_table[4]
+final_matrix$`LUMA.%`[2] <- round(a_cont_table[4]/A_tot*100)
+final_matrix$LUMA.pval[2] <- a_result$p.value
+
+#lumb
+final_matrix$LUMB[2] <- b_cont_table[4]
+final_matrix$`LUMB.%`[2] <- round(b_cont_table[4]/B_tot*100)
+final_matrix$LUMB.pval[2] <- b_result$p.value
+    
+final_matrix
+#######################################################################
+# Age comparison
+#######################################################################
 
 # for Her2 vs LumA
 # equal variance check
@@ -132,16 +184,18 @@ if (var.test(unlist(anno[Her2_samp,"Age"]),unlist(anno[LumB_samp,"Age"]),
 B_pvalue <- result$p.value
 B_mean <- result$estimate[2]
 
-# add to final result df
-age_matrix$H_mean <- H_mean
-age_matrix$A_mean <- A_mean
-age_matrix$A_pvalue <- A_pvalue
-age_matrix$B_mean <- B_mean
-age_matrix$B_pvalue <- B_pvalue
+#her2e
+final_matrix$`HER2E(ref)`[3] <- H_mean
 
-row.names(age_matrix) <- c("Age")
+#luma
+final_matrix$LUMA[3] <- A_mean
+final_matrix$LUMA.pval[3] <- A_pvalue
 
-#View(age_matrix)
+#lumb
+final_matrix$LUMB[3] <- B_mean
+final_matrix$LUMB.pval[3] <- B_pvalue
+
+final_matrix
 #######################################################################
 # 4. Size
 #######################################################################
@@ -180,74 +234,68 @@ if (var.test(unlist(anno[Her2_samp,"Size"]),unlist(anno[LumB_samp,"Size"]),
 B_pvalue <- result$p.value
 B_mean <- result$estimate[2]
 
-# add to final result df
-size_matrix$H_mean <- H_mean
-size_matrix$A_mean <- A_mean
-size_matrix$A_pvalue <- A_pvalue
-size_matrix$B_mean <- B_mean
-size_matrix$B_pvalue <- B_pvalue
+#her2e
+final_matrix$`HER2E(ref)`[4] <- H_mean
 
-row.names(size_matrix) <- c("Size")
-#View(size_matrix)
+#luma
+final_matrix$LUMA[4] <- A_mean
+final_matrix$LUMA.pval[4] <- A_pvalue
 
+#lumb
+final_matrix$LUMB[4] <- B_mean
+final_matrix$LUMB.pval[4] <- B_pvalue
+
+final_matrix
 #######################################################################
 # 4. NHG (2x3 contingency table)
 #######################################################################
-
-nhg_matrix <- data.frame(matrix(ncol = 0, nrow = 1))
 
 # for Her2 vs LumA
 a_nhg <- subset(anno,PAM50 %in% c("Her2","LumA")) %>% droplevels()
 a_cont_table <- table(a_nhg$PAM50,a_nhg$NHG)
 #GTest(table(a_nhg$PAM50,a_nhg$NHG))
-a_result <- fisher.test(a_cont_table) # maybe use fishers due to expected n below 5
+a_result <- fisher.test(a_cont_table) # use fishers due to expected n below 5
 
         
 # for Her2 vs LumB
 b_nhg <- subset(anno,PAM50 %in% c("Her2","LumB")) %>% droplevels()
 b_cont_table <- table(b_nhg$PAM50,b_nhg$NHG)
-
-b_result <- fisher.test(b_cont_table) # maybe use fishers due to expected n below 5
+b_result <- fisher.test(b_cont_table) # use fishers due to expected n below 5
 
 H_tot <- a_cont_table[1] + a_cont_table[3] + a_cont_table[5]
 A_tot <- a_cont_table[2] + a_cont_table[4] + a_cont_table[6]
 B_tot <- b_cont_table[2] + b_cont_table[4] + b_cont_table[6]
 
-# final results
-nhg_matrix$A_nhg_pvalue <- a_result$p.value
-nhg_matrix$B_nhg_pvalue <- b_result$p.value
+#luma
+final_matrix$LUMA[6] <- a_cont_table[2]
+final_matrix$LUMA[7] <- a_cont_table[4]
+final_matrix$LUMA[8] <- a_cont_table[6]
+final_matrix$`LUMA.%`[6] <- round(a_cont_table[2]/A_tot*100)
+final_matrix$`LUMA.%`[7] <- round(a_cont_table[4]/A_tot*100)
+final_matrix$`LUMA.%`[8] <- round(a_cont_table[6]/A_tot*100)
+final_matrix$LUMA.pval[5] <- a_result$p.value
+    
+#lumb
+final_matrix$LUMB[6] <- b_cont_table[2]
+final_matrix$LUMB[7] <- b_cont_table[4]
+final_matrix$LUMB[8] <- b_cont_table[6]
+final_matrix$`LUMB.%`[6] <- round(b_cont_table[2]/B_tot*100)
+final_matrix$`LUMB.%`[7] <- round(b_cont_table[4]/B_tot*100)
+final_matrix$`LUMB.%`[8] <- round(b_cont_table[6]/B_tot*100)
+final_matrix$LUMB.pval[5] <- b_result$p.value
 
-nhg_matrix$H_nhg1_count <- a_cont_table[1]
-nhg_matrix$A_nhg1_count <- a_cont_table[2]
-nhg_matrix$B_nhg1_count <- b_cont_table[2]
+#her2e
+final_matrix$`HER2E(ref)`[6] <- a_cont_table[1]
+final_matrix$`HER2E(ref)`[7] <- a_cont_table[3]
+final_matrix$`HER2E(ref)`[8] <- a_cont_table[5]
+final_matrix$`HER2E.%`[6] <- round(a_cont_table[1]/H_tot*100)
+final_matrix$`HER2E.%`[7] <- round(a_cont_table[3]/H_tot*100)
+final_matrix$`HER2E.%`[8] <- round(a_cont_table[5]/H_tot*100)
 
-nhg_matrix$H_nhg1_perc <- round(a_cont_table[1]/H_tot*100)
-nhg_matrix$A_nhg1_perc <- round(a_cont_table[2]/A_tot*100)
-nhg_matrix$B_nhg1_perc <- round(b_cont_table[2]/B_tot*100)
-
-nhg_matrix$H_nhg2_count <- a_cont_table[3]
-nhg_matrix$A_nhg2_count <- a_cont_table[4]
-nhg_matrix$B_nhg2_count <- b_cont_table[4]
-
-nhg_matrix$H_nhg2_perc <- round(a_cont_table[3]/H_tot*100)
-nhg_matrix$A_nhg2_perc <- round(a_cont_table[4]/A_tot*100)
-nhg_matrix$B_nhg2_perc <- round(b_cont_table[4]/B_tot*100)
-
-nhg_matrix$H_nhg3_count <- a_cont_table[5]
-nhg_matrix$A_nhg3_count <- a_cont_table[6]
-nhg_matrix$B_nhg3_count <- b_cont_table[6]
-
-nhg_matrix$H_nhg3_perc <- round(a_cont_table[5]/H_tot*100)
-nhg_matrix$A_nhg3_perc <- round(a_cont_table[6]/A_tot*100)
-nhg_matrix$B_nhg3_perc <- round(b_cont_table[6]/B_tot*100)
-
-#View(nhg_matrix)
-
+final_matrix
 #######################################################################
 # 4. LN (2x2 contingency table)
 #######################################################################
-
-ln_matrix <- data.frame(matrix(ncol = 0, nrow = 1))
 
 # for Her2 vs LumA
 a_ln <- subset(anno,PAM50 %in% c("Her2","LumA")) %>% droplevels()
@@ -264,133 +312,33 @@ A_tot <- a_cont_table[2] + a_cont_table[4]
 B_tot <- b_cont_table[2] + b_cont_table[4]
 
 # add to final matrix
-
 #lumb
-final_matrix$LUMB[9] <- b_cont_table[2]
-final_matrix$LUMB[10] <- b_cont_table[4]
-final_matrix$`LUMB.%`[9] <- round(b_cont_table[2]/B_tot*100)
-final_matrix$`LUMB.%`[10] <-round(b_cont_table[4]/B_tot*100)
-final_matrix$LUMB.pval[8] <- b_result$p.value
+final_matrix$LUMB[10] <- b_cont_table[2]
+final_matrix$LUMB[11] <- b_cont_table[4]
+final_matrix$`LUMB.%`[10] <- round(b_cont_table[2]/B_tot*100)
+final_matrix$`LUMB.%`[11] <-round(b_cont_table[4]/B_tot*100)
+final_matrix$LUMB.pval[9] <- b_result$p.value
     
 #luma
-final_matrix$LUMA[9] <- a_cont_table[2]
-final_matrix$LUMA[10] <- a_cont_table[4]
-final_matrix$`LUMA.%`[9] <- round(a_cont_table[1]/H_tot*100)
-final_matrix$`LUMA.%`[10] <- round(a_cont_table[4]/A_tot*100)
-final_matrix$LUMA.pval[8] <- a_result$p.value
+final_matrix$LUMA[10] <- a_cont_table[2]
+final_matrix$LUMA[11] <- a_cont_table[4]
+final_matrix$`LUMA.%`[10] <- round(a_cont_table[1]/H_tot*100)
+final_matrix$`LUMA.%`[11] <- round(a_cont_table[4]/A_tot*100)
+final_matrix$LUMA.pval[9] <- a_result$p.value
 
 #her2e
-final_matrix$`HER2E(ref)`[9] <- a_cont_table[1]
-final_matrix$`HER2E(ref)`[10] <- a_cont_table[3]
-final_matrix$`HER2E.%`[9] <- round(a_cont_table[1]/H_tot*100)
-final_matrix$`HER2E.%`[10] <- round(a_cont_table[3]/H_tot*100)
+final_matrix$`HER2E(ref)`[10] <- a_cont_table[1]
+final_matrix$`HER2E(ref)`[11] <- a_cont_table[3]
+final_matrix$`HER2E.%`[10] <- round(a_cont_table[1]/H_tot*100)
+final_matrix$`HER2E.%`[11] <- round(a_cont_table[3]/H_tot*100)
 
-final_matrix    # da stimmt was nicht
-#View(ln_matrix)
+final_matrix 
 
 #######################################################################
-# 4. export to excel
+# export to excel
 #######################################################################
 
-# get desired format
-final_matrix <- data.frame(matrix(ncol = 9, nrow = 10))
-colnames(final_matrix) <- c("Variable","HER2E(ref)","HER2E.%","LUMA","LUMA.%","LUMA.pval","LUMB","LUMB.%","LUMB.pval")
-final_matrix$Variable <- c("N","Age in years (mean)","Tumor Size in mm (mean)","Tumor grade (count):","grade 1","grade 2", "grade 3","Lymph node status (count):","N0","N+")
-final_matrix
-# add count data
-
-final_matrix$`HER2E(ref)`[1] <- table(anno$PAM50)[1]
-final_matrix$LUMA[1] <- table(anno$PAM50)[2]
-final_matrix$LUMB[1] <- table(anno$PAM50)[3]
-final_matrix    
-
-
-
+View(final_matrix)
 # save
-datasheets <- list("Final" = final_matrix, "Age" = age_matrix, "Size" = size_matrix, "NHG" = nhg_matrix, "LN" = ln_matrix)
-write.xlsx(datasheets, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
+write.xlsx(final_matrix, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
 
-##################################
-
-# plot exploration
-ggplot(anno, aes(x=as.factor(PAM50),y=Age)) +
-    geom_boxplot(fill="slateblue",alpha=0.2) +
-    xlab("PAM50 subtype") +
-    ylab("Age") +
-    ggtitle("one of many") +
-    geom_text(data=as.data.frame(dplyr::count(anno, PAM50)), aes(y = 0, label = paste("n=",n,sep = "")))
-
-
-###
-#######################################################################
-# 4. HER2low frequency (2x2 contingency table)
-#######################################################################
-
-hl_matrix <- data.frame(matrix(ncol = 0, nrow = 1))
-
-
-# for Her2 vs LumA
-a_hl <- subset(anno,PAM50 %in% c("Her2","LumA")) %>% droplevels()
-a_cont_table <- table(a_hl$PAM50,a_hl$HER2_Low)
-a_cont_table
-a_result <- fisher.test(a_cont_table)
-
-# for Her2 vs LumB
-b_hl <- subset(anno,PAM50 %in% c("Her2","LumB")) %>% droplevels()
-b_cont_table <- table(b_hl$PAM50,b_hl$HER2_Low)
-b_cont_table
-b_result <- fisher.test(b_cont_table) 
-
-H_tot <- a_cont_table[1] + a_cont_table[3]
-A_tot <- a_cont_table[2] + a_cont_table[4]
-B_tot <- b_cont_table[2] + b_cont_table[4]
-
-# final results
-hl_matrix$A_hl_pvalue <- a_result$p.value
-hl_matrix$B_hl_pvalue <- b_result$p.value
-
-hl_matrix$H_H0_count <- a_cont_table[1]
-hl_matrix$A_H0_count <- a_cont_table[2]
-hl_matrix$B_H0_count <- b_cont_table[2]
-
-hl_matrix$H_H0_perc <- round(a_cont_table[1]/H_tot*100)
-hl_matrix$A_H0_perc <- round(a_cont_table[2]/A_tot*100)
-hl_matrix$B_H0_perc <- round(b_cont_table[2]/B_tot*100)
-
-hl_matrix$H_Hlow_count <- a_cont_table[3]
-hl_matrix$A_Hlow_count <- a_cont_table[4]
-hl_matrix$B_Hlow_count <- b_cont_table[4]
-
-hl_matrix$H_Hlow_perc <- round(a_cont_table[3]/H_tot*100)
-hl_matrix$A_Hlow_perc <- round(a_cont_table[4]/A_tot*100)
-hl_matrix$B_Hlow_perc <- round(b_cont_table[4]/B_tot*100)
-
-View(hl_matrix)
-
-write.xlsx(hl_matrix, file = paste("~/Desktop/MTP_project/Data/",cohort,"/her2low_matrix.xlsx",sep=''),overwrite = TRUE)
-
-
-# check treatments
-anno <- as.data.frame(pam50.frame) %>% 
-    filter(PAM50_NCN_ProSigna_rel4 %in% c("LumA", "LumB", "Her2")) %>% 
-    mutate(LN = case_when(LNstatus_Bosch == "N0" ~ 0, LNstatus_Bosch == "N+" ~ 1)) %>%
-    dplyr::rename(sampleID=rba_rel4,PAM50=PAM50_NCN_ProSigna_rel4,NHG=NHG_Bosch,Size=TumSize_Bosch) %>% 
-    dplyr::select(sampleID,PAM50,Size, Age, NHG, LN, HER2_Low,AI_Bosch,Tamoxifen_Bosch,Chemo_Regime_Bosch,Chemo_Bosch) 
-
-
-# sample namesx
-Her2_samp <- anno %>% filter(PAM50=="Her2") %>% pull(sampleID)
-LumA_samp <- anno %>% filter(PAM50=="LumA") %>% pull(sampleID)
-LumB_samp <- anno %>% filter(PAM50=="LumB") %>% pull(sampleID)
-anno <- anno %>% column_to_rownames(var = "sampleID")
-
-table(anno[Her2_samp,]$Tamoxifen_Bosch) # 22 yes (59%) 14 no
-table(anno[Her2_samp,]$AI_Bosch) # 16 yes (44%), 20 n0
-table(anno[Her2_samp,]$AI_Bosch,anno[Her2_samp,]$Tamoxifen_Bosch)
-
-x <- anno %>% rownames_to_column(var="ids")
-h <- x %>%
-    filter(ids %in% Her2_samp) %>%
-    filter(Chemo_Bosch==TRUE)
-table(h$AI_Bosch)
-table(h$Tamoxifen_Bosch)
