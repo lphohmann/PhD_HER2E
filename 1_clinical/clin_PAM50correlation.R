@@ -100,7 +100,15 @@ ggplot(data = confusion_matrix,
     scale_fill_gradient(low = "#fee6ce",
                         high = "#e6550d",
                         trans = "log") +
-    theme(legend.position="none")
+    ggtitle("2nd best PAM50 match in ERpHER2n samples") +
+    xlab("PAM50 Class") +
+    ylab("2nd best PAM50 match") +
+    theme(plot.title = element_text(size = 25),
+          axis.text.x = element_text(size = 20),
+          axis.title.x = element_text(size = 25),
+          axis.text.y = element_text(size = 20),
+          axis.title.y = element_text(size = 25),
+          legend.position = "none") 
 
 ggsave(filename=paste(output.path,cohort,"_","CM_PAM50class.pdf",sep=""), 
        width = 260,
@@ -171,7 +179,7 @@ ggplot(data) +
     geom_boxplot(aes(x=majoritySecondBest, y=HER2Diff,fill=as.factor(majoritySecondBest)),alpha=0.7, size=1.5, outlier.size = 5) +
     xlab("PAM50 Class") +
     ylab("Correlation diff (1st-2nd)") +
-    ggtitle("PAM50-HER2E distinctiveness in ERpHER2nHER2E samples") +
+    ggtitle("PAM50-HER2E distinctiveness in ERpHER2nHER2E") +
     theme(plot.title = element_text(size = 25),
           axis.text.x = element_text(size = 20),
           axis.title.x = element_text(size = 25),
@@ -194,8 +202,8 @@ ggplot(data_mod) +
     geom_point(aes(x=meanHer2, y=HER2Diff,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
     xlab("HER2 correlation (mean)") +
     ylab("Correlation diff (1st-2nd)") +
-    ggtitle("HER2E distinctiveness in ERpHER2nHER2E samples") +
-    theme(plot.title = element_text(size = 25),
+    ggtitle("HER2E distinctiveness: Subtype centroid correlations (ERpHER2nHER2E)") +
+    theme(plot.title = element_text(size = 20),
           axis.text.x = element_text(size = 20),
           axis.title.x = element_text(size = 25),
           axis.text.y = element_text(size = 20),
