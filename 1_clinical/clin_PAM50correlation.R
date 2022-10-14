@@ -24,6 +24,7 @@ dir.create(data.path)
 library(ggplot2)
 library(tidyverse)
 library(reshape)
+library(openxlsx)
 
 #######################################################################
 # Load data
@@ -115,6 +116,17 @@ ggsave(filename=paste(output.path,cohort,"_","CM_PAM50class.pdf",sep=""),
        height = 210,
        units = "mm")
 
+# small table for her2e
+her2e_matrix <- confusion_matrix %>% 
+    filter(majorityNearest == "Her2") %>% 
+    droplevels() %>% 
+    dplyr::select(-c(majorityNearest)) %>% 
+    column_to_rownames(var="majoritySecondBest")
+her2e_matrix <- as.data.frame(t(her2e_matrix)) %>% dplyr::select(-c(2))
+write.xlsx(her2e_matrix, file = paste(data.path,"PAM50_HER2E_2ndbest.xlsx",sep=""),overwrite = TRUE)
+
+
+
 #######################################################################
 # Distinctiveness: Boxplot the difference between the best and second 
 # best correlation matches
@@ -186,7 +198,7 @@ ggplot(data) +
           axis.text.y = element_text(size = 20),
           axis.title.y = element_text(size = 25),
           legend.position = "none") +
-    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d"))
+    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d")) 
 
 ggsave(filename=paste(output.path,cohort,"_","HER2E_distinctiveness.pdf",sep=""), 
        width = 260,
@@ -200,7 +212,7 @@ data_mod <- data %>% dplyr::select(c(majoritySecondBest,HER2Diff,meanHer2))
 # all samples
 ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=HER2Diff,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
-    xlab("HER2 correlation (mean)") +
+    xlab("HER2E correlation (mean)") +
     ylab("Correlation diff (1st-2nd)") +
     ggtitle("HER2E distinctiveness: Subtype centroid correlations (ERpHER2nHER2E)") +
     theme(plot.title = element_text(size = 20),
@@ -225,7 +237,7 @@ data_mod <- data %>% filter(majoritySecondBest == "LumA")
 
 ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=meanLumA,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
-    xlab("HER2 correlation") +
+    xlab("HER2E correlation") +
     ylab("LumA correlation") +
     ggtitle("ERpHER2nHER2E: Luminal A and HER2E centroid correlations") +
     theme(plot.title = element_text(size = 20),
@@ -248,9 +260,9 @@ data_mod <- data %>% filter(majoritySecondBest == "LumB")
 
 ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=meanLumB,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
-    xlab("HER2 correlation") +
+    xlab("HER2E correlation") +
     ylab("LumB correlation") +
-    ggtitle("Luminal B and HER2E centroid correlations in ERpHER2nHER2E samples") +
+    ggtitle("ERpHER2nHER2E: Luminal B and HER2E centroid correlations") +
     theme(plot.title = element_text(size = 20),
           axis.text.x = element_text(size = 20),
           axis.title.x = element_text(size = 25),
@@ -270,10 +282,10 @@ ggsave(filename=paste(output.path,cohort,"_","HER2E_LUMB_scatter.pdf",sep=""),
 data_mod <- data %>% filter(majoritySecondBest == "Basal")
 
 ggplot(data_mod) + 
-    geom_point(aes(x=meanHer2, y=meanLumB,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
-    xlab("HER2 correlation") +
+    geom_point(aes(x=meanHer2, y=meanBasal,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
+    xlab("HER2E correlation") +
     ylab("Basal correlation") +
-    ggtitle("Basal and HER2E centroid correlations in ERpHER2nHER2E samples") +
+    ggtitle("ERpHER2nHER2E: Basal and HER2E centroid correlations") +
     theme(plot.title = element_text(size = 20),
           axis.text.x = element_text(size = 20),
           axis.title.x = element_text(size = 25),

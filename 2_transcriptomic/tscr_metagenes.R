@@ -53,7 +53,7 @@ anno <- clin.rel4 %>%
 gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
 
 #######################################################################
-# 3. data processing
+# 3. data processing # IDEA SCALE OVER WHOLE COHORT IN THE BEGINNING
 #######################################################################
 
 # log transformed FPKM data
@@ -105,6 +105,7 @@ setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
 # get the gex data in the correct format
 gex.data <- rownames_to_column(as.data.frame(gex.data), "ensembl_gene_id")
 gex.data$ensembl_gene_id <- gsub("\\..*","",gex.data$ensembl_gene_id)
+
 
 #######################################################################
 # 4. calc. score for each metagene in each sample
