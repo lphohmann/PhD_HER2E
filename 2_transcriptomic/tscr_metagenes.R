@@ -102,8 +102,6 @@ metagene.def <- merge(metagene.def, relevant.res, by = "entrezgene_id")
 setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
 
 # get the gex data in the correct format
-str(gex.data)
-
 gex.data <- gex.data %>% 
     rownames_to_column(var="ensembl_gene_id") %>% 
     mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) %>% 
@@ -112,20 +110,28 @@ gex.data <- gex.data %>%
 
 # scale the data
 gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
-scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
+scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) %>% # for some rows there may be 0 variance so i have to handle these cases
+    rownames_to_column(var="ensembl_gene_id") 
 
 #######################################################################
 # 4. calc. score for each metagene in each sample
 #######################################################################
-str(gex.data)
-mg.gex.data <- gex.data
-mg.anno <- anno
 
-##
+## remove later
 source("scripts/2_transcriptomic/src/tscr_functions.R")
 
+#test
+basal.scores <- mgscore(metagene = "Basal",
+                metagene.def = metagene.def,
+                gex.data = scaled.gex.data) 
 
+earlyresponse.scores <- mgscore(metagene = "Early_response",
+                        metagene.def = metagene.def,
+                        gex.data = scaled.gex.data)
 
+m <- merge(basal.scores,earlyresponse.scores,by=0) %>% column_to_rownames(var = "Row.names")
+
+head(m)
 # basal
 scaled_mg_scores <- mg_score("Basal",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Basal = mg)
 

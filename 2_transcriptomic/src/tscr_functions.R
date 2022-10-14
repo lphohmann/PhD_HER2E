@@ -8,17 +8,18 @@
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
 # function to calc. the score for each metagene for each sample
-mg_score <- function(mg,method="scaled",metag_def,gex,cohort) {
+mgscore <- function(metagene,metagene.def,gex.data) {
     
     # extract the gex for each metagene
-    mg_ids <- filter(metag_def, module == mg) %>% pull(ensembl_gene_id)
+    mg.ids <- filter(metagene.def, module == metagene) %>% pull(ensembl_gene_id)
     
-    mg_gex <- gex %>% 
-        filter(ensembl_gene_id %in% mg_ids) %>% 
+    # filter out the corresponding gex data
+    mg.gex.data <- gex.data %>% 
+        filter(ensembl_gene_id %in% mg.ids) %>% 
         column_to_rownames(var = "ensembl_gene_id") 
     
     # calc. the score for each sample
-    result <- as.data.frame(apply(scaled_mg_gex, 2, median)) %>% dplyr::rename(mg = "apply(scaled_mg_gex, 2, median)") 
+    result <- as.data.frame(apply(mg.gex.data, 2, mean)) %>% dplyr::rename(!!metagene := "apply(mg.gex.data, 2, mean)")
     
     return(result)
 }
