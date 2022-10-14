@@ -20,7 +20,7 @@ data.path <- paste("data/",cohort,"/2_transcriptomic/processed/",sep="")
 dir.create(data.path)
 
 #packages
-#source("scripts/2_transcriptomic/src/")
+source("scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
 library(tidyverse)
 #library(matrixStats)
@@ -28,8 +28,6 @@ library(readxl)
 library(biomaRt)
 library(gridExtra)
 library(ggsignif)
-
-##
 
 #if (cohort=="SCANB") {
     
@@ -58,7 +56,7 @@ gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno
 
 # log transformed FPKM data
 gex.data <- as.data.frame(log2(gex.data + 1))
-    
+
 # sample annotation
 sample.info <- anno[c("sampleID","PAM50")] %>% remove_rownames %>% column_to_rownames(var="sampleID") #%>% dplyr::rename(group=PAM50)
     
@@ -77,14 +75,15 @@ ensembl.ids <- as.data.frame(gex.data) %>%
 ensembl.ids <- gsub("\\..*","",ensembl.ids) # remove characters after dot
 
 # convert 
-mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                         dataset = "hsapiens_gene_ensembl",
-                         host = "http://www.ensembl.org")
-res <- getBM(filters = "ensembl_gene_id",
-                 attributes = c("ensembl_gene_id","entrezgene_id"),
-                 values = ensembl.ids, 
-                 mart = mart)
-
+#mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+#                         dataset = "hsapiens_gene_ensembl",
+#                         host = "http://www.ensembl.org")
+#res <- getBM(filters = "ensembl_gene_id",
+#                 attributes = c("ensembl_gene_id","entrezgene_id"),
+#                 values = ensembl.ids, 
+#                 mart = mart)
+#save(res,file = paste(data.path,"mart_res.RData",sep="") )
+load(paste(data.path,"mart_res.RData",sep=""))
 # select only the ids that are relevant for the metagenes
 relevant.res <- res %>% 
     filter(entrezgene_id %in% metagene.def$entrezgene_id) #pull(ensembl_gene_id)
@@ -103,18 +102,29 @@ metagene.def <- merge(metagene.def, relevant.res, by = "entrezgene_id")
 setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
 
 # get the gex data in the correct format
-gex.data <- rownames_to_column(as.data.frame(gex.data), "ensembl_gene_id")
-gex.data$ensembl_gene_id <- gsub("\\..*","",gex.data$ensembl_gene_id)
+str(gex.data)
 
+gex.data <- gex.data %>% 
+    rownames_to_column(var="ensembl_gene_id") %>% 
+    mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) %>% 
+    filter(ensembl_gene_id %in% metagene.def$ensembl_gene_id) %>% 
+    column_to_rownames(var="ensembl_gene_id")
+
+# scale the data
+gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
+scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
 
 #######################################################################
 # 4. calc. score for each metagene in each sample
 #######################################################################
-
-mg_gex_data <- gex_data_log
-mg_anno <- anno
+str(gex.data)
+mg.gex.data <- gex.data
+mg.anno <- anno
 
 ##
+source("scripts/2_transcriptomic/src/tscr_functions.R")
+
+
 
 # basal
 scaled_mg_scores <- mg_score("Basal",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Basal = mg)

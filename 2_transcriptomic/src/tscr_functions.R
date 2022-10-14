@@ -18,20 +18,8 @@ mg_score <- function(mg,method="scaled",metag_def,gex,cohort) {
         column_to_rownames(var = "ensembl_gene_id") 
     
     # calc. the score for each sample
-    if (method == "simple") {
-        
-        result <- as.data.frame(apply(mg_gex, 2, median)) %>% 
-            dplyr::rename(mg = "apply(mg_gex, 2, median)")
-        
-    } else if (method == "scaled") {
-        
-        # first scale the rows
-        mg_gex <- mg_gex %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
-        
-        scaled_mg_gex <- as.data.frame(t(apply(mg_gex, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-        
-        result <- as.data.frame(apply(scaled_mg_gex, 2, median)) %>% dplyr::rename(mg = "apply(scaled_mg_gex, 2, median)") 
-    }
+    result <- as.data.frame(apply(scaled_mg_gex, 2, median)) %>% dplyr::rename(mg = "apply(scaled_mg_gex, 2, median)") 
+    
     return(result)
 }
 
