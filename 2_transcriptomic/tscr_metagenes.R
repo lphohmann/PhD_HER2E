@@ -209,30 +209,54 @@ ggsave(filename = paste(output.path,cohort,"_","Basal","_mg_boxplot.pdf", sep ="
        height = 300,
        units = "mm")
 
-pvalues[2,1:2]
-quickplot(scaled_mg_scores, 2, "****", "*", 4, c(-2,4.6))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[2],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[3,1:2]
-quickplot(scaled_mg_scores, 3, "****", "****", 5, c(-2,5.6))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[3],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[4,1:2]
-quickplot(scaled_mg_scores, 4, "****", "ns", 3.5, c(-1.5,4))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[4],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[5,1:2]
-quickplot(scaled_mg_scores, 5, "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[5],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[6,1:2]
-quickplot(scaled_mg_scores, 6, "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[6],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[7,1:2]
-quickplot(scaled_mg_scores, 7, "****", "****", 2.7, c(-2,3.2))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[7],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
-pvalues[8,1:2]
-quickplot(scaled_mg_scores, 8, "ns", "****", 2.9, c(-3.5,3.5))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[8],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Early_response",]
+quickplot(mg.anno, "Early_response", "****", "ns", 4, c(-2,4.6))
+ggsave(filename = paste(output.path,cohort,"_","Early_response","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
 
-#dev.off()
+mg.pvals["IR",]
+quickplot(mg.anno, "IR", "****", "****", 5, c(-2,5.6))
+ggsave(filename = paste(output.path,cohort,"_","IR","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
 
+mg.pvals["Lipid",]
+quickplot(mg.anno, "Lipid", "****", "ns", 3.5, c(-1.5,4))
+ggsave(filename = paste(output.path,cohort,"_","Lipid","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
+
+mg.pvals["Mitotic_checkpoint",]
+quickplot(mg.anno, "Mitotic_checkpoint", "****", "ns", 4.5, c(-2,5))
+ggsave(filename = paste(output.path,cohort,"_","Mitotic_checkpoint","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
+
+mg.pvals["Mitotic_progression",]
+quickplot(mg.anno, "Mitotic_progression", "****", "ns", 4.5, c(-2,5))
+ggsave(filename = paste(output.path,cohort,"_","Mitotic_progression","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
+
+mg.pvals["SR",]
+quickplot(mg.anno, "SR", "****", "****", 3.5, c(-1.5,4))
+ggsave(filename = paste(output.path,cohort,"_","SR","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
+
+mg.pvals["Stroma",]
+quickplot(mg.anno, "Stroma", "ns", "****", 2.9, c(-3.5,3.5))
+ggsave(filename = paste(output.path,cohort,"_","Stroma","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
 
 
 ###############
