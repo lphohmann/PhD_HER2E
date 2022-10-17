@@ -25,68 +25,75 @@ mgscore <- function(metagene,metagene.def,gex.data) {
 }
 
 # function to calc. the p value for each metagene
-mg_ttest <- function(scaled_mg_scores,sample_info) {
+mgtest <- function(metagene.scores,anno) {
+    
     # sample ids 
-    Her2_cols <- sample_info %>% filter(PAM50=="Her2") %>% pull(sampleID)
-    LumA_cols <- sample_info %>% filter(PAM50=="LumA") %>% pull(sampleID)
-    LumB_cols <- sample_info %>% filter(PAM50=="LumB") %>% pull(sampleID) 
-    #transpose
-    tmg <- t(scaled_mg_scores)
+    Her2.cols <- anno %>% filter(PAM50=="Her2") %>% pull(sampleID)
+    LumA.cols <- anno %>% filter(PAM50=="LumA") %>% pull(sampleID)
+    LumB.cols <- anno %>% filter(PAM50=="LumB") %>% pull(sampleID)
+    
+    # transpose
+    tmg <- t(metagene.scores)
+    
     #initialize storing vector
-    H2vsLA_pvalue <- rep(0,nrow(tmg))
-    H2vsLB_pvalue <- rep(0,nrow(tmg))
-    #loop
+    H2vsLA.pval <- rep(0,nrow(tmg))
+    H2vsLB.pval <- rep(0,nrow(tmg))
+    
+    # calc. pvalues
     for (i in 1:nrow(tmg)) {
-        # vars
-        print(colnames(tmg))
-        hdata <- as.numeric(tmg[i,Her2_cols])
-        adata <- as.numeric(tmg[i,LumA_cols])
-        bdata <- as.numeric(tmg[i,LumB_cols])
+        
+        # group data
+        her2.data <- as.numeric(tmg[i,Her2.cols])
+        luma.data <- as.numeric(tmg[i,LumA.cols])
+        lumb.data <- as.numeric(tmg[i,LumB.cols])
         
         # for Her2 vs LumA
         # equal variance check
-        if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
-            H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
+        if (var.test(unlist(her2.data),unlist(luma.data), alternative = "two.sided")$p.value <= 0.05) {
+            H2vsLA.res <- t.test(her2.data,luma.data, var.equal = FALSE)
         } else {
-            H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
+            H2vsLA.res <- t.test(her2.data,luma.data, var.equal = TRUE)
         }
         # save results
-        #print(rownames(tmg)[i])
-        #print(H2vsLA_ttest_result)
-        H2vsLA_pvalue[i] <- H2vsLA_ttest_result$p.value
+        H2vsLA.pval[i] <- H2vsLA.res$p.value
         
         # for Her2 vs LumB
         # equal variance check
-        if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
-            H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
+        if (var.test(unlist(her2.data),unlist(lumb.data), alternative = "two.sided")$p.value <= 0.05) {
+            H2vsLB.res <- t.test(her2.data,lumb.data, var.equal = FALSE)
         } else {
-            H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
+            H2vsLB.res <- t.test(her2.data,lumb.data, var.equal = TRUE)
         }
         # save results
-        #print(rownames(tmg)[i])
-        #print(H2vsLB_ttest_result)
-        H2vsLB_pvalue[i] <- H2vsLB_ttest_result$p.value }
+        H2vsLB.pval[i] <- H2vsLB.res$p.value 
+    
+    }
     
     # add the results to the dataframe
-    results <- as.data.frame(tmg) %>% add_column(H2vsLA_pvalue = H2vsLA_pvalue,H2vsLB_pvalue = H2vsLB_pvalue) %>% dplyr::select(H2vsLA_pvalue,H2vsLB_pvalue)
+    results <- as.data.frame(tmg) %>% 
+        add_column(H2vsLA_pval = H2vsLA.pval,H2vsLB_pval = H2vsLB.pval) %>% 
+        dplyr::select(H2vsLA_pval,H2vsLB_pval)
+    
     return(results)
 }
 
 
 # quickplot function
-quickplot <- function(scaled_mg_scores, plotnum, A_signs, B_signs, B_pos, ylim) {
-    plot <- ggplot(scaled_mg_scores, aes(x=as.factor(mg_anno$PAM50),y=scaled_mg_scores[,plotnum],fill=as.factor(mg_anno$PAM50))) +
+quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
+    plot <- ggplot(mg.anno, aes(x=as.factor(PAM50),y=.data[[metagene]],fill=as.factor(PAM50))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab("PAM50 subtype") +
-        ylab("scaled metagene score") +
+        ylab("Metagene score") +
         ylim(ylim) +
-        ggtitle(colnames(scaled_mg_scores)[plotnum]) +
-        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=B_signs, tip_length = 0.02, vjust=0.01, y_position = B_pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=A_signs, tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) + 
+        ggtitle(paste(metagene," metagene scores in PAM50 subtypes (ERpHER2p)",sep="")) +
+        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sig, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sig, tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) + 
         theme(axis.text.x = element_text(size = 30),
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
               axis.title.y = element_text(size = 35),
-              legend.position = "none")
+              legend.position = "none") +
+        scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
+        scale_x_discrete(labels = c("HER2E","LUMA","LUMB"))
     print(plot)
 }

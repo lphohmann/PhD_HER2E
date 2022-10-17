@@ -51,14 +51,8 @@ anno <- clin.rel4 %>%
 gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
 
 #######################################################################
-# 3. data processing # IDEA SCALE OVER WHOLE COHORT IN THE BEGINNING
+# 3. metagene definitions (ensembl and entrez ids)
 #######################################################################
-
-# log transformed FPKM data
-gex.data <- as.data.frame(log2(gex.data + 1))
-
-# sample annotation
-sample.info <- anno[c("sampleID","PAM50")] %>% remove_rownames %>% column_to_rownames(var="sampleID") #%>% dplyr::rename(group=PAM50)
     
 # metagene definitions
 metagene.def <- as.data.frame(read_excel(
@@ -84,6 +78,7 @@ ensembl.ids <- gsub("\\..*","",ensembl.ids) # remove characters after dot
 #                 mart = mart)
 #save(res,file = paste(data.path,"mart_res.RData",sep="") )
 load(paste(data.path,"mart_res.RData",sep=""))
+
 # select only the ids that are relevant for the metagenes
 relevant.res <- res %>% 
     filter(entrezgene_id %in% metagene.def$entrezgene_id) #pull(ensembl_gene_id)
@@ -101,6 +96,13 @@ metagene.def <- merge(metagene.def, relevant.res, by = "entrezgene_id")
 # check if genes were not in the scanb data
 setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
 
+#######################################################################
+# 3. gex data processing 
+#######################################################################
+
+# log transformed FPKM data
+gex.data <- as.data.frame(log2(gex.data + 1))
+
 # get the gex data in the correct format
 gex.data <- gex.data %>% 
     rownames_to_column(var="ensembl_gene_id") %>% 
@@ -117,90 +119,95 @@ scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) 
 # 4. calc. score for each metagene in each sample
 #######################################################################
 
-## remove later
-source("scripts/2_transcriptomic/src/tscr_functions.R")
-
-#test
+#basal
 basal.scores <- mgscore(metagene = "Basal",
                 metagene.def = metagene.def,
                 gex.data = scaled.gex.data) 
 
+#earlyresponse
 earlyresponse.scores <- mgscore(metagene = "Early_response",
                         metagene.def = metagene.def,
                         gex.data = scaled.gex.data)
 
-m <- merge(basal.scores,earlyresponse.scores,by=0) %>% column_to_rownames(var = "Row.names")
+metagene.scores <- merge(basal.scores,earlyresponse.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
-head(m)
-# basal
-scaled_mg_scores <- mg_score("Basal",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Basal = mg)
+#immuneresponse
+ir.scores <- mgscore(metagene = "IR",
+                                metagene.def = metagene.def,
+                                gex.data = scaled.gex.data)
 
-er <- mg_score("Early_response",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Early_response = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,er,by=0) %>% column_to_rownames(var = "Row.names")
+metagene.scores <- merge(metagene.scores,ir.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
-ir <- mg_score("IR",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(IR = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,ir,by=0) %>% column_to_rownames(var = "Row.names")
+#lipid
+lipid.scores <- mgscore(metagene = "Lipid",
+                        metagene.def = metagene.def,
+                        gex.data = scaled.gex.data)
 
-lp <- mg_score("Lipid",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Lipid = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,lp,by=0) %>% column_to_rownames(var = "Row.names")
+metagene.scores <- merge(metagene.scores,lipid.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
-mitc <- mg_score("Mitotic_checkpoint",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Mitotic_checkpoint = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,mitc,by=0) %>% column_to_rownames(var = "Row.names")
+#mitoticcheckpoint
+mitoticcheckpoint.scores <- mgscore(metagene = "Mitotic_checkpoint",
+                                    metagene.def = metagene.def,
+                                    gex.data = scaled.gex.data)
 
-mitp <- mg_score("Mitotic_progression",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Mitotic_progression = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,mitp,by=0) %>% column_to_rownames(var = "Row.names")
+metagene.scores <- merge(metagene.scores,mitoticcheckpoint.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
-sr <- mg_score("SR",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(SR = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,sr,by=0) %>% column_to_rownames(var = "Row.names")
 
-str <- mg_score("Stroma",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Stroma = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,str,by=0) %>% column_to_rownames(var = "Row.names")
+#mitoticprogression
+mitoticprogression.scores <- mgscore(metagene = "Mitotic_progression",
+                                    metagene.def = metagene.def,
+                                    gex.data = scaled.gex.data)
 
-#View(scaled_mg_scores)
+metagene.scores <- merge(metagene.scores,mitoticprogression.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
-pvalues <- mg_ttest(scaled_mg_scores,mg_anno)
 
-#View(pvalues)
-pvalues <- pvalues %>% mutate_if(is.numeric, round, digits=5)
+#SR
+sr.scores <- mgscore(metagene = "SR",
+                    metagene.def = metagene.def,
+                    gex.data = scaled.gex.data)
+
+metagene.scores <- merge(metagene.scores,sr.scores,by=0) %>% column_to_rownames(var = "Row.names")
+
+#stroma
+stroma.scores <- mgscore(metagene = "Stroma",
+                     metagene.def = metagene.def,
+                     gex.data = scaled.gex.data)
+
+metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rownames(var = "Row.names")
+
+#######################################################################
+# 5. statistics for metagene scores between groups
+#######################################################################
+
+# get pvalues
+mg.pvals <- mgtest(metagene.scores,anno)
+
+# save as a summarized object
+obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50, ER, HER2))
+mg.scores <- metagene.scores %>% rownames_to_column(var="sampleID")
+mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
+
+#mg.anno.list <- list(mg.anno, mg.pvals)
+#save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 
 #######################################################################
 # 5. compare scaled metagene scores between groups
 #######################################################################
 
-# add the pam50 annotations
-mg_anno <- mg_anno %>% column_to_rownames(var="sampleID")
-scaled_mg_scores <- merge(scaled_mg_scores,mg_anno,by=0) %>% column_to_rownames(var = "Row.names")
+# round
+mg.pvals <- round(mg.pvals, digits = 5)
 
-# save the file
-save(scaled_mg_scores, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/sample_metagene_scores.RData",sep = ""))
-#load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/sample_metagene_scores.RData",sep = ""))
-
-# create pdf with all the boxplots
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/metagene_plots.pdf", sep =""), onefile= TRUE)
-for(i in c(1:8)) {
-    plot <- ggplot(scaled_mg_scores, aes(x=as.factor(PAM50),y=scaled_mg_scores[,i])) +
-        geom_boxplot(fill="slateblue",alpha=0.2) +
-        xlab("PAM50 subtype") +
-        ylab("scaled metagene score") +
-        ggtitle(colnames(scaled_mg_scores)[i]) +
-        geom_text(data=as.data.frame(dplyr::count(x=mg_anno, PAM50)), aes(y = 0, label = paste("n=",n,sep = "")),nudge_y = -2,nudge_x = 0.3,size=5) +
-        theme(axis.text.x = element_text(size = 15),
-              axis.title.x = element_text(size = 20),
-              axis.text.y = element_text(size = 15),
-              axis.title.y = element_text(size = 20))
-    print(plot)
-}
-dev.off()
-
-#geom_text(data=as.data.frame(dplyr::count(sample_info, group)), aes(y = 0, label = paste("n=",n,sep = ""))))
-
-#######################################
+## remove later
+source("scripts/2_transcriptomic/src/tscr_functions.R")
 
 
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
-pvalues[1,1:2]
-quickplot(scaled_mg_scores, 1, "****", "****", 3.5, c(-1.5,4))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[1],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Basal",]
+quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))
+ggsave(filename = paste(output.path,cohort,"_","Basal","_mg_boxplot.pdf", sep =""),
+       width = 300,
+       height = 300,
+       units = "mm")
 
 pvalues[2,1:2]
 quickplot(scaled_mg_scores, 2, "****", "*", 4, c(-2,4.6))
