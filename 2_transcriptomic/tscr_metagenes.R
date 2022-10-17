@@ -28,27 +28,72 @@ library(readxl)
 library(biomaRt)
 library(gridExtra)
 library(ggsignif)
-
-#if (cohort=="SCANB") {
     
 #######################################################################
 # 2. Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
 #######################################################################
 
-# load annotation data
-clin.rel4 <- as.data.frame(
-    read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
-# load gex data
-load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
+# for SCANB
+if (cohort=="SCANB") {
+    
+    # load annotation data
+    clin.rel4 <- as.data.frame(
+        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
+    
+    # load gex data
+    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
+    
+    # select subgroup data
+    anno <- clin.rel4 %>% 
+        filter(Follow.up.cohort==TRUE) %>% 
+        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+        filter(ER=="Positive" & HER2=="Negative") %>% 
+        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+        # %>% dplyr::select(sampleID,PAM50)
+    
+    # filter to select subgroup gex data
+    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
+    
+} else if (cohort="METABRIC") {
+    
+    # load annotation data
+    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
 
-anno <- clin.rel4 %>% 
-    filter(Follow.up.cohort==TRUE) %>% 
-    filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(ER=="Positive" & HER2=="Negative") %>% 
-    dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
-
-gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
+    # load gex data
+    gex.data <- as.data.frame(
+        read.table(
+            "Data/Metabric/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% 
+        row_to_names(row_number = 1) %>% 
+        na.omit() %>% 
+        distinct(Hugo_Symbol) # gex_data[!duplicated(gex_data$Hugo_Symbol),]
+        
+    
+    # extract relevant variables
+    anno <- anno %>% 
+        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+        filter(grepl('ERpHER2n', ClinGroup)) %>% 
+        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+        # %>% dplyr::select(sampleID,PAM50)
+    
+    
+    # TRY TO DO THIS WHEN LOADING THE DATA
+    # remove rowns with na and duplicates
+    gex_data <- na.omit(gex_data)
+    gex_data <- 
+    
+    # also save the gene annotation data
+    gene_anno <- gex_data[,1:2]
+    gex_data <- gex_data %>% remove_rownames() %>% column_to_rownames(var="Hugo_Symbol") %>% dplyr::select(-Entrez_Gene_Id)
+    gex_data <- gex_data[,colnames(gex_data) %in% anno$sampleID]
+    
+    # remove samples from anno that are not in the gex data
+    anno <- anno %>% filter(sampleID %in% colnames(gex_data))
+    anno <- anno %>% remove_rownames %>% column_to_rownames(var="sampleID")
+    
+    gex_data <- rownames_to_column(gex_data, "ensembl_gene_id") # name the column ensembl even though they arent so i can reuse the same functions as for the other cohorts
+    
+}
 
 #######################################################################
 # 3. metagene definitions (ensembl and entrez ids)
@@ -197,10 +242,6 @@ mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
 # round
 mg.pvals <- round(mg.pvals, digits = 5)
 
-## remove later
-source("scripts/2_transcriptomic/src/tscr_functions.R")
-
-
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 mg.pvals["Basal",]
 quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))
@@ -259,18 +300,12 @@ ggsave(filename = paste(output.path,cohort,"_","Stroma","_mg_boxplot.pdf", sep =
        units = "mm")
 
 
-###############
-###############
-###############
-###############
-###############
-###############
-###############
-###############
+###########################################################################
+###########################################################################
 
 
 
-} else if (cohort=="Metabric") {
+#} else if (cohort=="Metabric") {
 # load annotation data
 load("Data/Metabric/Annotations/Merged_annotations.RData")
 anno <- as.data.frame(anno) %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% filter(grepl('ERpHER2n', ClinGroup)) %>% dplyr::rename(sampleID=METABRIC_ID) %>% dplyr::select(sampleID,PAM50)

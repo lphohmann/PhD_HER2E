@@ -94,6 +94,6 @@ quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
               axis.title.y = element_text(size = 35),
               legend.position = "none") +
         scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
-        scale_x_discrete(labels = c("HER2E","LUMA","LUMB"))
+        scale_x_discrete(labels = c("HER2E","LUMA","LUMB")) # check that these are in the correct order
     print(plot)
 }
