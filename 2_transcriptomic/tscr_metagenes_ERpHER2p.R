@@ -1,4 +1,4 @@
-# Script: Metagene analysis in SCAN-B and METABRIC
+# Script: Metagene analysis for HER2E and ERpHER2p contrast groups in SCAN-B 
 
 # TODO:
 
@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -35,62 +35,21 @@ library(ggsignif)
 #######################################################################
 
 # for SCANB
-if (cohort=="SCANB") {
+# load annotation data
+clin.rel4 <- as.data.frame(read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
     
-    # load annotation data
-    clin.rel4 <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
+# load gex data
+load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
     
-    # load gex data
-    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
+# select subgroup data
+anno <- clin.rel4 %>% 
+    filter(Follow.up.cohort==TRUE) %>% 
+    filter(ER=="Positive") %>% 
+    dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+    # %>% dplyr::select(sampleID,PAM50)
     
-    # select subgroup data
-    anno <- clin.rel4 %>% 
-        filter(Follow.up.cohort==TRUE) %>% 
-        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(ER=="Positive" & HER2=="Negative") %>% 
-        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
-        # %>% dplyr::select(sampleID,PAM50)
-    
-    # filter to select subgroup gex data
-    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
-    
-} else if (cohort="METABRIC") {
-    
-    # load annotation data
-    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
-
-    # load gex data
-    gex.data <- as.data.frame(
-        read.table(
-            "Data/Metabric/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% 
-        row_to_names(row_number = 1) %>% 
-        na.omit() %>% 
-        distinct(Hugo_Symbol) # gex_data[!duplicated(gex_data$Hugo_Symbol),]
-        
-    
-    # extract relevant variables
-    anno <- anno %>% 
-        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
-        # %>% dplyr::select(sampleID,PAM50)
-    
-    
-    # TRY TO DO THIS WHEN LOADING THE DATA
-    
-    # also save the gene annotation data
-    gene_anno <- gex_data[,1:2]
-    gex_data <- gex_data %>% remove_rownames() %>% column_to_rownames(var="Hugo_Symbol") %>% dplyr::select(-Entrez_Gene_Id)
-    gex_data <- gex_data[,colnames(gex_data) %in% anno$sampleID]
-    
-    # remove samples from anno that are not in the gex data
-    anno <- anno %>% filter(sampleID %in% colnames(gex_data))
-    anno <- anno %>% remove_rownames %>% column_to_rownames(var="sampleID")
-    
-    gex_data <- rownames_to_column(gex_data, "ensembl_gene_id") # name the column ensembl even though they arent so i can reuse the same functions as for the other cohorts
-    
-}
+# filter to select subgroup gex data
+gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
 
 #######################################################################
 # 3. metagene definitions (ensembl and entrez ids)
@@ -111,23 +70,21 @@ ensembl.ids <- as.data.frame(gex.data) %>%
 ensembl.ids <- gsub("\\..*","",ensembl.ids) # remove characters after dot
 
 # convert 
-#mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-#                         dataset = "hsapiens_gene_ensembl",
-#                         host = "http://www.ensembl.org")
-#res <- getBM(filters = "ensembl_gene_id",
-#                 attributes = c("ensembl_gene_id","entrezgene_id"),
-#                 values = ensembl.ids, 
-#                 mart = mart)
-#save(res,file = paste(data.path,"mart_res.RData",sep="") )
-load(paste(data.path,"mart_res.RData",sep=""))
+mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                         dataset = "hsapiens_gene_ensembl",
+                         host = "http://www.ensembl.org")
+res <- getBM(filters = "ensembl_gene_id",
+                 attributes = c("ensembl_gene_id","entrezgene_id"),
+                 values = ensembl.ids, 
+                 mart = mart)
 
 # select only the ids that are relevant for the metagenes
 relevant.res <- res %>% 
     filter(entrezgene_id %in% metagene.def$entrezgene_id) #pull(ensembl_gene_id)
 
 # no duplicates
-#length(relevant.ensembl.ids)
-#length(unique(relevant.ensembl.ids))
+#length(relevant.res$entrezgene_id)
+#length(unique(relevant.res$entrezgene_id))
 
 # genes in the metag def
 m.genes <- metagene.def %>% pull(gene_symbol)
@@ -152,8 +109,9 @@ gex.data <- gex.data %>%
     filter(ensembl_gene_id %in% metagene.def$ensembl_gene_id) %>% 
     column_to_rownames(var="ensembl_gene_id")
 
-# scale the data
+# scale the data (over entire ER positive cohort)
 gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
+
 scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) %>% # for some rows there may be 0 variance so i have to handle these cases
     rownames_to_column(var="ensembl_gene_id") 
 
@@ -221,23 +179,88 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 # 5. statistics for metagene scores between groups
 #######################################################################
 
-# get pvalues
-mg.pvals <- mgtest(metagene.scores,anno)
+# get pvalues CANT USE THIS FUNCTION 
+#mg.pvals <- mgtest(metagene.scores,anno)
 
 # save as a summarized object
-obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50, ER, HER2))
-mg.scores <- metagene.scores %>% rownames_to_column(var="sampleID")
+# create group label column (ERpHER2nHER2E, ERpHER2p, ERpHER2pHER2E)
+obj.anno <- anno %>% 
+    dplyr::select(c(sampleID, PAM50, ER, HER2))
+mg.scores <- metagene.scores %>% 
+    rownames_to_column(var="sampleID")
 mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
 
 #mg.anno.list <- list(mg.anno, mg.pvals)
-#save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 
 #######################################################################
 # 5. compare scaled metagene scores between groups
 #######################################################################
 
+
 # round
-mg.pvals <- round(mg.pvals, digits = 5)
+#mg.pvals <- round(mg.pvals, digits = 5)
+
+
+
+# create quickplot function for erpher2p etc. 
+
+test.data <- mg.anno %>% 
+    mutate(Group = case_when(
+        HER2 == "Positive" & PAM50 == "Her2" ~ "HER2pHER2E",
+        HER2 == "Negative" & PAM50 == "Her2" ~ "HER2nHER2E",
+        HER2 == "Positive" ~ "HER2p"))
+
+#how can i reorder boxplots
+ggplot() +
+    geom_boxplot(aes(
+        x=test.data[grep("HER2pHER2E", test.data$Group),"Group"],
+        y=test.data[grep("HER2pHER2E", test.data$Group),"Basal"],
+        fill=test.data[grep("HER2pHER2E", test.data$Group),]$Group),
+        alpha=0.7, size=1.5, outlier.size = 5) +
+    
+    geom_boxplot(aes(
+        x=test.data[grep("HER2nHER2E", test.data$Group),"Group"],
+        y=test.data[grep("HER2nHER2E", test.data$Group),"Basal"],
+        fill=test.data[grep("HER2nHER2E", test.data$Group),]$Group),
+        alpha=0.7, size=1.5, outlier.size = 5) +
+    
+    geom_boxplot(aes(
+        x=test.data[grep("HER2p", test.data$Group),"Group"],
+        y=test.data[grep("HER2p", test.data$Group),"Basal"],
+        fill=test.data[grep("HER2p", test.data$Group),]$Group),
+        alpha=0.7, size=1.5, outlier.size = 5) +
+    
+    xlab("Subtype") +
+    ylab("Metagene score") +
+    ggtitle(paste("Basal"," metagene scores in HER2 subtypes (ERp)",sep="")) +
+    theme(axis.text.x = element_text(size = 30),
+          axis.title.x = element_text(size = 35),
+          axis.text.y = element_text(size = 30),
+          axis.title.y = element_text(size = 35),
+          legend.position = "none") +
+    scale_fill_manual(values=c(HER2p = "#2176d5", HER2pHER2E = "#34c6eb", HER2nHER2E ="#d334eb")) +
+    ylim(c(-3,4)) #+ 
+    #geom_signif(comparisons=list(c("HER2nHER2E", "HER2pHER2E")), annotations="signs", tip_length = 0.02, vjust=0.01, y_position = 2.5, size = 2, textsize = 15) +
+    #geom_signif(comparisons=list(c("HER2nHER2E", "HER2p")), annotations="signs", tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) 
+# add significance indication
+
+
+    scale_x_discrete(labels = c("HER2E","LUMA","LUMB")) # check that these are in the correct order
+print(plot)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 mg.pvals["Basal",]

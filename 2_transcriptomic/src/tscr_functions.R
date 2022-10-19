@@ -11,7 +11,8 @@
 mgscore <- function(metagene,metagene.def,gex.data) {
     
     # extract the gex for each metagene
-    mg.ids <- filter(metagene.def, module == metagene) %>% pull(ensembl_gene_id)
+    mg.ids <- filter(metagene.def, module == metagene) %>% 
+        pull(ensembl_gene_id)
     
     # filter out the corresponding gex data
     mg.gex.data <- gex.data %>% 
@@ -19,7 +20,8 @@ mgscore <- function(metagene,metagene.def,gex.data) {
         column_to_rownames(var = "ensembl_gene_id") 
     
     # calc. the score for each sample
-    result <- as.data.frame(apply(mg.gex.data, 2, mean)) %>% dplyr::rename(!!metagene := "apply(mg.gex.data, 2, mean)")
+    result <- as.data.frame(apply(mg.gex.data, 2, mean)) %>% 
+        dplyr::rename(!!metagene := "apply(mg.gex.data, 2, mean)")
     
     return(result)
 }
