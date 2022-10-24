@@ -55,7 +55,7 @@ if (cohort=="SCANB") {
     # filter to select subgroup gex data
     gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
     
-} else if (cohort="METABRIC") {
+} else if (cohort=="METABRIC") {
     
     # load annotation data
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
@@ -111,15 +111,15 @@ ensembl.ids <- as.data.frame(gex.data) %>%
 ensembl.ids <- gsub("\\..*","",ensembl.ids) # remove characters after dot
 
 # convert 
-#mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-#                         dataset = "hsapiens_gene_ensembl",
-#                         host = "http://www.ensembl.org")
-#res <- getBM(filters = "ensembl_gene_id",
-#                 attributes = c("ensembl_gene_id","entrezgene_id"),
-#                 values = ensembl.ids, 
-#                 mart = mart)
+mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                         dataset = "hsapiens_gene_ensembl",
+                         host = "http://www.ensembl.org")
+res <- getBM(filters = "ensembl_gene_id",
+                 attributes = c("ensembl_gene_id","entrezgene_id"),
+                 values = ensembl.ids, 
+                 mart = mart)
 #save(res,file = paste(data.path,"mart_res.RData",sep="") )
-load(paste(data.path,"mart_res.RData",sep=""))
+#load(paste(data.path,"mart_res.RData",sep=""))
 
 # select only the ids that are relevant for the metagenes
 relevant.res <- res %>% 
@@ -239,63 +239,43 @@ mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
 # round
 mg.pvals <- round(mg.pvals, digits = 5)
 
+# list to save plots
+plot.list <- list()
+
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 mg.pvals["Basal",]
-quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","Basal","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))))
 
 mg.pvals["Early_response",]
-quickplot(mg.anno, "Early_response", "****", "ns", 4, c(-2,4.6))
-ggsave(filename = paste(output.path,cohort,"_","Early_response","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Early_response", "****", "ns", 4, c(-2,4.6))))
 
 mg.pvals["IR",]
-quickplot(mg.anno, "IR", "****", "****", 5, c(-2,5.6))
-ggsave(filename = paste(output.path,cohort,"_","IR","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "IR", "****", "****", 5, c(-2,5.6))))
 
 mg.pvals["Lipid",]
-quickplot(mg.anno, "Lipid", "****", "ns", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","Lipid","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Lipid", "****", "ns", 3.5, c(-1.5,4))))
 
 mg.pvals["Mitotic_checkpoint",]
-quickplot(mg.anno, "Mitotic_checkpoint", "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste(output.path,cohort,"_","Mitotic_checkpoint","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Mitotic_checkpoint", "****", "ns", 4.5, c(-2,5))))
 
 mg.pvals["Mitotic_progression",]
-quickplot(mg.anno, "Mitotic_progression", "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste(output.path,cohort,"_","Mitotic_progression","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Mitotic_progression", "****", "ns", 4.5, c(-2,5))))
 
 mg.pvals["SR",]
-quickplot(mg.anno, "SR", "****", "****", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","SR","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "SR", "****", "****", 3.5, c(-1.5,4))))
 
 mg.pvals["Stroma",]
-quickplot(mg.anno, "Stroma", "ns", "****", 2.9, c(-3.5,3.5))
-ggsave(filename = paste(output.path,cohort,"_","Stroma","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(quickplot(mg.anno, "Stroma", "ns", "****", 2.9, c(-3.5,3.5))))
 
+#plot
+pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
+    onefile = TRUE, width = 30, height = 30) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()
 
 ###########################################################################
 ###########################################################################

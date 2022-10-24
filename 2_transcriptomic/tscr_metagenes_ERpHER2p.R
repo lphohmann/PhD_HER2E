@@ -28,6 +28,8 @@ library(readxl)
 library(biomaRt)
 library(gridExtra)
 library(ggsignif)
+library(forcats)
+
     
 #######################################################################
 # 2. Cohort-specific data preprocessing including selection of  
@@ -175,14 +177,11 @@ stroma.scores <- mgscore(metagene = "Stroma",
 
 metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
+
 #######################################################################
-# 5. statistics for metagene scores between groups
+# create summarized object
 #######################################################################
 
-# get pvalues CANT USE THIS FUNCTION 
-#mg.pvals <- mgtest(metagene.scores,anno)
-
-# save as a summarized object
 # create group label column (ERpHER2nHER2E, ERpHER2p, ERpHER2pHER2E)
 obj.anno <- anno %>% 
     dplyr::select(c(sampleID, PAM50, ER, HER2))
@@ -190,135 +189,77 @@ mg.scores <- metagene.scores %>%
     rownames_to_column(var="sampleID")
 mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
 
-#mg.anno.list <- list(mg.anno, mg.pvals)
+# data prep for plotting
+mg.anno <- mg.anno %>% 
+    mutate(Group = case_when(
+        HER2 == "Positive" & PAM50 == "Her2" ~ "HER2pHER2E",
+        HER2 == "Negative" & PAM50 == "Her2" ~ "HER2nHER2E",
+        HER2 == "Positive" ~ "HER2p")) %>% 
+    mutate(Group = fct_relevel(Group,"HER2p","HER2pHER2E","HER2nHER2E")) # doesnt matter cant reorder boxplots
+
+#######################################################################
+# 5. statistics for metagene scores between groups
+#######################################################################
+
+# get pvalues 
+mg.pvals <- her2p_mgtest(metagene.scores,mg.anno)
 
 #######################################################################
 # 5. compare scaled metagene scores between groups
 #######################################################################
 
-
 # round
-#mg.pvals <- round(mg.pvals, digits = 5)
+mg.pvals <- round(mg.pvals, digits = 5)
+#mg.pvals["Basal",]
 
-
-
-# create quickplot function for erpher2p etc. 
-
-test.data <- mg.anno %>% 
-    mutate(Group = case_when(
-        HER2 == "Positive" & PAM50 == "Her2" ~ "HER2pHER2E",
-        HER2 == "Negative" & PAM50 == "Her2" ~ "HER2nHER2E",
-        HER2 == "Positive" ~ "HER2p"))
-
-#how can i reorder boxplots
-ggplot() +
-    geom_boxplot(aes(
-        x=test.data[grep("HER2pHER2E", test.data$Group),"Group"],
-        y=test.data[grep("HER2pHER2E", test.data$Group),"Basal"],
-        fill=test.data[grep("HER2pHER2E", test.data$Group),]$Group),
-        alpha=0.7, size=1.5, outlier.size = 5) +
-    
-    geom_boxplot(aes(
-        x=test.data[grep("HER2nHER2E", test.data$Group),"Group"],
-        y=test.data[grep("HER2nHER2E", test.data$Group),"Basal"],
-        fill=test.data[grep("HER2nHER2E", test.data$Group),]$Group),
-        alpha=0.7, size=1.5, outlier.size = 5) +
-    
-    geom_boxplot(aes(
-        x=test.data[grep("HER2p", test.data$Group),"Group"],
-        y=test.data[grep("HER2p", test.data$Group),"Basal"],
-        fill=test.data[grep("HER2p", test.data$Group),]$Group),
-        alpha=0.7, size=1.5, outlier.size = 5) +
-    
-    xlab("Subtype") +
-    ylab("Metagene score") +
-    ggtitle(paste("Basal"," metagene scores in HER2 subtypes (ERp)",sep="")) +
-    theme(axis.text.x = element_text(size = 30),
-          axis.title.x = element_text(size = 35),
-          axis.text.y = element_text(size = 30),
-          axis.title.y = element_text(size = 35),
-          legend.position = "none") +
-    scale_fill_manual(values=c(HER2p = "#2176d5", HER2pHER2E = "#34c6eb", HER2nHER2E ="#d334eb")) +
-    ylim(c(-3,4)) #+ 
-    #geom_signif(comparisons=list(c("HER2nHER2E", "HER2pHER2E")), annotations="signs", tip_length = 0.02, vjust=0.01, y_position = 2.5, size = 2, textsize = 15) +
-    #geom_signif(comparisons=list(c("HER2nHER2E", "HER2p")), annotations="signs", tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) 
-# add significance indication
-
-
-    scale_x_discrete(labels = c("HER2E","LUMA","LUMB")) # check that these are in the correct order
-print(plot)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# plot
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
+# cant add signif bars automatically will have to do in figure editing software
+#source("scripts/2_transcriptomic/src/tscr_functions.R")
+
+plot.list <- list()
+#
 mg.pvals["Basal",]
-quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","Basal","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Basal")))
+#
 mg.pvals["Early_response",]
-quickplot(mg.anno, "Early_response", "****", "ns", 4, c(-2,4.6))
-ggsave(filename = paste(output.path,cohort,"_","Early_response","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Early_response")))
+#
 mg.pvals["IR",]
-quickplot(mg.anno, "IR", "****", "****", 5, c(-2,5.6))
-ggsave(filename = paste(output.path,cohort,"_","IR","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "IR")))
+#
 mg.pvals["Lipid",]
-quickplot(mg.anno, "Lipid", "****", "ns", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","Lipid","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Lipid")))
+#
 mg.pvals["Mitotic_checkpoint",]
-quickplot(mg.anno, "Mitotic_checkpoint", "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste(output.path,cohort,"_","Mitotic_checkpoint","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Mitotic_checkpoint")))
+#
 mg.pvals["Mitotic_progression",]
-quickplot(mg.anno, "Mitotic_progression", "****", "ns", 4.5, c(-2,5))
-ggsave(filename = paste(output.path,cohort,"_","Mitotic_progression","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Mitotic_progression")))
+#
 mg.pvals["SR",]
-quickplot(mg.anno, "SR", "****", "****", 3.5, c(-1.5,4))
-ggsave(filename = paste(output.path,cohort,"_","SR","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
-
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "SR")))
+#
 mg.pvals["Stroma",]
-quickplot(mg.anno, "Stroma", "ns", "****", 2.9, c(-3.5,3.5))
-ggsave(filename = paste(output.path,cohort,"_","Stroma","_mg_boxplot.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
+plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
+          metagene = "Stroma")))
 
+#plot
+pdf(file = paste(output.path,cohort,"_HER2p_metagenes.pdf", sep=""), 
+    onefile = TRUE, width = 30, height = 30) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()
 
 ###########################################################################
 ###########################################################################
