@@ -290,7 +290,7 @@ anno <- as.data.frame(anno) %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>%
 # load gex data
 gex_data <- as.data.frame(read.table("Data/Metabric/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% row_to_names(row_number = 1) # samples = 1906 - genes = 24368
 
-# remove rowns with na and duplicates
+# remove rows with na and duplicates
 gex_data <- na.omit(gex_data)
 gex_data <- gex_data[!duplicated(gex_data$Hugo_Symbol),]
 
