@@ -29,27 +29,79 @@ library(org.Hs.eg.db)
 library(enrichR)
 
 #######################################################################
-# Load data and convert to entrez id
+# Core clusters
 #######################################################################
 
 # load data
 clust.anno <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Core_Clusters_6_Info_ann.txt"))
 
 # convert hgnc to entrez ids 
-hgnc.ids <- clust.anno %>% pull(HGNC) 
-hs <- org.Hs.eg.db
-res <- select(hs, 
-       keys = hgnc.ids,
-       columns = c("ENTREZID", "SYMBOL"),
-       keytype = "SYMBOL") %>% dplyr::rename(HGNC=SYMBOL)
-head(clust.anno)
-head(res)
+# hgnc.ids <- clust.anno %>% pull(HGNC) 
+# hs <- org.Hs.eg.db
+# res <- select(hs, 
+#               keys = hgnc.ids,
+#               columns = c("ENTREZID", "SYMBOL"),
+#               keytype = "SYMBOL") %>% dplyr::rename(HGNC=SYMBOL)
+
 # merge
-clust.anno <- as.data.frame(merge(clust.anno,res,by="HGNC"))
+#clust.anno <- as.data.frame(merge(clust.anno,res,by="HGNC"))
 
 # pwe analysis
 setEnrichrSite("Enrichr") 
 dbs <- listEnrichrDbs() # see avaiable dbs and select 
-dbs <- c("GO_Molecular_Function_2021", "GO_Biological_Process_2021","KEGG_2021_Human")
+dbs <- c("KEGG_2021_Human") #"GO_Molecular_Function_2021", "GO_Biological_Process_2021
+
 # for each cluster
-enriched <- enrichr(c("Runx1", "Gfi1", "Gfi1b", "Spi1", "Gata1", "Kdr"), dbs)
+pdf(file = paste(output.path,cohort,"_PAM50coreclust_pwe.pdf", sep=""), onefile = TRUE )
+for(i in 1:length(unique(clust.anno$ClusterNumber))) { 
+    data <- clust.anno %>% filter(ClusterNumber == i)
+    clust <- paste("core.cluster.", i, sep = "")
+    #assign(clust, enrichr(data$HGNC, dbs)) # will seperate for plotting
+    res <- enrichr(data$HGNC, dbs)
+    if (nrow(res[[1]])>0) {
+        plot <- plotEnrich(res[[1]], showTerms = 5, numChar = 40, y = "Count", orderBy = "P.value", title = paste(clust))
+        print(plot)
+    } else {}
+    assign(clust, res)
+}
+
+dev.off()
+
+#######################################################################
+# Spiral clusters
+#######################################################################
+
+# load data
+clust.anno <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt"))
+
+# convert hgnc to entrez ids 
+# hgnc.ids <- clust.anno %>% pull(HGNC) 
+# hs <- org.Hs.eg.db
+# res <- select(hs, 
+#               keys = hgnc.ids,
+#               columns = c("ENTREZID", "SYMBOL"),
+#               keytype = "SYMBOL") %>% dplyr::rename(HGNC=SYMBOL)
+
+# merge
+#clust.anno <- as.data.frame(merge(clust.anno,res,by="HGNC"))
+
+# pwe analysis
+setEnrichrSite("Enrichr") 
+dbs <- listEnrichrDbs() # see avaiable dbs and select 
+dbs <- c("KEGG_2021_Human") #"GO_Molecular_Function_2021", "GO_Biological_Process_2021
+
+# for each cluster
+pdf(file = paste(output.path,cohort,"_PAM50spiralclust_pwe.pdf", sep=""), onefile = TRUE )
+for(i in 1:length(unique(clust.anno$ClusterNumber))) { 
+    data <- clust.anno %>% filter(ClusterNumber == i)
+    clust <- paste("spiral.cluster.", i, sep = "")
+    #assign(clust, enrichr(data$HGNC, dbs)) # will seperate for plotting
+    res <- enrichr(data$HGNC, dbs)
+    if (nrow(res[[1]])>0) {
+        plot <- plotEnrich(res[[1]], showTerms = 5, numChar = 40, y = "Count", orderBy = "P.value", title = paste(clust))
+        print(plot)
+    } else {}
+    assign(clust, res)
+}
+
+dev.off()
