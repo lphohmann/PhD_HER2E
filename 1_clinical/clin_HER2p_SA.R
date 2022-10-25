@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "Metabric" # Metabric or SCANB 
+cohort <- "SCANB" # SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -27,175 +27,59 @@ library(survival)
 library(tidyverse)
 library(survminer)
 library(grid)
+library(readxl)
 
 #######################################################################
-# Cohort-specific data preprocessing including selection of  
-# the clinical ER+Her2- subtyped samples
+# data preprocessing including selection of  
+# the clinical HER2p subtyped samples
 #######################################################################
 
-# for metabric cohort
-if (cohort=="Metabric") {
-    # load data
-    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
-    anno$Chemotherapy[is.na(anno$Chemotherapy)] <- 0
-    anno$Endocrine[is.na(anno$Endocrine)] <- 0
-    
-    # extract relevant variables
-    survdata <- anno %>% 
-        dplyr::select(
-            METABRIC_ID, Age, Grade, TumSize,
-            lymph_nodes_positive, ClinGroup, 
-            PAM50, OS, OSbin, DSS, DSSbin, 
-            DRFI, DRFIbin, RFI, RFIbin, 
-            IDFS, IDFSbin, Chemotherapy, Endocrine) %>% 
-        mutate(Treatment = case_when(Chemotherapy==1 & Endocrine==1 ~ "CE",
-                                     Chemotherapy==0 & Endocrine==1 ~ "E")) %>% 
-        mutate(LN = ifelse(lymph_nodes_positive > 0, "N+", "N0")) %>% 
-        dplyr::select(-c(lymph_nodes_positive)) %>% 
-        mutate(across(c(OS,DSS,DRFI,RFI,IDFS), (function(years) return(years*365)))) %>% 
-        filter(grepl('ERpHER2n', ClinGroup))
-    
-    # getting correct structure
-    survdata$DSS <- as.numeric(survdata$DSS)
-    survdata$DSSbin <- as.numeric(survdata$DSSbin)
-    survdata$DRFI <- as.numeric(survdata$DRFI)
-    survdata$DRFIbin <- as.numeric(survdata$DRFIbin)
-    survdata$IDFS <- as.numeric(survdata$IDFS)
-    survdata$IDFSbin <- as.numeric(survdata$IDFSbin)
-    
-# for SCANB cohort
-} else if (cohort=="SCANB") {
-    # load data
-    load("data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_with_ExternalReview_Bosch_data.RData")
-    # extract relevant variables
-    survdata <- pam50.frame %>% 
-        filter(fuV8 == 1) %>% 
-        filter(!is.na(treatment_Bosch)) %>% # only include the review data
-        mutate(relapse_Bosch = ifelse(relapse_Bosch,1,0)) %>% 
-        filter(ERpHER2n_Bosch==1) %>%
-        mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
-                                     !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
-        dplyr::rename(
-            RFI = relapseTime_Bosch,
-            RFIbin = relapse_Bosch, 
-            TumSize = TumSize_Bosch,
-            PAM50 = PAM50_NCN_rel4,
-            Grade = NHG_Bosch,
-            LN = LNstatus_Bosch) %>%
-        dplyr::select(
-            rba_rel4, PAM50, OS, OSbin, TumSize, 
-            Age, Grade, LN, RFI, RFIbin, Treatment)
-}
+# load data
+clin.rel4 <- as.data.frame(read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
 
-# getting correct structure for common variables
-survdata$PAM50 <- as.factor(survdata$PAM50)
-survdata$Age <- as.numeric(survdata$Age)
-survdata$TumSize <- as.numeric(survdata$TumSize)
-survdata$Grade <- as.factor(survdata$Grade) 
-survdata$LN <- as.factor(survdata$LN) 
-survdata$LN <- relevel(survdata$LN, ref = "N0")
-
-# outcome measures
-survdata$OS <- as.numeric(survdata$OS)
-survdata$OSbin <- as.numeric(survdata$OSbin)
-survdata$RFI <- as.numeric(survdata$RFI)
-survdata$RFIbin <- as.numeric(survdata$RFIbin)
-
+clin.rel4 <- clin.rel4 %>% 
+    filter(Follow.up.cohort==TRUE) %>% 
+    filter(HER2 == "Positive") %>% 
+    filter(grepl("Immu",TreatGroup)) %>% 
+    dplyr::rename(OS_rel4 = OS_days,
+                  OSbin_rel4 = OS_event,
+                  RFI_rel4 = RFi_days,
+                  RFIbin_rel4 = RFi_event,
+                  DRFI_rel4 = DRFi_days,
+                  DRFIbin_rel4 = DRFi_event,
+                  PAM50 = NCN.PAM50) %>% 
+    mutate(PAM50= ifelse(PAM50=="Her2","HER2E","nonHER2E"))
+ 
+#table(clin.rel4$PAM50) 
 #######################################################################
-# Defining the PAM50 subtypes of interest
+# Survival Analyses
 #######################################################################
 
-# filter to only include subjects that are PAM50 == Her2 | LumA | LumB
-survdata <- survdata %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) # basal
-survdata$PAM50 <- droplevels(survdata$PAM50) # drop empty levels
-barplot(table(survdata$PAM50))
+pdf(file = paste(output.path,cohort,"_","HER2p_KMplots.pdf", sep=""), onefile = TRUE, width = 21, height = 14.8) 
 
-#######################################################################
-# 3. Relevel to use HER2E as base for comparison
-#######################################################################
+# OS
+# ET OS rel4
+HER2p_KMplot(group.cohort.version = "(HER2p; cohort: rel4)",
+       OMstring = "Overall survival",
+       OM = clin.rel4$OS_rel4,
+       OMbin = clin.rel4$OSbin_rel4,
+       sdata = clin.rel4)
 
-# relevel and check
-levels(survdata$PAM50)
-survdata$PAM50 <- relevel(survdata$PAM50, ref = "Her2")
-levels(survdata$PAM50)
 
-#######################################################################
-# 4. Investigate the EC treatment group
-#######################################################################
-
-# define the group
-EC_group <- survdata %>% filter(Treatment == "CE")
-EC_group.surv <- Surv(EC_group[["RFI"]], EC_group[["RFIbin"]])
-#table(EC_group$PAM50) 
-
-##########################
-
-# univariate cox regression + forest plot
-unicox(EC_group,EC_group.surv)
-
-##########################
-
-# KM plot
-KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
+# RFI
+# ET RFI rel4
+HER2p_KMplot(group.cohort.version = "(HER2p; cohort: rel4)",
        OMstring = "Recurrence-free interval",
-       OM = EC_group$RFI,
-       OMbin = EC_group$RFIbin,
-       sdata = EC_group)
+       OM = clin.rel4$RFI_rel4,
+       OMbin = clin.rel4$RFIbin_rel4,
+       sdata = clin.rel4)
 
-# save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_EC.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
+# DRFI
+# ET DRFI rel4
+HER2p_KMplot(group.cohort.version = "(HER2p; cohort: rel4)",
+       OMstring = "Distant recurrence-free interval",
+       OM = clin.rel4$DRFI_rel4,
+       OMbin = clin.rel4$DRFIbin_rel4,
+       sdata = clin.rel4)
 
-##########################
-
-# Multivariate Cox proportional hazards model
-mvcox(EC_group,EC_group.surv)
-
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_EC.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
-
-#######################################################################
-# 7. Investigate the Endo treatment group
-#######################################################################
-
-# define the group
-E_group <- survdata %>% filter(Treatment == "E")
-E_group.surv <- Surv(E_group[["RFI"]], E_group[["RFIbin"]])
-#table(E_group$PAM50)
-
-##########################
-
-# univariate cox regression + forest plot
-unicox(E_group,E_group.surv)
-
-##########################
-
-# KM plot
-KMplot(group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
-       OMstring = "Recurrence-free interval",
-       OM = E_group$RFI,
-       OMbin = E_group$RFIbin,
-       sdata = E_group)
-
-# save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_E.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
-
-##########################
-
-# Multivariate Cox proportional hazards model
-mvcox(E_group,E_group.surv)
-
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_E.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
-
-#######################################################################
-#######################################################################
+dev.off()
