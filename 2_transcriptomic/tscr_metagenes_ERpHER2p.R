@@ -253,7 +253,7 @@ plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
 
 #plot
 pdf(file = paste(output.path,cohort,"_HER2p_metagenes.pdf", sep=""), 
-    onefile = TRUE, width = 30, height = 30) 
+    onefile = TRUE, width = 15, height = 15) 
 
 for (i in 1:length(plot.list)) {
     print(plot.list[[i]])

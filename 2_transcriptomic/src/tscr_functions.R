@@ -99,6 +99,7 @@ quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
               axis.title.y = element_text(size = 35),
+              plot.title = element_text(size=30),
               legend.position = "none") +
         scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
         scale_x_discrete(labels = c("HER2E","LUMA","LUMB")) # check that these are in the correct order
@@ -134,6 +135,7 @@ her2p_quickplot <- function(mg.anno, metagene) {
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
               axis.title.y = element_text(size = 35),
+              plot.title = element_text(size=30),
               legend.position = "none") +
         scale_fill_manual(values=c(HER2p = "#d8b365", HER2pHER2E = "#5ab4ac", HER2nHER2E ="#d334eb")) +
         scale_x_discrete(limits = levels(mg.anno$Group)) 
