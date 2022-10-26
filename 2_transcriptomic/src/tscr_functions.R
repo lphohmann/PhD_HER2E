@@ -110,23 +110,9 @@ quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
 ### functions for metagenes script (HER2pHER2E,HER2p) ###
 
 # quickplot function for her2p samples
-her2p_quickplot <- function(mg.anno, metagene) { 
-    plot <- ggplot() +
-        geom_boxplot(aes(
-            x=mg.anno[grep("HER2pHER2E", mg.anno$Group),"Group"],
-            y=mg.anno[grep("HER2pHER2E", mg.anno$Group),metagene],
-            fill=mg.anno[grep("HER2pHER2E", mg.anno$Group),]$Group),
-            alpha=0.7, size=1.5, outlier.size = 5) +
-        geom_boxplot(aes(
-            x=mg.anno[grep("HER2nHER2E", mg.anno$Group),"Group"],
-            y=mg.anno[grep("HER2nHER2E", mg.anno$Group),metagene],
-            fill=mg.anno[grep("HER2nHER2E", mg.anno$Group),]$Group),
-            alpha=0.7, size=1.5, outlier.size = 5) +
-        geom_boxplot(aes(
-            x=mg.anno[grep("HER2p", mg.anno$Group),"Group"],
-            y=mg.anno[grep("HER2p", mg.anno$Group),metagene],
-            fill=mg.anno[grep("HER2p", mg.anno$Group),]$Group),
-            alpha=0.7, size=1.5, outlier.size = 5) +
+her2p_quickplot <- function(mg.anno, metagene, pher2e.sig, pher2e.pos, nonher2e.sig, nonher2e.pos, ylim) { 
+    plot <- ggplot(mg.anno, aes(x=as.factor(Group),y=.data[[metagene]],fill=as.factor(Group))) +
+        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab("Subtype") +
         ylab("Metagene score") +
         ggtitle(paste(
@@ -137,21 +123,22 @@ her2p_quickplot <- function(mg.anno, metagene) {
               axis.title.y = element_text(size = 35),
               plot.title = element_text(size=30),
               legend.position = "none") +
-        scale_fill_manual(values=c(HER2p = "#d8b365", HER2pHER2E = "#5ab4ac", HER2nHER2E ="#d334eb")) +
-        scale_x_discrete(limits = levels(mg.anno$Group)) 
-    
-    
+        scale_fill_manual(values=c(HER2p_nonHER2E = "#d8b365", HER2p_HER2E = "#5ab4ac", HER2n_HER2E ="#d334eb")) +
+        scale_x_discrete(limits = levels(mg.anno$Group)) +
+        ylim(ylim) +
+        geom_signif(comparisons=list(c("HER2n_HER2E", "HER2p_nonHER2E")), annotations=nonher2e.sig, tip_length = 0.02, vjust=0.01, y_position = nonher2e.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c("HER2n_HER2E", "HER2p_HER2E")), annotations=pher2e.sig, tip_length = 0.02, vjust=0.01, y_position = pher2e.pos, size = 2, textsize = 15) 
+        
     return(plot)
 }
-
 
 # function to calc. the p value for each metagene in her2p,her2pher2e,her2e
 her2p_mgtest <- function(metagene.scores,anno) {
     
     # sample ids 
-    HER2nHER2E.cols <- anno %>% filter(Group=="HER2nHER2E") %>% pull(sampleID)
-    HER2pHER2E.cols <- anno %>% filter(Group=="HER2pHER2E") %>% pull(sampleID)
-    HER2p.cols <- anno %>% filter(Group=="HER2p") %>% pull(sampleID)
+    HER2nHER2E.cols <- anno %>% filter(Group=="HER2n_HER2E") %>% pull(sampleID)
+    HER2pHER2E.cols <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sampleID)
+    HER2p.cols <- anno %>% filter(Group=="HER2p_nonHER2E") %>% pull(sampleID)
     
     # transpose
     tmg <- t(metagene.scores)
@@ -192,8 +179,8 @@ her2p_mgtest <- function(metagene.scores,anno) {
     
     # add the results to the dataframe
     results <- as.data.frame(tmg) %>% 
-        add_column(HER2pHER2E_pval = HER2nHER2E.vs.HER2pHER2E.pval,HER2p_pval = HER2nHER2E.vs.HER2p.pval) %>% 
-        dplyr::select(HER2pHER2E_pval,HER2p_pval)
+        add_column(HER2p_HER2E_pval = HER2nHER2E.vs.HER2pHER2E.pval,HER2p_nonHER2E_pval = HER2nHER2E.vs.HER2p.pval) %>% 
+        dplyr::select(HER2p_HER2E_pval,HER2p_nonHER2E_pval)
     
     return(results)
 }

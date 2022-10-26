@@ -65,7 +65,6 @@ HER2p_KMplot(group.cohort.version = "(HER2p; cohort: rel4)",
        OMbin = clin.rel4$OSbin_rel4,
        sdata = clin.rel4)
 
-
 # RFI
 # ET RFI rel4
 HER2p_KMplot(group.cohort.version = "(HER2p; cohort: rel4)",
