@@ -102,7 +102,7 @@ quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
               plot.title = element_text(size=30),
               legend.position = "none") +
         scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
-        scale_x_discrete(labels = c("HER2E","LUMA","LUMB")) # check that these are in the correct order
+        scale_x_discrete(limits = c("LumA","LumB","Her2"), labels = c("LUMA","LUMB","HER2E")) # check that these are in the correct order
     return(plot)
 }
 

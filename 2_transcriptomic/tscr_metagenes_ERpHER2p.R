@@ -221,50 +221,42 @@ plot.list <- list()
 #
 mg.pvals["Basal",]
 plot.list <- append(plot.list, list(
-    her2p_quickplot(mg.anno,"Basal","hi",2,"ho",2.5, c(-1.5,3))))
-her2p_quickplot(mg.anno,"Basal","hi",2,"ho",2.5, c(-1.5,3))
+    her2p_quickplot(mg.anno,"Basal","**",2,"****",2.5, c(-1.5,3))))
 
 #
 mg.pvals["Early_response",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "Early_response")))
-her2p_quickplot(mg.anno,"Early_response","hi",2,"ho",2.5, c(-1.5,3))
-
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"Early_response","ns",2,"ns",2.3, c(-2.5,2.6))))
+                                    
 #
 mg.pvals["IR",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "IR")))
-her2p_quickplot(mg.anno,"IR","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"IR","ns",3.3,"*",3.7, c(-2,4.1))))
 
 #
 mg.pvals["Lipid",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "Lipid")))
-her2p_quickplot(mg.anno,"Lipid","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"Lipid","ns",2,"****",2.5, c(-1.8,3))))
 
 #
 mg.pvals["Mitotic_checkpoint",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "Mitotic_checkpoint")))
-her2p_quickplot(mg.anno,"Mitotic_checkpoint","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"Mitotic_checkpoint","ns",3,"****",3.4, c(-2,3.8))))
 
 #
 mg.pvals["Mitotic_progression",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "Mitotic_progression")))
-her2p_quickplot(mg.anno,"Mitotic_progression","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"Mitotic_progression","ns",3,"****",3.4, c(-2,3.8))))
 
 #
 mg.pvals["SR",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "SR")))
-her2p_quickplot(mg.anno,"SR","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"SR","ns",1.1,"****",1.5, c(-4,1.9))))
 
 #
 mg.pvals["Stroma",]
-plot.list <- append(plot.list, list(her2p_quickplot(mg.anno = mg.anno,
-          metagene = "Stroma")))
-her2p_quickplot(mg.anno,"Stroma","hi",2,"ho",2.5, c(-1.5,3))
+plot.list <- append(plot.list, list(
+    her2p_quickplot(mg.anno,"Stroma","ns",1.5,"ns",1.9, c(-2.7,2.3))))
 
 #plot
 pdf(file = paste(output.path,cohort,"_HER2p_metagenes.pdf", sep=""), 

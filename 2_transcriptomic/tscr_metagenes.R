@@ -1,6 +1,8 @@
 # Script: Metagene analysis in SCAN-B and METABRIC
 
 # TODO:
+# try once with scaling MB data and without and compare output
+# try basing metagene selection on hgnc symbols instead of entrez ids
 
 # empty environment
 rm(list=ls())
@@ -28,6 +30,7 @@ library(readxl)
 library(biomaRt)
 library(gridExtra)
 library(ggsignif)
+library(janitor)
     
 #######################################################################
 # 2. Cohort-specific data preprocessing including selection of  
@@ -50,10 +53,14 @@ if (cohort=="SCANB") {
         filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(ER=="Positive" & HER2=="Negative") %>% 
         dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
-        # %>% dplyr::select(sampleID,PAM50)
-    
-    # filter to select subgroup gex data
-    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID])
+
+    # filter to select subgroup gex data, modfiy ensembl ids to remove version annotation
+    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
+        rownames_to_column("ensembl_gene_id") %>% 
+        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) # remove characters after dot
+        
+    # convert ensembl ids to gene symbols
+
     
 } else if (cohort=="METABRIC") {
     
@@ -61,26 +68,19 @@ if (cohort=="SCANB") {
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
 
     # load gex data
-    gex.data <- as.data.frame(
-        read.table(
-            "Data/Metabric/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% 
+    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% 
         row_to_names(row_number = 1) %>% 
-        na.omit() %>% 
-        distinct(Hugo_Symbol) # gex_data[!duplicated(gex_data$Hugo_Symbol),]
-        
+        na.omit() 
     
+    # gex_data[!duplicated(gex_data$Hugo_Symbol),]
+        
     # extract relevant variables
     anno <- anno %>% 
         filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(grepl('ERpHER2n', ClinGroup)) %>% 
         dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
-        # %>% dplyr::select(sampleID,PAM50)
     
-    
-    # TRY TO DO THIS WHEN LOADING THE DATA
-    
-    # also save the gene annotation data
-    gene_anno <- gex_data[,1:2]
+    # filter to select subgroup gex data
     gex_data <- gex_data %>% remove_rownames() %>% column_to_rownames(var="Hugo_Symbol") %>% dplyr::select(-Entrez_Gene_Id)
     gex_data <- gex_data[,colnames(gex_data) %in% anno$sampleID]
     
@@ -152,10 +152,13 @@ gex.data <- gex.data %>%
     filter(ensembl_gene_id %in% metagene.def$ensembl_gene_id) %>% 
     column_to_rownames(var="ensembl_gene_id")
 
-# scale the data
+# scale the data only for SCANB (MB is already scaled)
 gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
-scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) %>% # for some rows there may be 0 variance so i have to handle these cases
-    rownames_to_column(var="ensembl_gene_id") 
+if (cohort=="SCANB") {
+    scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) %>% # for some rows there may be 0 variance so i have to handle these cases
+        rownames_to_column(var="ensembl_gene_id") 
+}
+
 
 #######################################################################
 # 4. calc. score for each metagene in each sample
