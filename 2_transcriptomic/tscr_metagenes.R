@@ -11,7 +11,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -31,7 +31,18 @@ library(biomaRt)
 library(gridExtra)
 library(ggsignif)
 library(janitor)
-    
+
+#######################################################################
+# load metagene definitions
+#######################################################################
+
+# metagene definitions
+metagene.def <- as.data.frame(read_excel(
+    "data/SCANB/2_transcriptomic/raw/metagene_definitions.XLSX")) %>% 
+    dplyr::rename(entrezgene_id = `Entrez Gene ID`,
+                  module = `Module Name`,
+                  gene_symbol = `Gene symbol`)
+
 #######################################################################
 # 2. Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
@@ -53,14 +64,31 @@ if (cohort=="SCANB") {
         filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(ER=="Positive" & HER2=="Negative") %>% 
         dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
-
-    # filter to select subgroup gex data, modfiy ensembl ids to remove version annotation
+    
+    # filter to select subgroup gex data
+    # modfiy ensembl ids to remove version annotation
     gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
         rownames_to_column("ensembl_gene_id") %>% 
         mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) # remove characters after dot
-        
-    # convert ensembl ids to gene symbols
+    
+    # convert to entrez ids
+    # mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+    #                          dataset = "hsapiens_gene_ensembl",
+    #                          host = "http://www.ensembl.org")
+    # res <- getBM(filters = "ensembl_gene_id",
+    #              attributes = c("ensembl_gene_id","entrezgene_id"),
+    #              values = gex.data$ensembl_gene_id, 
+    #              mart = mart)
+    #save(res,file = paste(data.path,"mart_res.RData",sep="") )
+    load(paste(data.path,"mart_res.RData",sep=""))
+    
+    # get final metagene gex data
+    gex.data <- as.data.frame(merge(gex.data, res, by="ensembl_gene_id")) %>% 
+        filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
+        column_to_rownames(var="entrezgene_id") %>% 
+        dplyr::select(-c(ensembl_gene_id))
 
+#-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
     
@@ -68,75 +96,36 @@ if (cohort=="SCANB") {
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
 
     # load gex data
-    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% 
+    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>%
         row_to_names(row_number = 1) %>% 
-        na.omit() 
+        mutate_all(na_if,"") %>% 
+        drop_na(Entrez_Gene_Id) %>% 
+        distinct(Entrez_Gene_Id,.keep_all = TRUE) %>% 
+        column_to_rownames(var="Entrez_Gene_Id") %>% 
+        dplyr::select(-c(Hugo_Symbol)) 
     
-    # gex_data[!duplicated(gex_data$Hugo_Symbol),]
-        
     # extract relevant variables
     anno <- anno %>% 
         filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+        dplyr::rename(sampleID=METABRIC_ID) %>% # rename to match SCANB variables
+        filter(sampleID %in% colnames(gex.data))
     
-    # filter to select subgroup gex data
-    gex_data <- gex_data %>% remove_rownames() %>% column_to_rownames(var="Hugo_Symbol") %>% dplyr::select(-Entrez_Gene_Id)
-    gex_data <- gex_data[,colnames(gex_data) %in% anno$sampleID]
+    # filter to select subgroup gex data HERE
+    gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
+        rownames_to_column("entrezgene_id") %>% 
+        filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
+        column_to_rownames(var="entrezgene_id") 
     
-    # remove samples from anno that are not in the gex data
-    anno <- anno %>% filter(sampleID %in% colnames(gex_data))
-    anno <- anno %>% remove_rownames %>% column_to_rownames(var="sampleID")
-    
-    gex_data <- rownames_to_column(gex_data, "ensembl_gene_id") # name the column ensembl even though they arent so i can reuse the same functions as for the other cohorts
     
 }
 
-#######################################################################
-# 3. metagene definitions (ensembl and entrez ids)
-#######################################################################
-    
-# metagene definitions
-metagene.def <- as.data.frame(read_excel(
-    "data/SCANB/2_transcriptomic/raw/metagene_definitions.XLSX")) %>% 
-    dplyr::rename(entrezgene_id = `Entrez Gene ID`,
-                  module = `Module Name`,
-                  gene_symbol = `Gene symbol`)
-
-# Convert ensembl to entrez IDs
-# select ensembl ids
-ensembl.ids <- as.data.frame(gex.data) %>% 
-    rownames_to_column("ensembl_gene_id") %>% 
-    pull(ensembl_gene_id) 
-ensembl.ids <- gsub("\\..*","",ensembl.ids) # remove characters after dot
-
-# convert 
-mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                         dataset = "hsapiens_gene_ensembl",
-                         host = "http://www.ensembl.org")
-res <- getBM(filters = "ensembl_gene_id",
-                 attributes = c("ensembl_gene_id","entrezgene_id"),
-                 values = ensembl.ids, 
-                 mart = mart)
-#save(res,file = paste(data.path,"mart_res.RData",sep="") )
-#load(paste(data.path,"mart_res.RData",sep=""))
-
-# select only the ids that are relevant for the metagenes
-relevant.res <- res %>% 
-    filter(entrezgene_id %in% metagene.def$entrezgene_id) #pull(ensembl_gene_id)
-
-# no duplicates
-#length(relevant.ensembl.ids)
-#length(unique(relevant.ensembl.ids))
-
-# genes in the metag def
-m.genes <- metagene.def %>% pull(gene_symbol)
-
-# merge
-metagene.def <- merge(metagene.def, relevant.res, by = "entrezgene_id")
 
 # check if genes were not in the scanb data
-setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
+setdiff(metagene.def$entrezgene_id,rownames(gex.data)) 
+
+#METABRIC: 125 ; 9370 ; 1520 ; 3507 -> "IGHM" ; 28755 <- "TRAC"
+#SCANB: 3507 -> "IGHM" ; 28755 <- "TRAC"
 
 #######################################################################
 # 3. gex data processing 
@@ -145,20 +134,11 @@ setdiff(m.genes,metagene.def$gene_symbol) #"IGHM" "TRAC"
 # log transformed FPKM data
 gex.data <- as.data.frame(log2(gex.data + 1))
 
-# get the gex data in the correct format
-gex.data <- gex.data %>% 
-    rownames_to_column(var="ensembl_gene_id") %>% 
-    mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) %>% 
-    filter(ensembl_gene_id %in% metagene.def$ensembl_gene_id) %>% 
-    column_to_rownames(var="ensembl_gene_id")
-
 # scale the data only for SCANB (MB is already scaled)
-gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
+gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column with NA
 if (cohort=="SCANB") {
-    scaled.gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) %>% # for some rows there may be 0 variance so i have to handle these cases
-        rownames_to_column(var="ensembl_gene_id") 
+    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
 }
-
 
 #######################################################################
 # 4. calc. score for each metagene in each sample
@@ -167,33 +147,33 @@ if (cohort=="SCANB") {
 #basal
 basal.scores <- mgscore(metagene = "Basal",
                 metagene.def = metagene.def,
-                gex.data = scaled.gex.data) 
+                gex.data = gex.data) 
 
 #earlyresponse
 earlyresponse.scores <- mgscore(metagene = "Early_response",
                         metagene.def = metagene.def,
-                        gex.data = scaled.gex.data)
+                        gex.data = gex.data)
 
 metagene.scores <- merge(basal.scores,earlyresponse.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
 #immuneresponse
 ir.scores <- mgscore(metagene = "IR",
                                 metagene.def = metagene.def,
-                                gex.data = scaled.gex.data)
+                                gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,ir.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
 #lipid
 lipid.scores <- mgscore(metagene = "Lipid",
                         metagene.def = metagene.def,
-                        gex.data = scaled.gex.data)
+                        gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,lipid.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
 #mitoticcheckpoint
 mitoticcheckpoint.scores <- mgscore(metagene = "Mitotic_checkpoint",
                                     metagene.def = metagene.def,
-                                    gex.data = scaled.gex.data)
+                                    gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,mitoticcheckpoint.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
@@ -201,7 +181,7 @@ metagene.scores <- merge(metagene.scores,mitoticcheckpoint.scores,by=0) %>% colu
 #mitoticprogression
 mitoticprogression.scores <- mgscore(metagene = "Mitotic_progression",
                                     metagene.def = metagene.def,
-                                    gex.data = scaled.gex.data)
+                                    gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,mitoticprogression.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
@@ -209,14 +189,14 @@ metagene.scores <- merge(metagene.scores,mitoticprogression.scores,by=0) %>% col
 #SR
 sr.scores <- mgscore(metagene = "SR",
                     metagene.def = metagene.def,
-                    gex.data = scaled.gex.data)
+                    gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,sr.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
 #stroma
 stroma.scores <- mgscore(metagene = "Stroma",
                      metagene.def = metagene.def,
-                     gex.data = scaled.gex.data)
+                     gex.data = gex.data)
 
 metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rownames(var = "Row.names")
 
@@ -247,28 +227,60 @@ plot.list <- list()
 
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 mg.pvals["Basal",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Basal", "****", "****", 3.5, c(-1.5,4))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Basal", 
+    lumb.sig = "****", lumb.pos = 1, 
+    luma.sig = "****", luma.pos = 2.9, 
+    c(-1.5,4))))
 
 mg.pvals["Early_response",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Early_response", "****", "ns", 4, c(-2,4.6))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Early_response", 
+    lumb.sig = "ns", lumb.pos = 2.5, 
+    luma.sig = "****", luma.pos = 3.6, 
+    c(-2,4.6))))
 
 mg.pvals["IR",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "IR", "****", "****", 5, c(-2,5.6))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "IR", 
+    lumb.sig = "****", lumb.pos = 4, 
+    luma.sig = "****", luma.pos = 4.6, 
+    c(-2,5.6))))
 
 mg.pvals["Lipid",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Lipid", "****", "ns", 3.5, c(-1.5,4))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Lipid", 
+    lumb.sig = "ns", lumb.pos = 2.2, 
+    luma.sig = "****",  luma.pos = 3.1, 
+    c(-1.5,4))))
 
 mg.pvals["Mitotic_checkpoint",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Mitotic_checkpoint", "****", "ns", 4.5, c(-2,5))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Mitotic_checkpoint", 
+    lumb.sig = "ns", lumb.pos = 3.7, 
+    luma.sig = "****",  luma.pos = 4.2, 
+    c(-2,5))))
 
 mg.pvals["Mitotic_progression",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Mitotic_progression", "****", "ns", 4.5, c(-2,5))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Mitotic_progression", 
+    lumb.sig = "ns", lumb.pos = 3.6, 
+    luma.sig = "****",  luma.pos = 4.1, 
+    c(-2,5))))
 
 mg.pvals["SR",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "SR", "****", "****", 3.5, c(-1.5,4))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "SR", 
+    lumb.sig = "****", lumb.pos = 1.8, 
+    luma.sig = "****", luma.pos = 2.3, 
+    c(-1.5,4))))
 
 mg.pvals["Stroma",]
-plot.list <- append(plot.list, list(quickplot(mg.anno, "Stroma", "ns", "****", 2.9, c(-3.5,3.5))))
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Stroma", 
+    lumb.sig = "****", lumb.pos = 2, 
+    luma.sig = "ns", luma.pos = 2.5, 
+    c(-3.5,3.5))))
 
 #plot
 pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
@@ -279,7 +291,6 @@ for (i in 1:length(plot.list)) {
 }
 
 dev.off()
-
 ###########################################################################
 ###########################################################################
 

@@ -7,9 +7,6 @@
 # define "not in" operator 
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
-
-
-
 ### functions for metagenes script (LUMA,LUMB) ###
 
 # function to calc. the score for each metagene for each sample
@@ -17,12 +14,13 @@ mgscore <- function(metagene,metagene.def,gex.data) {
     
     # extract the gex for each metagene
     mg.ids <- filter(metagene.def, module == metagene) %>% 
-        pull(ensembl_gene_id)
+        pull(entrezgene_id)
     
     # filter out the corresponding gex data
     mg.gex.data <- gex.data %>% 
-        filter(ensembl_gene_id %in% mg.ids) %>% 
-        column_to_rownames(var = "ensembl_gene_id") 
+        rownames_to_column(var = "entrezgene_id") %>% 
+        filter(entrezgene_id %in% mg.ids) %>% 
+        column_to_rownames(var = "entrezgene_id") 
     
     # calc. the score for each sample
     result <- as.data.frame(apply(mg.gex.data, 2, mean)) %>% 
@@ -86,15 +84,15 @@ mgtest <- function(metagene.scores,anno) {
 
 
 # quickplot function
-quickplot <- function(mg.anno, metagene, luma.sig, lumb.sig, lumb.pos, ylim) {
+quickplot <- function(mg.anno, metagene, lumb.sig, lumb.pos, luma.sig, luma.pos, ylim) {
     plot <- ggplot(mg.anno, aes(x=as.factor(PAM50),y=.data[[metagene]],fill=as.factor(PAM50))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab("PAM50 subtype") +
         ylab("Metagene score") +
         ylim(ylim) +
-        ggtitle(paste(metagene," metagene scores in PAM50 subtypes (ERpHER2p)",sep="")) +
-        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sig, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sig, tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) + 
+        ggtitle(paste(metagene," metagene scores in PAM50 subtypes (ERpHER2n)",sep="")) +
+        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sig, tip_length = 0.02, vjust=0.01, y_position = luma.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sig, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) + 
         theme(axis.text.x = element_text(size = 30),
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
