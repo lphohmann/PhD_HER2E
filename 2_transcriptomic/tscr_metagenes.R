@@ -86,8 +86,13 @@ if (cohort=="SCANB") {
     gex.data <- as.data.frame(merge(gex.data, res, by="ensembl_gene_id")) %>% 
         filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
         column_to_rownames(var="entrezgene_id") %>% 
-        dplyr::select(-c(ensembl_gene_id))
+        dplyr::select(-c(ensembl_gene_id)) %>% 
+        select_if(~ !any(is.na(.)))
 
+    # exclude samples from anno without associated gex data
+    anno <- anno %>% 
+        filter(sampleID %in% colnames(gex.data))
+    
 #-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
@@ -108,35 +113,37 @@ if (cohort=="SCANB") {
     anno <- anno %>% 
         filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) %>% # rename to match SCANB variables
-        filter(sampleID %in% colnames(gex.data))
+        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
     
     # filter to select subgroup gex data HERE
     gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
         rownames_to_column("entrezgene_id") %>% 
         filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
-        column_to_rownames(var="entrezgene_id") 
+        column_to_rownames(var="entrezgene_id") %>% 
+        mutate_all(function(x) as.numeric(x)) %>% 
+        select_if(~ !any(is.na(.))) 
     
-    
+    # exclude samples from anno without associated gex data
+    anno <- anno %>% 
+        filter(sampleID %in% colnames(gex.data))
 }
 
 
 # check if genes were not in the scanb data
 setdiff(metagene.def$entrezgene_id,rownames(gex.data)) 
 
-#METABRIC: 125 ; 9370 ; 1520 ; 3507 -> "IGHM" ; 28755 <- "TRAC"
+#METABRIC: 125 -> ; 9370 -> ; 1520 -> ; 3507 -> "IGHM" ; 28755 <- "TRAC"
 #SCANB: 3507 -> "IGHM" ; 28755 <- "TRAC"
 
 #######################################################################
 # 3. gex data processing 
 #######################################################################
 
-# log transformed FPKM data
-gex.data <- as.data.frame(log2(gex.data + 1))
-
-# scale the data only for SCANB (MB is already scaled)
-gex.data <- gex.data %>% select_if(~ !any(is.na(.))) # exclude column with NA
+# log transform and scale the data only for SCANB (MB is already log-tranformed & scaled)
 if (cohort=="SCANB") {
+    # log transformed FPKM data
+    gex.data <- as.data.frame(log2(gex.data + 1))
+    # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
 }
 
@@ -208,19 +215,23 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 mg.pvals <- mgtest(metagene.scores,anno)
 
 # save as a summarized object
-obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50, ER, HER2))
+obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50))
 mg.scores <- metagene.scores %>% rownames_to_column(var="sampleID")
 mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
 
 #mg.anno.list <- list(mg.anno, mg.pvals)
 #save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 
-#######################################################################
-# 5. compare scaled metagene scores between groups
-#######################################################################
-
 # round
 mg.pvals <- round(mg.pvals, digits = 5)
+
+#######################################################################
+# 5. Boxplots
+#######################################################################
+
+# SCANB
+if (cohort=="SCANB") {
+    
 
 # list to save plots
 plot.list <- list()
@@ -291,246 +302,81 @@ for (i in 1:length(plot.list)) {
 }
 
 dev.off()
-###########################################################################
-###########################################################################
 
 
+#-----------------------------------------------------------------------#
 
-#} else if (cohort=="Metabric") {
-# load annotation data
-load("Data/Metabric/Annotations/Merged_annotations.RData")
-anno <- as.data.frame(anno) %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% filter(grepl('ERpHER2n', ClinGroup)) %>% dplyr::rename(sampleID=METABRIC_ID) %>% dplyr::select(sampleID,PAM50)
-# load gex data
-# load gex data
-gex_data <- as.data.frame(read.table("Data/Metabric/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>% row_to_names(row_number = 1) # samples = 1906 - genes = 24368
-
-# remove rows with na and duplicates
-gex_data <- na.omit(gex_data)
-gex_data <- gex_data[!duplicated(gex_data$Hugo_Symbol),]
-
-# also save the gene annotation data
-gene_anno <- gex_data[,1:2]
-gex_data <- gex_data %>% remove_rownames() %>% column_to_rownames(var="Hugo_Symbol") %>% dplyr::select(-Entrez_Gene_Id)
-gex_data <- gex_data[,colnames(gex_data) %in% anno$sampleID]
-
-# remove samples from anno that are not in the gex data
-anno <- anno %>% filter(sampleID %in% colnames(gex_data))
-anno <- anno %>% remove_rownames %>% column_to_rownames(var="sampleID")
-
-gex_data <- rownames_to_column(gex_data, "ensembl_gene_id") # name the column ensembl even though they arent so i can reuse the same functions as for the other cohorts
-
-
-#######################################################################
-# 3. Required data
-#######################################################################
-
-metag_def <- as.data.frame(read_excel("Data/metagene_definitions.XLSX")) %>% 
-    dplyr::rename(entrezgene_id = `Entrez Gene ID`,
-                  module = `Module Name`,
-                  gene_symbol = `Gene symbol`)
-
-relevant_ensembl_ids <- gex_data %>% filter(ensembl_gene_id %in% metag_def$gene_symbol) %>% pull(ensembl_gene_id)
-
-#cheeky lil operator
-'%!in%' <- function(x,y)!('%in%'(x,y))
-
-#######################################################################
-# 4. calc. score for each metagene in each sample
-#######################################################################
-
-# function to calc. the p value for each metagene
-mg_ttest <- function(scaled_mg_scores,sample_info) {
-    # sample ids 
-    Her2_cols <- sample_info %>% rownames_to_column(var="sampleID") %>% filter(PAM50=="Her2") %>% pull(sampleID)
-    LumA_cols <- sample_info %>% rownames_to_column(var="sampleID") %>% filter(PAM50=="LumA") %>% pull(sampleID)
-    LumB_cols <- sample_info %>% rownames_to_column(var="sampleID") %>% filter(PAM50=="LumB") %>% pull(sampleID) 
+# METABRIC
+} else if (cohort=="METABRIC") {
     
-    #transpose
-    tmg <- t(scaled_mg_scores)
-    #initialize storing vector
-    H2vsLA_pvalue <- rep(0,nrow(tmg))
-    H2vsLB_pvalue <- rep(0,nrow(tmg))
-    #loop
-    for (i in 1:nrow(tmg)) {
-        # vars
-        hdata <- as.numeric(tmg[i,Her2_cols])
-        adata <- as.numeric(tmg[i,LumA_cols])
-        bdata <- as.numeric(tmg[i,LumB_cols])
-        
-        # for Her2 vs LumA
-        # equal variance check
-        if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
-            H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
-        } else {
-            H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
-        }
-        # save results
-        H2vsLA_pvalue[i] <- H2vsLA_ttest_result$p.value
-        
-        # for Her2 vs LumB
-        # equal variance check
-        if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
-            H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
-        } else {
-            H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
-        }
-        # save results
-        H2vsLB_pvalue[i] <- H2vsLB_ttest_result$p.value }
-    
-    # add the results to the dataframe
-    results <- as.data.frame(tmg) %>% add_column(H2vsLA_pvalue = H2vsLA_pvalue,H2vsLB_pvalue = H2vsLB_pvalue) %>% dplyr::select(H2vsLA_pvalue,H2vsLB_pvalue)
-    return(results)
-}
-
-# function to calc. the score for each metagene for each sample
-mg_score <- function(mg,method="scaled",metag_def, gex,cohort) {
-    # extract the gex for each metagene
-    #method <- "simple"
-    mg_ids <- filter(metag_def,module == mg) %>% pull(gene_symbol)
-    print(mg_ids)
-    mg_gex <- as.data.frame(gex) %>% filter(ensembl_gene_id %in% mg_ids) %>% column_to_rownames(var = "ensembl_gene_id")
-    mg_gex <- mg_gex %>% mutate(across(where(is.character), as.numeric))
-    if (method == "simple") {
-        result <- as.data.frame(apply(mg_gex, 2, median)) %>% dplyr::rename(mg = "apply(mg_gex, 2, median)")
-    } else if (method == "scaled") {
-        # first scale the rows
-        mg_gex <- mg_gex %>% select_if(~ !any(is.na(.))) # exclude column iwth NA
-        scaled_mg_gex <- as.data.frame(t(apply(mg_gex, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-        result <- as.data.frame(apply(scaled_mg_gex, 2, median)) %>% dplyr::rename(mg = "apply(scaled_mg_gex, 2, median)") 
-    }
-    return(result)
-}
-
-#######################################################
-
-# exclude samples that had NA for any of the genes in the metagenes
-mg_gex_data <- as.data.frame(t(gex_data)) %>% row_to_names(1)
-mg_gex_data <- as.data.frame(t(mg_gex_data[,colnames(mg_gex_data) %in% metag_def$gene_symbol]))
-nasamples <- mg_gex_data %>% select_if(~any(is.na(.))) %>% colnames()
-mg_gex_data <- mg_gex_data[,colnames(mg_gex_data) %!in% nasamples] %>% rownames_to_column(var="ensembl_gene_id")
-
-mg_anno <- as.data.frame(t(anno)) 
-mg_anno <- as.data.frame(t(mg_anno[,colnames(mg_anno) %!in% nasamples,]))
-##
-
-# basal
-scaled_mg_scores <- mg_score("Basal",metag_def=metag_def, gex=mg_gex_data,cohort=cohort,method = "simple") %>% dplyr::rename(Basal = mg)
-
-er <- mg_score("Early_response",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Early_response = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,er,by=0) %>% column_to_rownames(var = "Row.names")
-
-ir <- mg_score("IR",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(IR = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,ir,by=0) %>% column_to_rownames(var = "Row.names")
-
-lp <- mg_score("Lipid",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Lipid = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,lp,by=0) %>% column_to_rownames(var = "Row.names")
-
-mitc <- mg_score("Mitotic_checkpoint",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Mitotic_checkpoint = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,mitc,by=0) %>% column_to_rownames(var = "Row.names")
-
-mitp <- mg_score("Mitotic_progression",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Mitotic_progression = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,mitp,by=0) %>% column_to_rownames(var = "Row.names")
-
-sr <- mg_score("SR",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(SR = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,sr,by=0) %>% column_to_rownames(var = "Row.names")
-
-str <- mg_score("Stroma",metag_def=metag_def, gex=mg_gex_data,cohort=cohort) %>% dplyr::rename(Stroma = mg)
-scaled_mg_scores <- merge(scaled_mg_scores,str,by=0) %>% column_to_rownames(var = "Row.names")
-
-#View(scaled_mg_scores)
-pvalues <- mg_ttest(scaled_mg_scores,mg_anno)
-#View(head(scaled_mg_scores))
-pvalues <- pvalues %>% mutate_if(is.numeric, round, digits=5)
-
-#######################################################################
-# 5. compare scaled metagene scores between groups
-#######################################################################
-
-# add the pam50 annotations
-scaled_mg_scores <- merge(scaled_mg_scores,mg_anno,by=0) %>% column_to_rownames(var = "Row.names")
-
-# save the file
-save(scaled_mg_scores, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/sample_metagene_scores.RData",sep = ""))
-#load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/sample_metagene_scores.RData",sep = ""))
-
-# create pdf with all the boxplots
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/metagene_plots.pdf", sep =""), onefile= TRUE)
-for(i in c(1:8)) {
-    plot <- ggplot(scaled_mg_scores, aes(x=as.factor(PAM50),y=scaled_mg_scores[,i])) +
-        geom_boxplot(fill="slateblue",alpha=0.2) +
-        xlab("PAM50 subtype") +
-        ylab("scaled metagene score") +
-        ggtitle(colnames(scaled_mg_scores)[i]) +
-        geom_text(data=as.data.frame(dplyr::count(x=mg_anno, PAM50)), aes(y = 0, label = paste("n=",n,sep = "")),nudge_y = -2,nudge_x = 0.3,size=5) +
-        theme(axis.text.x = element_text(size = 15),
-              axis.title.x = element_text(size = 20),
-              axis.text.y = element_text(size = 15),
-              axis.title.y = element_text(size = 20))
-    print(plot)
-}
-dev.off()
-
-
-#geom_text(data=as.data.frame(dplyr::count(sample_info, group)), aes(y = 0, label = paste("n=",n,sep = ""))))
-
-#######################################
-# CONT HERE
-
-# ill do it here without a loop to make the figures nice for publication
-#pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/metagene_plots.pdf", sep =""), onefile= TRUE)
-
-# 
-quickplot <- function(scaled_mg_scores, plotnum, A_signs, B_signs, B_pos, ylim) {
-    plot <- ggplot(scaled_mg_scores, aes(x=as.factor(mg_anno$PAM50),y=scaled_mg_scores[,plotnum],fill=as.factor(mg_anno$PAM50))) +
-        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-        xlab("PAM50 subtype") +
-        ylab("scaled metagene score") +
-        ylim(ylim) +
-        ggtitle(colnames(scaled_mg_scores)[plotnum]) +
-        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=B_signs, tip_length = 0.02, vjust=0.01, y_position = B_pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=A_signs, tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) + 
-        theme(axis.text.x = element_text(size = 30),
-              axis.title.x = element_text(size = 35),
-              axis.text.y = element_text(size = 30),
-              axis.title.y = element_text(size = 35),
-              legend.position = "none")
-    print(plot)
-}
+# list to save plots
+plot.list <- list()
 
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
-pvalues[1,1:2]
-quickplot(scaled_mg_scores, 1, "****", "ns", 4, c(-1.5,4.5))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[1],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Basal",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Basal", 
+    lumb.sig = "ns", lumb.pos = 0.8, 
+    luma.sig = "****", luma.pos = 2.1, 
+    c(-1.5,4))))
 
-pvalues[2,1:2]
-quickplot(scaled_mg_scores, 2, "****", "*", 2.7, c(-2,3.2))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[2],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Early_response",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Early_response", 
+    lumb.sig = "*", lumb.pos = 2.2, 
+    luma.sig = "****", luma.pos = 2.7, 
+    c(-2,4.6))))
 
-pvalues[3,1:2]
-quickplot(scaled_mg_scores, 3, "**", "*", 3.5, c(-2,4))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[3],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["IR",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "IR", 
+    lumb.sig = "*", lumb.pos = 3, 
+    luma.sig = "**", luma.pos = 3.6, 
+    c(-2,5.6))))
 
-pvalues[4,1:2]
-quickplot(scaled_mg_scores, 4, "****", "*", 3.4, c(-1.5,3.9))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[4],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Lipid",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Lipid", 
+    lumb.sig = "*", lumb.pos = 2.5, 
+    luma.sig = "****",  luma.pos = 3.3, 
+    c(-1.5,4))))
 
-pvalues[5,1:2]
-quickplot(scaled_mg_scores, 5, "****", "ns", 3.1, c(-2,3.6))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[5],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Mitotic_checkpoint",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Mitotic_checkpoint", 
+    lumb.sig = "ns", lumb.pos = 2.2, 
+    luma.sig = "****",  luma.pos = 2.7, 
+    c(-2,5))))
 
-pvalues[6,1:2]
-quickplot(scaled_mg_scores, 6, "****", "ns", 3.4, c(-2,3.9))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[6],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["Mitotic_progression",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Mitotic_progression", 
+    lumb.sig = "ns", lumb.pos = 2.5, 
+    luma.sig = "****",  luma.pos = 3, 
+    c(-2,5))))
 
-pvalues[7,1:2]
-quickplot(scaled_mg_scores, 7, "****", "****", 2.5, c(-2,3))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[7],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")
+mg.pvals["SR",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "SR", 
+    lumb.sig = "****", lumb.pos = 2.1, 
+    luma.sig = "****", luma.pos = 2.6, 
+    c(-1.5,4))))
 
-pvalues[8,1:2]
-quickplot(scaled_mg_scores, 8, "***", "ns", 2.8, c(-3.5,3.3))
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/",colnames(scaled_mg_scores)[8],"_metagene_expression.pdf", sep =""),width = 300,height = 300,units = "mm")#dev.off()
+mg.pvals["Stroma",]
+plot.list <- append(plot.list, list(quickplot(
+    mg.anno, "Stroma", 
+    lumb.sig = "ns", lumb.pos = 2, 
+    luma.sig = "***", luma.pos = 2.5, 
+    c(-3.5,3.5))))
 
-    
-    
-    
+#plot
+pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
+    onefile = TRUE, width = 15, height = 15) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()
+
 }
