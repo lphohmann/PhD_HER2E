@@ -115,36 +115,13 @@ library(rstatix)
 erbb2.gex <- get_gex("ENSG00000141736",gex.data,anno)
 get_stats(erbb2.gex,"PAM50","ENSG00000141736")
 
-#TODO : USe this function or write one myself? why not use it for other applicaitons too then 
+# test
+three_ttest(erbb2.gex,"PAM50",c("Her2","LumA","LumB"),"ENSG00000141736")
 
-# pairwise ttest 
-pwc <- erbb2.gex %>%
-    pairwise_t_test(ENSG00000141736 ~ PAM50, p.adjust.method = "bonferroni")
-
-pwc
 gene_quickplot(erbb2.gex,"ENSG00000141736","hi",7.4,"ho",9,c(-5,10))
 
-#plot
-ggplot(erbb2.gex, aes(x=as.factor(PAM50),y=ENSG00000141736,fill=as.factor(PAM50))) +
-    geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-    xlab("PAM50 subtype") +
-    ylab("Expression (log2)") +
-    ylim(c(-5,10)) +
-    ggtitle("ERBB2 expression (ENSG00000141736)") +
-    geom_signif(comparisons=list(c("Her2", "LumB")), annotations="*", tip_length = 0.02, vjust=0.01, y_position = 8.8, size = 2, textsize = 15) +
-    geom_signif(comparisons=list(c("Her2", "LumA")), annotations="ns", tip_length = 0.02, vjust=0.01, size = 2, textsize = 15) + 
-    theme(axis.text.x = element_text(size = 30),
-          axis.title.x = element_text(size = 35),
-          axis.text.y = element_text(size = 30),
-          axis.title.y = element_text(size = 35),
-          legend.position = "none")
 
-#+geom_text(data=as.data.frame(dplyr::count(x=sample_info, group)), aes(y = 0, label = paste("n=",n,sep = "")),nudge_y = -4.5,nudge_x = 0.3,size=5) +
 
-ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/ERBB2_expression.pdf", sep =""),
-       width = 300,
-       height = 300,
-       units = "mm")
 
 
 # ESR1 gene (as part of elucidating the steroid response metagene results) #

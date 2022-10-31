@@ -251,7 +251,7 @@ get_stats <- function(data,grouping_var,stat_var) {
     return(res)
 }
 
-# quickplot function
+# gene quickplot function
 gene_quickplot <- function(mg.anno, gene, lumb.sig, lumb.pos, luma.sig, luma.pos, ylim) {
     plot <- ggplot(mg.anno, aes(x=as.factor(PAM50),y=.data[[gene]],fill=as.factor(PAM50))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
@@ -272,42 +272,38 @@ gene_quickplot <- function(mg.anno, gene, lumb.sig, lumb.pos, luma.sig, luma.pos
     return(plot)
 }
 
-## funtion to chefk ithe pwc output, delete later?
+
+
+# make a nicer ttest functioin that can be universally applied
 # ttest function: should return 2 pvalues
-sg_ttest <- function(id,gex_data_log,sample_info) {
-    
-    sample_info <- anno
-    gex <- erbb2.gex %>% dplyr::select(-c(PAM50)) %>% 
-        column_to_rownames(var = "sampleID") %>% t(.) %>% 
-        as.data.frame()
-    
-    # sample ids
-    Her2_cols <- sample_info %>% filter(PAM50=="Her2") %>% pull(sampleID)
-    LumA_cols <- sample_info %>% filter(PAM50=="LumA") %>% pull(sampleID)
-    LumB_cols <- sample_info %>% filter(PAM50=="LumB") %>% pull(sampleID) 
-    # extract the gex
-    gex <- gex_data_log %>% filter(ensembl_gene_id == id) %>% column_to_rownames(var = "ensembl_gene_id")
-    
-    # vars
-    hdata <- as.numeric(gex[1,Her2_cols])
-    adata <- as.numeric(gex[1,LumA_cols])
-    bdata <- as.numeric(gex[1,LumB_cols])
-    
-    # for Her2 vs LumA
-    # equal variance check
-    if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
-        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
+# input: dataframe with column: sampleID, PAM50/Group, test_data 
+
+var_ttest <- function(dat1,dat2) {
+    # equal var check
+    if (var.test(dat1,dat2)$p.value <= 0.05) {
+        res <- t.test(dat1,dat2, var.equal = FALSE)
     } else {
-        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
+        res <- t.test(dat1,dat2, var.equal = TRUE)
     }
-    # for Her2 vs LumB
-    # equal variance check
-    if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
-        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
-    } else {
-        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
-    }
+    return(res)
+}
+
+three_ttest <- function(data,group.var,group.vec,test.var) {
     
+    # group data
+    dat1 <- data %>% 
+        filter(!!rlang::ensym(group.var)==group.vec[1]) %>% 
+        pull(!!rlang::ensym(test.var))
+    dat2 <- data %>% 
+        filter(!!rlang::ensym(group.var)==group.vec[2]) %>% 
+        pull(!!rlang::ensym(test.var))
+    dat3 <- data %>% 
+        filter(!!rlang::ensym(group.var)==group.vec[3]) %>% 
+        pull(!!rlang::ensym(test.var))
     
-    res <- list("H2vsLA_pvalue" = H2vsLA_ttest_result$p.value,"H2vsLB_pvalue" = H2vsLB_ttest_result$p.value)
+    # test
+    pair1.pval <- var_ttest(dat1,dat2)$p.value
+    pair2.pval <- var_ttest(dat1,dat3)$p.value
+    
+    return(c(pair1.pval,pair2.pval))
 }
