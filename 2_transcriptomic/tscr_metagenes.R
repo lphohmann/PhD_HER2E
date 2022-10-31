@@ -2,7 +2,6 @@
 
 # TODO:
 # try once with scaling MB data and without and compare output
-# try basing metagene selection on hgnc symbols instead of entrez ids
 
 # empty environment
 rm(list=ls())
@@ -93,6 +92,11 @@ if (cohort=="SCANB") {
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
     
+    # log transformed FPKM data
+    gex.data <- as.data.frame(log2(gex.data + 1))
+    # z-transform
+    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
+    
 #-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
@@ -134,18 +138,6 @@ setdiff(metagene.def$entrezgene_id,rownames(gex.data))
 
 #METABRIC: 125 -> ; 9370 -> ; 1520 -> ; 3507 -> "IGHM" ; 28755 <- "TRAC"
 #SCANB: 3507 -> "IGHM" ; 28755 <- "TRAC"
-
-#######################################################################
-# 3. gex data processing 
-#######################################################################
-
-# log transform and scale the data only for SCANB (MB is already log-tranformed & scaled)
-if (cohort=="SCANB") {
-    # log transformed FPKM data
-    gex.data <- as.data.frame(log2(gex.data + 1))
-    # z-transform
-    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-}
 
 #######################################################################
 # 4. calc. score for each metagene in each sample

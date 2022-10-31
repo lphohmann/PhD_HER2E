@@ -1,4 +1,5 @@
 # Function definitions for transcriptomic data analyses
+#TODO just write one quickplot function and one ttest function with enough parameters to adapt them to all situations
 
 ################################################################################
 # functions
@@ -181,4 +182,132 @@ her2p_mgtest <- function(metagene.scores,anno) {
         dplyr::select(HER2p_HER2E_pval,HER2p_nonHER2E_pval)
     
     return(results)
+}
+
+
+### functions for singlegex script ###
+# delete?
+## do this later for the extracted gex data
+
+# ttest function: should return 2 pvalues
+sg_ttest <- function(id,gex_data_log,sample_info) {
+    
+    sample_info <- anno
+    gex <- erbb2.gex %>% dplyr::select(-c(PAM50)) %>% 
+        column_to_rownames(var = "sampleID") %>% t(.) %>% 
+        as.data.frame()
+    
+    # sample ids
+    Her2_cols <- sample_info %>% filter(PAM50=="Her2") %>% pull(sampleID)
+    LumA_cols <- sample_info %>% filter(PAM50=="LumA") %>% pull(sampleID)
+    LumB_cols <- sample_info %>% filter(PAM50=="LumB") %>% pull(sampleID) 
+    # extract the gex
+    gex <- gex_data_log %>% filter(ensembl_gene_id == id) %>% column_to_rownames(var = "ensembl_gene_id")
+    
+    # vars
+    hdata <- as.numeric(gex[1,Her2_cols])
+    adata <- as.numeric(gex[1,LumA_cols])
+    bdata <- as.numeric(gex[1,LumB_cols])
+    
+    # for Her2 vs LumA
+    # equal variance check
+    if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
+        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
+    } else {
+        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
+    }
+    # for Her2 vs LumB
+    # equal variance check
+    if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
+        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
+    } else {
+        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
+    }
+    
+    
+    res <- list("H2vsLA_pvalue" = H2vsLA_ttest_result$p.value,"H2vsLB_pvalue" = H2vsLB_ttest_result$p.value)
+}
+
+# get gex, sampleid, pam50
+get_gex <- function(id,gex.data,anno) {
+    # extract the gex for each gene
+    single.gex <- gex.data %>% 
+        select_if(~ !any(is.na(.))) %>% 
+        rownames_to_column(var = "gene_id") %>% 
+        filter(gene_id == id) %>% 
+        column_to_rownames(var = "gene_id") %>% 
+        t(.) %>% as.data.frame() %>% 
+        rownames_to_column(var="sampleID")
+    # combine with anno
+    single.gex <- merge(single.gex, anno[,c("PAM50","sampleID")],by="sampleID") %>% relocate(PAM50,.after=sampleID)
+}
+
+# calc. 
+# summary stats.
+get_stats <- function(data,grouping_var,stat_var) {
+    res <- data %>% 
+        group_by(!!rlang::ensym(grouping_var)) %>%
+        get_summary_stats(!!rlang::ensym(stat_var), type = "mean_sd")
+    return(res)
+}
+
+# quickplot function
+gene_quickplot <- function(mg.anno, gene, lumb.sig, lumb.pos, luma.sig, luma.pos, ylim) {
+    plot <- ggplot(mg.anno, aes(x=as.factor(PAM50),y=.data[[gene]],fill=as.factor(PAM50))) +
+        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
+        xlab("PAM50 subtype") +
+        ylab("Expression (log2)") +
+        ylim(ylim) +
+        ggtitle(paste(gene," expression in PAM50 subtypes (ERpHER2n)",sep="")) +
+        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sig, tip_length = 0.02, vjust=0.01, y_position = luma.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sig, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) + 
+        theme(axis.text.x = element_text(size = 30),
+              axis.title.x = element_text(size = 35),
+              axis.text.y = element_text(size = 30),
+              axis.title.y = element_text(size = 35),
+              plot.title = element_text(size=30),
+              legend.position = "none") +
+        scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
+        scale_x_discrete(limits = c("LumA","LumB","Her2"), labels = c("LUMA","LUMB","HER2E")) # check that these are in the correct order
+    return(plot)
+}
+
+## funtion to chefk ithe pwc output, delete later?
+# ttest function: should return 2 pvalues
+sg_ttest <- function(id,gex_data_log,sample_info) {
+    
+    sample_info <- anno
+    gex <- erbb2.gex %>% dplyr::select(-c(PAM50)) %>% 
+        column_to_rownames(var = "sampleID") %>% t(.) %>% 
+        as.data.frame()
+    
+    # sample ids
+    Her2_cols <- sample_info %>% filter(PAM50=="Her2") %>% pull(sampleID)
+    LumA_cols <- sample_info %>% filter(PAM50=="LumA") %>% pull(sampleID)
+    LumB_cols <- sample_info %>% filter(PAM50=="LumB") %>% pull(sampleID) 
+    # extract the gex
+    gex <- gex_data_log %>% filter(ensembl_gene_id == id) %>% column_to_rownames(var = "ensembl_gene_id")
+    
+    # vars
+    hdata <- as.numeric(gex[1,Her2_cols])
+    adata <- as.numeric(gex[1,LumA_cols])
+    bdata <- as.numeric(gex[1,LumB_cols])
+    
+    # for Her2 vs LumA
+    # equal variance check
+    if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
+        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
+    } else {
+        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
+    }
+    # for Her2 vs LumB
+    # equal variance check
+    if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
+        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
+    } else {
+        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
+    }
+    
+    
+    res <- list("H2vsLA_pvalue" = H2vsLA_ttest_result$p.value,"H2vsLB_pvalue" = H2vsLB_ttest_result$p.value)
 }
