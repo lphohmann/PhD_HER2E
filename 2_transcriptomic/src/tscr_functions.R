@@ -189,45 +189,6 @@ her2p_mgtest <- function(metagene.scores,anno) {
 # delete?
 ## do this later for the extracted gex data
 
-# ttest function: should return 2 pvalues
-sg_ttest <- function(id,gex_data_log,sample_info) {
-    
-    sample_info <- anno
-    gex <- erbb2.gex %>% dplyr::select(-c(PAM50)) %>% 
-        column_to_rownames(var = "sampleID") %>% t(.) %>% 
-        as.data.frame()
-    
-    # sample ids
-    Her2_cols <- sample_info %>% filter(PAM50=="Her2") %>% pull(sampleID)
-    LumA_cols <- sample_info %>% filter(PAM50=="LumA") %>% pull(sampleID)
-    LumB_cols <- sample_info %>% filter(PAM50=="LumB") %>% pull(sampleID) 
-    # extract the gex
-    gex <- gex_data_log %>% filter(ensembl_gene_id == id) %>% column_to_rownames(var = "ensembl_gene_id")
-    
-    # vars
-    hdata <- as.numeric(gex[1,Her2_cols])
-    adata <- as.numeric(gex[1,LumA_cols])
-    bdata <- as.numeric(gex[1,LumB_cols])
-    
-    # for Her2 vs LumA
-    # equal variance check
-    if (var.test(unlist(hdata),unlist(adata), alternative = "two.sided")$p.value <= 0.05) {
-        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = FALSE)
-    } else {
-        H2vsLA_ttest_result <- t.test(hdata,adata, var.equal = TRUE)
-    }
-    # for Her2 vs LumB
-    # equal variance check
-    if (var.test(unlist(hdata),unlist(bdata), alternative = "two.sided")$p.value <= 0.05) {
-        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = FALSE)
-    } else {
-        H2vsLB_ttest_result <- t.test(hdata,bdata, var.equal = TRUE)
-    }
-    
-    
-    res <- list("H2vsLA_pvalue" = H2vsLA_ttest_result$p.value,"H2vsLB_pvalue" = H2vsLB_ttest_result$p.value)
-}
-
 # get gex, sampleid, pam50
 get_gex <- function(id,gex.data,anno) {
     # extract the gex for each gene
@@ -262,12 +223,18 @@ var_ttest <- function(dat1,dat2) {
 }
 
 # function for pairwise ttests (g1vsg2,g1vsg3)
-pair_ttest <- function(data,group.var,test.var,g1,g2,g3) {
+pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
+    
+    # if anno data was provided it means that the data does not contain the sample pam50 annotations and is assumed to have the structure(rownames=sampleID; columns=data). The anno object does have to have the structure of sampleID as column, PAM50 (grouping var) as column
+    if(!is.null(anno)) { 
+        data <- merge(data %>% rownames_to_column(var="sampleID"),anno[,c("sampleID",group.var)],by="sampleID")
+    }
     
     # group data
     dat1 <- data %>% 
         filter(!!rlang::ensym(group.var)==g1) %>% 
         pull(!!rlang::ensym(test.var))
+    
     dat2 <- data %>% 
         filter(!!rlang::ensym(group.var)==g2) %>% 
         pull(!!rlang::ensym(test.var))

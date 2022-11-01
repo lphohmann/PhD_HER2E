@@ -2,6 +2,7 @@
 
 # TODO:
 # try once with scaling MB data and without and compare output
+# inplement the ttest and quickplot functions!
 
 # empty environment
 rm(list=ls())
@@ -10,7 +11,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -202,9 +203,20 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 #######################################################################
 # 5. statistics for metagene scores between groups
 #######################################################################
+source("./scripts/2_transcriptomic/src/tscr_functions.R")
 
 # get pvalues
-mg.pvals <- mgtest(metagene.scores,anno)
+mg.pvals <- data.frame()
+for(i in 1:ncol(metagene.scores)) {
+    mg <- colnames(metagene.scores)[i]
+    res <- pair_ttest(metagene.scores,
+               anno = anno,
+               group.var = "PAM50",
+               test.var = mg, 
+               g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    mg.pvals <- rbind(mg.pvals, c(mg,res$pval[1],res$signif[1],res$pval[2],res$signif[2]))
+}
+colnames(mg.pvals) <- c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")
 
 # save as a summarized object
 obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50))
