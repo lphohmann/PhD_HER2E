@@ -310,5 +310,3 @@ uni_quickplot <- function(data, group.var, test.var, pair_ttest.res, lumb.pos, l
         scale_x_discrete(limits = c("LumA","LumB","Her2"), labels = c("LUMA","LUMB","HER2E")) # check that these are in the correct order
     return(plot)
 }
-
-

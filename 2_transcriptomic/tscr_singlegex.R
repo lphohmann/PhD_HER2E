@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -112,68 +112,138 @@ if (cohort=="SCANB") {
 # list to store plots
 plot.list <- list()
 
-#ERBB2-----------------------------------------------------------------
+# for SCANB
 
-erbb2.gex <- get_gex("ENSG00000141736",gex.data,anno)
-# base statistics
-get_stats(erbb2.gex,"PAM50","ENSG00000141736")
-# test
-res <- pair_ttest(erbb2.gex, 
-            group.var = "PAM50",
-            test.var = "ENSG00000141736", 
-            g1 = "Her2", g2 = "LumA", g3 = "LumB")
-# plot
-plot.list <- append(plot.list, list(
-    uni_quickplot(erbb2.gex,
-              group.var = "PAM50",
-              test.var = "ENSG00000141736",
-              pair_ttest.res = res,
-              lumb.pos = 7.4, luma.pos = 9, ylim = c(-5,10),
-              ylab = "Expression (log2)", 
-              title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
-
-#ESR1------------------------------------------------------------------
-
-esr1.gex <- get_gex("ENSG00000091831",gex.data,anno)
-# base statistics
-get_stats(esr1.gex,"PAM50","ENSG00000091831")
-# test
-res <- pair_ttest(esr1.gex, 
+if (cohort=="SCANB") {
+    #ERBB2-----------------------------------------------------------------
+    
+    erbb2.gex <- get_gex("ENSG00000141736",gex.data,anno)
+    # base statistics
+    get_stats(erbb2.gex,"PAM50","ENSG00000141736")
+    # test
+    res <- pair_ttest(erbb2.gex, 
+                group.var = "PAM50",
+                test.var = "ENSG00000141736", 
+                g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(erbb2.gex,
                   group.var = "PAM50",
-                  test.var = "ENSG00000091831", 
-                  g1 = "Her2", g2 = "LumA", g3 = "LumB")
-# plot
-plot.list <- append(plot.list, list(
-    uni_quickplot(esr1.gex,
-                  group.var = "PAM50",
-                  test.var = "ENSG00000091831",
+                  test.var = "ENSG00000141736",
                   pair_ttest.res = res,
-                  lumb.pos = 2.6, luma.pos = 3.7, ylim = c(-5,5),
+                  lumb.pos = 7.4, luma.pos = 9, ylim = c(-5,10),
                   ylab = "Expression (log2)", 
-                  title = substitute(paste(italic("ESR1")," (ENSG00000091831) expression in PAM50 subtypes (ERpHER2n)")))))
+                  title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #ESR1------------------------------------------------------------------
+    
+    esr1.gex <- get_gex("ENSG00000091831",gex.data,anno)
+    # base statistics
+    get_stats(esr1.gex,"PAM50","ENSG00000091831")
+    # test
+    res <- pair_ttest(esr1.gex, 
+                      group.var = "PAM50",
+                      test.var = "ENSG00000091831", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(esr1.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000091831",
+                      pair_ttest.res = res,
+                      lumb.pos = 2.6, luma.pos = 3.7, ylim = c(-5,5),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("ESR1")," (ENSG00000091831) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGFR4-----------------------------------------------------------------
+    
+    fgfr4.gex <- get_gex("ENSG00000160867",gex.data,anno)
+    # base statistics
+    get_stats(fgfr4.gex,"PAM50","ENSG00000160867")
+    # test
+    res <- pair_ttest(fgfr4.gex, 
+                      group.var = "PAM50",
+                      test.var = "ENSG00000160867", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(fgfr4.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000160867",
+                      pair_ttest.res = res,
+                      lumb.pos = 6, luma.pos = 7, ylim = c(-2,8),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("FGFR4")," (ENSG00000160867) expression in PAM50 subtypes (ERpHER2n)")))))
 
-#FGFR4-----------------------------------------------------------------
+#######################################################################
 
-fgfr4.gex <- get_gex("ENSG00000160867",gex.data,anno)
-# base statistics
-get_stats(fgfr4.gex,"PAM50","ENSG00000160867")
-# test
-res <- pair_ttest(fgfr4.gex, 
-                  group.var = "PAM50",
-                  test.var = "ENSG00000160867", 
-                  g1 = "Her2", g2 = "LumA", g3 = "LumB")
-# plot
-plot.list <- append(plot.list, list(
-    uni_quickplot(fgfr4.gex,
-                  group.var = "PAM50",
-                  test.var = "ENSG00000160867",
-                  pair_ttest.res = res,
-                  lumb.pos = 6, luma.pos = 7, ylim = c(-2,8),
-                  ylab = "Expression (log2)", 
-                  title = substitute(paste(italic("FGFR4")," (ENSG00000160867) expression in PAM50 subtypes (ERpHER2n)")))))
-
-#----------------------------------------------------------------------
-
+# for METABRIC (have to use HUGO gene symbold instead of ensembl ids here)
+} else if (cohort=="METABRIC") {
+    #ERBB2-----------------------------------------------------------------
+    
+    erbb2.gex <- get_gex("ERBB2",gex.data,anno)
+    # base statistics
+    get_stats(erbb2.gex,"PAM50","ERBB2")
+    # test
+    res <- pair_ttest(erbb2.gex, 
+                      group.var = "PAM50",
+                      test.var = "ERBB2", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(erbb2.gex,
+                      group.var = "PAM50",
+                      test.var = "ERBB2",
+                      pair_ttest.res = res,
+                      lumb.pos = 2.5, luma.pos = 3.5, ylim = c(-4,4),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("ERBB2")," expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #ESR1------------------------------------------------------------------
+    
+    esr1.gex <- get_gex("ESR1",gex.data,anno)
+    # base statistics
+    get_stats(esr1.gex,"PAM50","ESR1")
+    # test
+    res <- pair_ttest(esr1.gex, 
+                      group.var = "PAM50",
+                      test.var = "ESR1", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(esr1.gex,
+                      group.var = "PAM50",
+                      test.var = "ESR1",
+                      pair_ttest.res = res,
+                      lumb.pos = 1.6, luma.pos = 2.3, ylim = c(-2,3.5),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("ESR1")," expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGFR4-----------------------------------------------------------------
+    
+    fgfr4.gex <- get_gex("FGFR4",gex.data,anno)
+    # base statistics
+    get_stats(fgfr4.gex,"PAM50","FGFR4")
+    # test
+    res <- pair_ttest(fgfr4.gex, 
+                      group.var = "PAM50",
+                      test.var = "FGFR4", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        uni_quickplot(fgfr4.gex,
+                      group.var = "PAM50",
+                      test.var = "FGFR4",
+                      pair_ttest.res = res,
+                      lumb.pos = 4.2, luma.pos = 5.2, ylim = c(-3,7),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #######################################################################
+    
+    
+    
+}
 # save plots
 pdf(file = paste(output.path,cohort,"_HER2n_selectedgenes.pdf", sep=""), 
     onefile = TRUE, width = 15, height = 15) 
