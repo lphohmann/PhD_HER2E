@@ -1,4 +1,4 @@
-# Script: Single gene expression assessment (incl. ERBB2, ESR1, ...)
+# Script: Single gene expression assessment (incl. ERBB2, ESR1, FGFR4)
 
 #TODO
 
@@ -131,8 +131,9 @@ if (cohort=="SCANB") {
         uni_quickplot(erbb2.gex,
                   group.var = "PAM50",
                   test.var = "ENSG00000141736",
-                  pair_ttest.res = res,
-                  lumb.pos = 7.4, luma.pos = 9, ylim = c(-5,10),
+                  lumb.pos = 7.4, lumb.sign = res[2,3],
+                  luma.pos = 9, luma.sign = res[1,3],
+                  ylim = c(-5,10),
                   ylab = "Expression (log2)", 
                   title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
     
@@ -151,8 +152,9 @@ if (cohort=="SCANB") {
         uni_quickplot(esr1.gex,
                       group.var = "PAM50",
                       test.var = "ENSG00000091831",
-                      pair_ttest.res = res,
-                      lumb.pos = 2.6, luma.pos = 3.7, ylim = c(-5,5),
+                      lumb.pos = 2.6, lumb.sign = res[2,3],
+                      luma.pos = 3.7, luma.sign = res[1,3],
+                      ylim = c(-5,5),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ESR1")," (ENSG00000091831) expression in PAM50 subtypes (ERpHER2n)")))))
     
@@ -171,8 +173,9 @@ if (cohort=="SCANB") {
         uni_quickplot(fgfr4.gex,
                       group.var = "PAM50",
                       test.var = "ENSG00000160867",
-                      pair_ttest.res = res,
-                      lumb.pos = 6, luma.pos = 7, ylim = c(-2,8),
+                      lumb.pos = 6, lumb.sign = res[2,3],
+                      luma.pos = 7, luma.sign = res[1,3],
+                      ylim = c(-2,8),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," (ENSG00000160867) expression in PAM50 subtypes (ERpHER2n)")))))
 
@@ -196,8 +199,9 @@ if (cohort=="SCANB") {
         uni_quickplot(erbb2.gex,
                       group.var = "PAM50",
                       test.var = "ERBB2",
-                      pair_ttest.res = res,
-                      lumb.pos = 2.5, luma.pos = 3.5, ylim = c(-4,4),
+                      lumb.pos = 2.5, lumb.sign = res[2,3],
+                      luma.pos = 3.5, luma.sign = res[1,3],
+                      ylim = c(-4,4),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ERBB2")," expression in PAM50 subtypes (ERpHER2n)")))))
     
@@ -216,8 +220,9 @@ if (cohort=="SCANB") {
         uni_quickplot(esr1.gex,
                       group.var = "PAM50",
                       test.var = "ESR1",
-                      pair_ttest.res = res,
-                      lumb.pos = 1.6, luma.pos = 2.3, ylim = c(-2,3.5),
+                      lumb.pos = 1.6, lumb.sign = res[2,3],
+                      luma.pos = 2.3, luma.sign = res[1,3],
+                      ylim = c(-2,3.5),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ESR1")," expression in PAM50 subtypes (ERpHER2n)")))))
     
@@ -236,8 +241,9 @@ if (cohort=="SCANB") {
         uni_quickplot(fgfr4.gex,
                       group.var = "PAM50",
                       test.var = "FGFR4",
-                      pair_ttest.res = res,
-                      lumb.pos = 4.2, luma.pos = 5.2, ylim = c(-3,7),
+                      lumb.pos = 4.2, lumb.sign = res[2,3],
+                      luma.pos = 5.2, luma.sign = res[1,3],
+                      ylim = c(-3,7),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
     

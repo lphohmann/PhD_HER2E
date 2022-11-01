@@ -11,7 +11,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -31,6 +31,7 @@ library(biomaRt)
 library(gridExtra)
 library(ggsignif)
 library(janitor)
+library(data.table)
 
 #######################################################################
 # load metagene definitions
@@ -203,7 +204,6 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 #######################################################################
 # 5. statistics for metagene scores between groups
 #######################################################################
-source("./scripts/2_transcriptomic/src/tscr_functions.R")
 
 # get pvalues
 mg.pvals <- data.frame()
@@ -216,163 +216,193 @@ for(i in 1:ncol(metagene.scores)) {
                g1 = "Her2", g2 = "LumA", g3 = "LumB")
     mg.pvals <- rbind(mg.pvals, c(mg,res$pval[1],res$signif[1],res$pval[2],res$signif[2]))
 }
-colnames(mg.pvals) <- c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")
+# name column and set rownames
+mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals), 
+         new = c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")) %>% column_to_rownames(var="metagene")
 
-# save as a summarized object
-obj.anno <- anno %>% dplyr::select(c(sampleID, PAM50))
-mg.scores <- metagene.scores %>% rownames_to_column(var="sampleID")
-mg.anno <- as.data.frame(merge(obj.anno,mg.scores,by="sampleID"))
+# make combined data and anno object for plotting
+mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","PAM50")],by="sampleID")
 
 #mg.anno.list <- list(mg.anno, mg.pvals)
 #save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 
-# round
-mg.pvals <- round(mg.pvals, digits = 5)
-
 #######################################################################
 # 5. Boxplots
 #######################################################################
-
-# SCANB
-if (cohort=="SCANB") {
-    
+# *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 
 # list to save plots
 plot.list <- list()
 
-# *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
-mg.pvals["Basal",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Basal", 
-    lumb.sig = "****", lumb.pos = 1, 
-    luma.sig = "****", luma.pos = 2.9, 
-    c(-1.5,4))))
-
-mg.pvals["Early_response",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Early_response", 
-    lumb.sig = "ns", lumb.pos = 2.5, 
-    luma.sig = "****", luma.pos = 3.6, 
-    c(-2,4.6))))
-
-mg.pvals["IR",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "IR", 
-    lumb.sig = "****", lumb.pos = 4, 
-    luma.sig = "****", luma.pos = 4.6, 
-    c(-2,5.6))))
-
-mg.pvals["Lipid",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Lipid", 
-    lumb.sig = "ns", lumb.pos = 2.2, 
-    luma.sig = "****",  luma.pos = 3.1, 
-    c(-1.5,4))))
-
-mg.pvals["Mitotic_checkpoint",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Mitotic_checkpoint", 
-    lumb.sig = "ns", lumb.pos = 3.7, 
-    luma.sig = "****",  luma.pos = 4.2, 
-    c(-2,5))))
-
-mg.pvals["Mitotic_progression",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Mitotic_progression", 
-    lumb.sig = "ns", lumb.pos = 3.6, 
-    luma.sig = "****",  luma.pos = 4.1, 
-    c(-2,5))))
-
-mg.pvals["SR",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "SR", 
-    lumb.sig = "****", lumb.pos = 1.8, 
-    luma.sig = "****", luma.pos = 2.3, 
-    c(-1.5,4))))
-
-mg.pvals["Stroma",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Stroma", 
-    lumb.sig = "****", lumb.pos = 2, 
-    luma.sig = "ns", luma.pos = 2.5, 
-    c(-3.5,3.5))))
-
-#plot
-pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
-    onefile = TRUE, width = 15, height = 15) 
-
-for (i in 1:length(plot.list)) {
-    print(plot.list[[i]])
-}
-
-dev.off()
-
+# SCANB
+if (cohort=="SCANB") {
+        
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "Basal",
+                  lumb.pos = 1, lumb.sign = mg.pvals["Basal","Her2.LumB.signif"],
+                  luma.pos = 2.9, luma.sign = mg.pvals["Basal","Her2.LumA.signif"],
+                  ylim = c(-1.5,4),
+                  ylab = "Metagene score", 
+                  title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Early_response",
+                      lumb.pos = 2.5, lumb.sign = mg.pvals["Early_response","Her2.LumB.signif"],
+                      luma.pos = 3.6, luma.sign = mg.pvals["Early_response","Her2.LumA.signif"],
+                      ylim = c(-2,4.6),
+                      ylab = "Metagene score", 
+                      title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "IR",
+                      lumb.pos = 4, lumb.sign = mg.pvals["IR","Her2.LumB.signif"],
+                      luma.pos = 4.6, luma.sign = mg.pvals["IR","Her2.LumA.signif"],
+                      ylim = c(-2,5.6),
+                      ylab = "Metagene score", 
+                      title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Lipid",
+                      lumb.pos = 2.2, lumb.sign = mg.pvals["Lipid","Her2.LumB.signif"],
+                      luma.pos = 3.1, luma.sign = mg.pvals["Lipid","Her2.LumA.signif"],
+                      ylim = c(-1.5,4),
+                      ylab = "Metagene score", 
+                      title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Mitotic_checkpoint",
+                      lumb.pos = 3.7, lumb.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.signif"],
+                      luma.pos = 4.2, luma.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.signif"],
+                      ylim = c(-2,5),
+                      ylab = "Metagene score", 
+                      title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Mitotic_progression",
+                      lumb.pos = 3.6, lumb.sign = mg.pvals["Mitotic_progression","Her2.LumB.signif"],
+                      luma.pos = 4.1, luma.sign = mg.pvals["Mitotic_progression","Her2.LumA.signif"],
+                      ylim = c(-2,5),
+                      ylab = "Metagene score", 
+                      title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "SR",
+                      lumb.pos = 1.8, lumb.sign = mg.pvals["SR","Her2.LumB.signif"],
+                      luma.pos = 2.3, luma.sign = mg.pvals["SR","Her2.LumA.signif"],
+                      ylim = c(-1.5,4),
+                      ylab = "Metagene score", 
+                      title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Stroma",
+                      lumb.pos = 2, lumb.sign = mg.pvals["Stroma","Her2.LumB.signif"],
+                      luma.pos = 2.5, luma.sign = mg.pvals["Stroma","Her2.LumA.signif"],
+                      ylim = c(-3.5,3.5),
+                      ylab = "Metagene score", 
+                      title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
 
 #-----------------------------------------------------------------------#
 
 # METABRIC
 } else if (cohort=="METABRIC") {
     
-# list to save plots
-plot.list <- list()
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Basal",
+                      lumb.pos = 0.8, lumb.sign = mg.pvals["Basal","Her2.LumB.signif"],
+                      luma.pos = 2.1, luma.sign = mg.pvals["Basal","Her2.LumA.signif"],
+                      ylim = c(-1.5,3),
+                      ylab = "Metagene score", 
+                      title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Early_response",
+                      lumb.pos = 2.2, lumb.sign = mg.pvals["Early_response","Her2.LumB.signif"],
+                      luma.pos = 2.7, luma.sign = mg.pvals["Early_response","Her2.LumA.signif"],
+                      ylim = c(-2,4),
+                      ylab = "Metagene score", 
+                      title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "IR",
+                      lumb.pos = 3, lumb.sign = mg.pvals["IR","Her2.LumB.signif"],
+                      luma.pos = 3.6, luma.sign = mg.pvals["IR","Her2.LumA.signif"],
+                      ylim = c(-2,4.6),
+                      ylab = "Metagene score", 
+                      title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Lipid",
+                      lumb.pos = 2.5, lumb.sign = mg.pvals["Lipid","Her2.LumB.signif"],
+                      luma.pos = 3.3, luma.sign = mg.pvals["Lipid","Her2.LumA.signif"],
+                      ylim = c(-1.5,4),
+                      ylab = "Metagene score", 
+                      title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Mitotic_checkpoint",
+                      lumb.pos = 2.2, lumb.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.signif"],
+                      luma.pos = 2.7, luma.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.signif"],
+                      ylim = c(-2,4),
+                      ylab = "Metagene score", 
+                      title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Mitotic_progression",
+                      lumb.pos = 2.5, lumb.sign = mg.pvals["Mitotic_progression","Her2.LumB.signif"],
+                      luma.pos = 3, luma.sign = mg.pvals["Mitotic_progression","Her2.LumA.signif"],
+                      ylim = c(-2,4),
+                      ylab = "Metagene score", 
+                      title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "SR",
+                      lumb.pos = 2.1, lumb.sign = mg.pvals["SR","Her2.LumB.signif"],
+                      luma.pos = 2.6, luma.sign = mg.pvals["SR","Her2.LumA.signif"],
+                      ylim = c(-1.5,3.5),
+                      ylab = "Metagene score", 
+                      title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
+    
+    plot.list <- append(plot.list, list(
+        uni_quickplot(mg.anno,
+                      group.var = "PAM50",
+                      test.var = "Stroma",
+                      lumb.pos = 2, lumb.sign = mg.pvals["Stroma","Her2.LumB.signif"],
+                      luma.pos = 2.5, luma.sign = mg.pvals["Stroma","Her2.LumA.signif"],
+                      ylim = c(-3.5,3.5),
+                      ylab = "Metagene score", 
+                      title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
 
-# *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
-mg.pvals["Basal",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Basal", 
-    lumb.sig = "ns", lumb.pos = 0.8, 
-    luma.sig = "****", luma.pos = 2.1, 
-    c(-1.5,4))))
-
-mg.pvals["Early_response",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Early_response", 
-    lumb.sig = "*", lumb.pos = 2.2, 
-    luma.sig = "****", luma.pos = 2.7, 
-    c(-2,4.6))))
-
-mg.pvals["IR",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "IR", 
-    lumb.sig = "*", lumb.pos = 3, 
-    luma.sig = "**", luma.pos = 3.6, 
-    c(-2,5.6))))
-
-mg.pvals["Lipid",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Lipid", 
-    lumb.sig = "*", lumb.pos = 2.5, 
-    luma.sig = "****",  luma.pos = 3.3, 
-    c(-1.5,4))))
-
-mg.pvals["Mitotic_checkpoint",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Mitotic_checkpoint", 
-    lumb.sig = "ns", lumb.pos = 2.2, 
-    luma.sig = "****",  luma.pos = 2.7, 
-    c(-2,5))))
-
-mg.pvals["Mitotic_progression",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Mitotic_progression", 
-    lumb.sig = "ns", lumb.pos = 2.5, 
-    luma.sig = "****",  luma.pos = 3, 
-    c(-2,5))))
-
-mg.pvals["SR",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "SR", 
-    lumb.sig = "****", lumb.pos = 2.1, 
-    luma.sig = "****", luma.pos = 2.6, 
-    c(-1.5,4))))
-
-mg.pvals["Stroma",]
-plot.list <- append(plot.list, list(quickplot(
-    mg.anno, "Stroma", 
-    lumb.sig = "ns", lumb.pos = 2, 
-    luma.sig = "***", luma.pos = 2.5, 
-    c(-3.5,3.5))))
-
+}
 #plot
 pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
     onefile = TRUE, width = 15, height = 15) 
@@ -382,5 +412,3 @@ for (i in 1:length(plot.list)) {
 }
 
 dev.off()
-
-}
