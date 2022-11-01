@@ -108,19 +108,28 @@ if (cohort=="SCANB") {
 #######################################################################
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 source("scripts/2_transcriptomic/src/tscr_functions.R")
-library(rstatix) 
+
+# list to save plots
+plot.list <- list()
 
 # erbb2 #
-
 erbb2.gex <- get_gex("ENSG00000141736",gex.data,anno)
+# base statistics
 get_stats(erbb2.gex,"PAM50","ENSG00000141736")
-
 # test
-three_ttest(erbb2.gex,"PAM50",c("Her2","LumA","LumB"),"ENSG00000141736")
-
-gene_quickplot(erbb2.gex,"ENSG00000141736","hi",7.4,"ho",9,c(-5,10))
-
-
+res <- pair_ttest(erbb2.gex, 
+            group.var = "PAM50",
+            test.var = "ENSG00000141736", 
+            g1 = "Her2", g2 = "LumA", g3 = "LumB")
+# plot
+plot.list <- append(plot.list, list(
+    uni_quickplot(erbb2.gex,
+              group.var = "PAM50",
+              test.var = "ENSG00000141736",
+              pair_ttest.res = res,
+              lumb.pos = 7.4, luma.pos = 9, ylim = c(-5,10),
+              ylab = "Expression (log2)", 
+              title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
 
 
 
@@ -220,6 +229,15 @@ ggsave(filename = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",co
 
 
 
+# save plots
+pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
+    onefile = TRUE, width = 15, height = 15) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()
 
 
 # #######################################################################

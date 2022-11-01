@@ -242,7 +242,6 @@ get_gex <- function(id,gex.data,anno) {
     single.gex <- merge(single.gex, anno[,c("PAM50","sampleID")],by="sampleID") %>% relocate(PAM50,.after=sampleID)
 }
 
-# calc. 
 # summary stats.
 get_stats <- function(data,grouping_var,stat_var) {
     res <- data %>% 
@@ -251,16 +250,56 @@ get_stats <- function(data,grouping_var,stat_var) {
     return(res)
 }
 
-# gene quickplot function
-gene_quickplot <- function(mg.anno, gene, lumb.sig, lumb.pos, luma.sig, luma.pos, ylim) {
-    plot <- ggplot(mg.anno, aes(x=as.factor(PAM50),y=.data[[gene]],fill=as.factor(PAM50))) +
+# ttest function with equal var check
+var_ttest <- function(dat1,dat2) {
+    # equal var check
+    if (var.test(dat1,dat2)$p.value <= 0.05) {
+        res <- t.test(dat1,dat2, var.equal = FALSE)
+    } else {
+        res <- t.test(dat1,dat2, var.equal = TRUE)
+    }
+    return(res)
+}
+
+# function for pairwise ttests (g1vsg2,g1vsg3)
+pair_ttest <- function(data,group.var,test.var,g1,g2,g3) {
+    
+    # group data
+    dat1 <- data %>% 
+        filter(!!rlang::ensym(group.var)==g1) %>% 
+        pull(!!rlang::ensym(test.var))
+    dat2 <- data %>% 
+        filter(!!rlang::ensym(group.var)==g2) %>% 
+        pull(!!rlang::ensym(test.var))
+    dat3 <- data %>% 
+        filter(!!rlang::ensym(group.var)==g3) %>% 
+        pull(!!rlang::ensym(test.var))
+    
+    # test and output formatting
+    var_pair <- c(paste(g1,".",g2,sep=""),paste(g1,".",g3,sep=""))
+    pval <- c(var_ttest(dat1,dat2)$p.value, var_ttest(dat1,dat3)$p.value)
+    signif <- c(symnum(pval[1], corr = FALSE, na = FALSE, 
+                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1), 
+                       symbols = c("****", "***", "**", "*", "ns")),
+                symnum(pval[2], corr = FALSE, na = FALSE, 
+                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1), 
+                       symbols = c("****", "***", "**", "*", "ns")))
+    
+    return(data.frame(var_pair,pval,signif))
+}
+
+
+# universal boxplot function
+uni_quickplot <- function(data, group.var, test.var, pair_ttest.res, lumb.pos, luma.pos, ylim, xlab="PAM50 subtype",
+                           ylab, title) {
+    plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-        xlab("PAM50 subtype") +
-        ylab("Expression (log2)") +
+        xlab(xlab) +
+        ylab(ylab) +
         ylim(ylim) +
-        ggtitle(paste(gene," expression in PAM50 subtypes (ERpHER2n)",sep="")) +
-        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sig, tip_length = 0.02, vjust=0.01, y_position = luma.pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sig, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) + 
+        ggtitle(title) +
+        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=pair_ttest.res[1,3], tip_length = 0.02, vjust=0.01, y_position = luma.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=pair_ttest.res[2,3], tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) + 
         theme(axis.text.x = element_text(size = 30),
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
@@ -273,37 +312,3 @@ gene_quickplot <- function(mg.anno, gene, lumb.sig, lumb.pos, luma.sig, luma.pos
 }
 
 
-
-# make a nicer ttest functioin that can be universally applied
-# ttest function: should return 2 pvalues
-# input: dataframe with column: sampleID, PAM50/Group, test_data 
-
-var_ttest <- function(dat1,dat2) {
-    # equal var check
-    if (var.test(dat1,dat2)$p.value <= 0.05) {
-        res <- t.test(dat1,dat2, var.equal = FALSE)
-    } else {
-        res <- t.test(dat1,dat2, var.equal = TRUE)
-    }
-    return(res)
-}
-
-three_ttest <- function(data,group.var,group.vec,test.var) {
-    
-    # group data
-    dat1 <- data %>% 
-        filter(!!rlang::ensym(group.var)==group.vec[1]) %>% 
-        pull(!!rlang::ensym(test.var))
-    dat2 <- data %>% 
-        filter(!!rlang::ensym(group.var)==group.vec[2]) %>% 
-        pull(!!rlang::ensym(test.var))
-    dat3 <- data %>% 
-        filter(!!rlang::ensym(group.var)==group.vec[3]) %>% 
-        pull(!!rlang::ensym(test.var))
-    
-    # test
-    pair1.pval <- var_ttest(dat1,dat2)$p.value
-    pair2.pval <- var_ttest(dat1,dat3)$p.value
-    
-    return(c(pair1.pval,pair2.pval))
-}
