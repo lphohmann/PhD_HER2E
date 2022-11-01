@@ -115,6 +115,7 @@ plot.list <- list()
 # for SCANB
 
 if (cohort=="SCANB") {
+    
     #ERBB2-----------------------------------------------------------------
     
     erbb2.gex <- get_gex("ENSG00000141736",gex.data,anno)
@@ -179,6 +180,7 @@ if (cohort=="SCANB") {
 
 # for METABRIC (have to use HUGO gene symbold instead of ensembl ids here)
 } else if (cohort=="METABRIC") {
+    
     #ERBB2-----------------------------------------------------------------
     
     erbb2.gex <- get_gex("ERBB2",gex.data,anno)
