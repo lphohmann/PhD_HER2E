@@ -56,63 +56,7 @@ her2p_quickplot <- function(mg.anno, metagene, pher2e.sig, pher2e.pos, nonher2e.
     return(plot)
 }
 
-# function to calc. the p value for each metagene in her2p,her2pher2e,her2e
-her2p_mgtest <- function(metagene.scores,anno) {
-    
-    # sample ids 
-    HER2nHER2E.cols <- anno %>% filter(Group=="HER2n_HER2E") %>% pull(sampleID)
-    HER2pHER2E.cols <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sampleID)
-    HER2p.cols <- anno %>% filter(Group=="HER2p_nonHER2E") %>% pull(sampleID)
-    
-    # transpose
-    tmg <- t(metagene.scores)
-    
-    #initialize storing vector
-    HER2nHER2E.vs.HER2pHER2E.pval <- rep(0,nrow(tmg))
-    HER2nHER2E.vs.HER2p.pval <- rep(0,nrow(tmg))
-    
-    # calc. pvalues
-    for (i in 1:nrow(tmg)) {
-        
-        # group data
-        HER2nHER2E.data <- as.numeric(tmg[i,HER2nHER2E.cols])
-        HER2pHER2E.data <- as.numeric(tmg[i,HER2pHER2E.cols])
-        HER2p.data <- as.numeric(tmg[i,HER2p.cols])
-        
-        # for HER2nHER2E vs HER2pHER2E
-        # equal variance check
-        if (var.test(unlist(HER2nHER2E.data),unlist(HER2pHER2E.data), alternative = "two.sided")$p.value <= 0.05) {
-            HER2nHER2E.vs.HER2pHER2E.res <- t.test(HER2nHER2E.data,HER2pHER2E.data, var.equal = FALSE)
-        } else {
-            HER2nHER2E.vs.HER2pHER2E.res <- t.test(HER2nHER2E.data,HER2pHER2E.data, var.equal = TRUE)
-        }
-        # save results
-        HER2nHER2E.vs.HER2pHER2E.pval[i] <- HER2nHER2E.vs.HER2pHER2E.res$p.value
-        
-        # for HER2nHER2E vs HER2p
-        # equal variance check
-        if (var.test(unlist(HER2nHER2E.data),unlist(HER2p.data), alternative = "two.sided")$p.value <= 0.05) {
-            HER2nHER2E.vs.HER2p.res <- t.test(HER2nHER2E.data,HER2p.data, var.equal = FALSE)
-        } else {
-            HER2nHER2E.vs.HER2p.res <- t.test(HER2nHER2E.data,HER2p.data, var.equal = TRUE)
-        }
-        # save results
-        HER2nHER2E.vs.HER2p.pval[i] <- HER2nHER2E.vs.HER2p.res$p.value
-        
-    }
-    
-    # add the results to the dataframe
-    results <- as.data.frame(tmg) %>% 
-        add_column(HER2p_HER2E_pval = HER2nHER2E.vs.HER2pHER2E.pval,HER2p_nonHER2E_pval = HER2nHER2E.vs.HER2p.pval) %>% 
-        dplyr::select(HER2p_HER2E_pval,HER2p_nonHER2E_pval)
-    
-    return(results)
-}
-
-
 ### functions for singlegex script ###
-# delete?
-## do this later for the extracted gex data
 
 # get gex, sampleid, pam50
 get_gex <- function(id,gex.data,anno) {
@@ -181,7 +125,7 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
 }
 
 
-# universal boxplot function
+# boxplot function for pam50 groups
 uni_quickplot <- function(data, group.var, test.var, lumb.pos, lumb.sign, luma.pos, luma.sign, ylim, xlab="PAM50 subtype",
                            ylab, title) {
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
@@ -200,5 +144,33 @@ uni_quickplot <- function(data, group.var, test.var, lumb.pos, lumb.sign, luma.p
               legend.position = "none") +
         scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
         scale_x_discrete(limits = c("LumA","LumB","Her2"), labels = c("LUMA","LUMB","HER2E")) # check that these are in the correct order
+    return(plot)
+}
+
+# boxplot real unviersal now
+hp_uni_quickplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title) {
+    
+    g1 <- ensym(g1)
+    g2 <- ensym(g2)
+    g3 <- ensym(g3)
+
+    plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
+        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
+        xlab(xlab) +
+        ylab(ylab) +
+        ylim(ylim) +
+        ggtitle(title) +
+        geom_signif(comparisons=list(c(g1, g2)), annotations = g2.sign, tip_length = 0.02, vjust=0.01, y_position = g2.pos, size = 2, textsize = 15) +
+        geom_signif(comparisons=list(c(g1, g3)), annotations = g3.sign, tip_length = 0.02, vjust=0.01, y_position = g3.pos, size = 2, textsize = 15) + 
+        theme(axis.text.x = element_text(size = 30),
+              axis.title.x = element_text(size = 35),
+              axis.text.y = element_text(size = 30),
+              axis.title.y = element_text(size = 35),
+              plot.title = element_text(size=30),
+              legend.position = "none") +
+        scale_fill_manual(values=c(!!rlang::ensym(g2) = g2.col, !!rlang::ensym(g3) = g3.col, !!rlang::ensym(g1) = g1.col)) +
+        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
+    #scale_fill_manual(values=c(!!rlang::ensym(g2) = g2.col, !!rlang::ensym(g3) = g3.col, !!rlang::ensym(g1) = g1.col)) +
+    #scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
     return(plot)
 }

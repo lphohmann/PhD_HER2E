@@ -155,7 +155,8 @@ earlyresponse.scores <- mgscore(metagene = "Early_response",
                         metagene.def = metagene.def,
                         gex.data = gex.data)
 
-metagene.scores <- merge(basal.scores,earlyresponse.scores,by=0) %>% column_to_rownames(var = "Row.names")
+metagene.scores <- merge(basal.scores,earlyresponse.scores,by=0) %>% 
+    column_to_rownames(var = "Row.names")
 
 #immuneresponse
 ir.scores <- mgscore(metagene = "IR",
@@ -216,6 +217,7 @@ for(i in 1:ncol(metagene.scores)) {
                g1 = "Her2", g2 = "LumA", g3 = "LumB")
     mg.pvals <- rbind(mg.pvals, c(mg,res$pval[1],res$signif[1],res$pval[2],res$signif[2]))
 }
+
 # name column and set rownames
 mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals), 
          new = c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")) %>% column_to_rownames(var="metagene")
