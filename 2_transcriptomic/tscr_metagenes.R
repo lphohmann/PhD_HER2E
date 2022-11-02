@@ -236,6 +236,10 @@ mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c(
 # list to save plots
 plot.list <- list()
 
+#TODO: three_boxplot; 
+#g1="Her2",g2="LumA",g3="LumB",
+#lumb=g3; luma=g2
+
 # SCANB
 if (cohort=="SCANB") {
         

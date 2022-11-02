@@ -159,7 +159,7 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab(xlab) +
         ylab(ylab) +
-        ylim(ylim) +
+        coord_cartesian(ylim=ylim) +
         ggtitle(title) +
         geom_signif(comparisons=list(c(g1, g2)), annotations = g2.sign, tip_length = 0.02, vjust=0.01, y_position = g2.pos, size = 2, textsize = 15) +
         geom_signif(comparisons=list(c(g1, g3)), annotations = g3.sign, tip_length = 0.02, vjust=0.01, y_position = g3.pos, size = 2, textsize = 15) + 

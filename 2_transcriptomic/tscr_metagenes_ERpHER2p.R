@@ -1,6 +1,7 @@
 # Script: Metagene analysis for HER2E and ERpHER2p contrast groups in SCAN-B 
 
 # TODO:
+# no data for metabric (only erpher2n or tnbc in dataset)
 
 # empty environment
 rm(list=ls())
@@ -9,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -275,9 +276,7 @@ if (cohort=="SCANB") {
                                         
     #
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"IR","ns",3.3,"*",3.7, c(-2,4.1))))
-    
-    three_boxplot(mg.anno,
+        three_boxplot(mg.anno,
                   group.var = "Group",
                   test.var = "IR",
                   g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
@@ -287,38 +286,196 @@ if (cohort=="SCANB") {
                   ylim = c(-2,4.1),
                   ylab = "Metagene score", 
                   xlab = "HER2 subtype",
-                  title = "IR metagene scores in HER2 subtypes (ERp)")
+                  title = "IR metagene scores in HER2 subtypes (ERp)")))
     
     #
-    mg.pvals["Lipid",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Lipid","ns",2,"****",2.5, c(-1.8,3))))
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "Lipid",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 2.5, g3.sign = mg.pvals["Lipid",4],
+                  g2.pos = 3, g2.sign = mg.pvals["Lipid",2],
+                  ylim = c(-1.8,3.5),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "Lipid metagene scores in HER2 subtypes (ERp)")))
     
     #
-    mg.pvals["Mitotic_checkpoint",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Mitotic_checkpoint","ns",3,"****",3.4, c(-2,3.8))))
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "Mitotic_checkpoint",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 2.7, g3.sign = mg.pvals["Mitotic_checkpoint",4],
+                  g2.pos = 3.2, g2.sign = mg.pvals["Mitotic_checkpoint",2],
+                  ylim = c(-3,3.8),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "Mitotic_checkpoint metagene scores in HER2 subtypes (ERp)")))
     
     #
-    mg.pvals["Mitotic_progression",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Mitotic_progression","ns",3.2,"****",3.6, c(-2,4))))
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "Mitotic_progression",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 2.8, g3.sign = mg.pvals["Mitotic_progression",4],
+                  g2.pos = 3.4, g2.sign = mg.pvals["Mitotic_progression",2],
+                  ylim = c(-3,4),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "Mitotic_progression metagene scores in HER2 subtypes (ERp)")))
+    
     
     #
-    mg.pvals["SR",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"SR","ns",1.1,"****",1.5, c(-4,1.9))))
-    
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "SR",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 1.4, g3.sign = mg.pvals["SR",4],
+                  g2.pos = 2.1, g2.sign = mg.pvals["SR",2],
+                  ylim = c(-4,3),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "SR metagene scores in HER2 subtypes (ERp)")))
+
     #
-    mg.pvals["Stroma",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Stroma","ns",1.5,"ns",1.9, c(-2.7,2.3))))
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "Stroma",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 1.6, g3.sign = mg.pvals["Stroma",4],
+                  g2.pos = 2.1, g2.sign = mg.pvals["Stroma",2],
+                  ylim = c(-2.7,2.7),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "Stroma metagene scores in HER2 subtypes (ERp)")))
 
 #-----------------------------------------------------------------------#
     
 # METABRIC
 } else if(cohort=="METABRIC") {
 
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Basal",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2, g3.sign = mg.pvals["Basal",4],
+                      g2.pos = 3.5, g2.sign = mg.pvals["Basal",2],
+                      ylim = c(-1.5,4),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Basal metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Early_response",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2.4, g3.sign = mg.pvals["Early_response",4],
+                      g2.pos = 2.9, g2.sign = mg.pvals["Early_response",2],
+                      ylim = c(-2.5,3.5),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Early_response metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "IR",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2.8, g3.sign = mg.pvals["IR",4],
+                      g2.pos = 3.3, g2.sign = mg.pvals["IR",2],
+                      ylim = c(-2,4.1),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "IR metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Lipid",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2.5, g3.sign = mg.pvals["Lipid",4],
+                      g2.pos = 3, g2.sign = mg.pvals["Lipid",2],
+                      ylim = c(-1.8,3.5),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Lipid metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Mitotic_checkpoint",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2.7, g3.sign = mg.pvals["Mitotic_checkpoint",4],
+                      g2.pos = 3.2, g2.sign = mg.pvals["Mitotic_checkpoint",2],
+                      ylim = c(-3,3.8),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Mitotic_checkpoint metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Mitotic_progression",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 2.8, g3.sign = mg.pvals["Mitotic_progression",4],
+                      g2.pos = 3.4, g2.sign = mg.pvals["Mitotic_progression",2],
+                      ylim = c(-3,4),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Mitotic_progression metagene scores in HER2 subtypes (ERp)")))
+    
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "SR",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 1.4, g3.sign = mg.pvals["SR",4],
+                      g2.pos = 2.1, g2.sign = mg.pvals["SR",2],
+                      ylim = c(-4,3),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "SR metagene scores in HER2 subtypes (ERp)")))
+    
+    #
+    plot.list <- append(plot.list, list(
+        three_boxplot(mg.anno,
+                      group.var = "Group",
+                      test.var = "Stroma",
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                      g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                      g3.pos = 1.6, g3.sign = mg.pvals["Stroma",4],
+                      g2.pos = 2.1, g2.sign = mg.pvals["Stroma",2],
+                      ylim = c(-2.7,2.7),
+                      ylab = "Metagene score", 
+                      xlab = "HER2 subtype",
+                      title = "Stroma metagene scores in HER2 subtypes (ERp)")))
     
     
 }

@@ -128,14 +128,15 @@ if (cohort=="SCANB") {
                 g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(erbb2.gex,
-                  group.var = "PAM50",
-                  test.var = "ENSG00000141736",
-                  lumb.pos = 7.4, lumb.sign = res[2,3],
-                  luma.pos = 9, luma.sign = res[1,3],
-                  ylim = c(-5,10),
-                  ylab = "Expression (log2)", 
-                  title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
+        three_boxplot(erbb2.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000141736",
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 7.4, g3.sign = res[2,3],
+                      g2.pos = 9, g2.sign = res[1,3],
+                      ylim = c(-5,10),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("ERBB2")," (ENSG00000141736) expression in PAM50 subtypes (ERpHER2n)")))))
     
     #ESR1------------------------------------------------------------------
     
@@ -149,11 +150,12 @@ if (cohort=="SCANB") {
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(esr1.gex,
+        three_boxplot(esr1.gex,
                       group.var = "PAM50",
                       test.var = "ENSG00000091831",
-                      lumb.pos = 2.6, lumb.sign = res[2,3],
-                      luma.pos = 3.7, luma.sign = res[1,3],
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 2.6, g3.sign = res[2,3],
+                      g2.pos = 3.7, g2.sign = res[1,3],
                       ylim = c(-5,5),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ESR1")," (ENSG00000091831) expression in PAM50 subtypes (ERpHER2n)")))))
@@ -170,11 +172,12 @@ if (cohort=="SCANB") {
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(fgfr4.gex,
+        three_boxplot(fgfr4.gex,
                       group.var = "PAM50",
                       test.var = "ENSG00000160867",
-                      lumb.pos = 6, lumb.sign = res[2,3],
-                      luma.pos = 7, luma.sign = res[1,3],
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 6, g3.sign = res[2,3],
+                      g2.pos = 7, g2.sign = res[1,3],
                       ylim = c(-2,8),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," (ENSG00000160867) expression in PAM50 subtypes (ERpHER2n)")))))
@@ -196,11 +199,12 @@ if (cohort=="SCANB") {
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(erbb2.gex,
+        three_boxplot(erbb2.gex,
                       group.var = "PAM50",
                       test.var = "ERBB2",
-                      lumb.pos = 2.5, lumb.sign = res[2,3],
-                      luma.pos = 3.5, luma.sign = res[1,3],
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 2.5, g3.sign = res[2,3],
+                      g2.pos = 3.5, g2.sign = res[1,3],
                       ylim = c(-4,4),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ERBB2")," expression in PAM50 subtypes (ERpHER2n)")))))
@@ -217,11 +221,12 @@ if (cohort=="SCANB") {
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(esr1.gex,
+        three_boxplot(esr1.gex,
                       group.var = "PAM50",
                       test.var = "ESR1",
-                      lumb.pos = 1.6, lumb.sign = res[2,3],
-                      luma.pos = 2.3, luma.sign = res[1,3],
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 1.6, g3.sign = res[2,3],
+                      g2.pos = 2.3, g2.sign = res[1,3],
                       ylim = c(-2,3.5),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("ESR1")," expression in PAM50 subtypes (ERpHER2n)")))))
@@ -238,11 +243,12 @@ if (cohort=="SCANB") {
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     # plot
     plot.list <- append(plot.list, list(
-        uni_quickplot(fgfr4.gex,
+        three_boxplot(fgfr4.gex,
                       group.var = "PAM50",
                       test.var = "FGFR4",
-                      lumb.pos = 4.2, lumb.sign = res[2,3],
-                      luma.pos = 5.2, luma.sign = res[1,3],
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 4.2, g3.sign = res[2,3],
+                      g2.pos = 5.2, g2.sign = res[1,3],
                       ylim = c(-3,7),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
