@@ -148,12 +148,13 @@ uni_quickplot <- function(data, group.var, test.var, lumb.pos, lumb.sign, luma.p
 }
 
 # boxplot real unviersal now
-hp_uni_quickplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title) {
+three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title) {
     
-    g1 <- ensym(g1)
-    g2 <- ensym(g2)
-    g3 <- ensym(g3)
-
+    # make color palette vector
+    colors <- c(g1.col, g2.col, g3.col)
+    names(colors) <- c(g1, g2, g3)
+    
+    # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab(xlab) +
@@ -168,9 +169,8 @@ hp_uni_quickplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d
               axis.title.y = element_text(size = 35),
               plot.title = element_text(size=30),
               legend.position = "none") +
-        scale_fill_manual(values=c(!!rlang::ensym(g2) = g2.col, !!rlang::ensym(g3) = g3.col, !!rlang::ensym(g1) = g1.col)) +
+        scale_fill_manual(values=colors) +
         scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
-    #scale_fill_manual(values=c(!!rlang::ensym(g2) = g2.col, !!rlang::ensym(g3) = g3.col, !!rlang::ensym(g1) = g1.col)) +
-    #scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
+    
     return(plot)
 }

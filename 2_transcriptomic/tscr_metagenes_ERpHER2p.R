@@ -246,32 +246,48 @@ plot.list <- list()
 if (cohort=="SCANB") {
     
     #
-    mg.pvals["Basal",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Basal","**",2,"****",2.5, c(-1.5,3))))
-    
-    plot.list <- append(plot.list, list())
-    
-    hp_uni_quickplot(mg.anno,
+        three_boxplot(mg.anno,
                       group.var = "Group",
                       test.var = "Basal",
-                      g1="Her2",g2="LumA",g3="LumB", #g1.col=, g2.col=, g3.col=, 
+                      g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                     g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
                       g3.pos = 2, g3.sign = mg.pvals["Basal",4],
-                      g2.pos = 2.5, g2.sign = mg.pvals["Basal",2],
-                      ylim = c(-1.5,3),
+                      g2.pos = 3.5, g2.sign = mg.pvals["Basal",2],
+                      ylim = c(-1.5,4),
                       ylab = "Metagene score", 
                       xlab = "HER2 subtype",
-                      title = "Basal metagene scores in HER2 subtypes (ERp)")
+                      title = "Basal metagene scores in HER2 subtypes (ERp)")))
     
     #
-    mg.pvals["Early_response",]
     plot.list <- append(plot.list, list(
-        her2p_quickplot(mg.anno,"Early_response","ns",2,"ns",2.3, c(-2.5,2.6))))
+        three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "Early_response",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 2.4, g3.sign = mg.pvals["Early_response",4],
+                  g2.pos = 2.9, g2.sign = mg.pvals["Early_response",2],
+                  ylim = c(-2.5,3.5),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "Early_response metagene scores in HER2 subtypes (ERp)")))
                                         
     #
-    mg.pvals["IR",]
     plot.list <- append(plot.list, list(
         her2p_quickplot(mg.anno,"IR","ns",3.3,"*",3.7, c(-2,4.1))))
+    
+    three_boxplot(mg.anno,
+                  group.var = "Group",
+                  test.var = "IR",
+                  g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E", 
+                  g1.col="#d334eb", g2.col="#d8b365", g3.col="#5ab4ac", 
+                  g3.pos = 2.8, g3.sign = mg.pvals["IR",4],
+                  g2.pos = 3.3, g2.sign = mg.pvals["IR",2],
+                  ylim = c(-2,4.1),
+                  ylab = "Metagene score", 
+                  xlab = "HER2 subtype",
+                  title = "IR metagene scores in HER2 subtypes (ERp)")
     
     #
     mg.pvals["Lipid",]
