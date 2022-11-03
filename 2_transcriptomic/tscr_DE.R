@@ -36,6 +36,8 @@ library(biomaRt)
 # the clinical ER+Her2- subtyped samples
 #######################################################################
 
+# TODO: FORGOT I HAVE TO FILTER ROWS WITH LOW STDev
+
 # for SCANB
 if (cohort=="SCANB") {
     
@@ -121,7 +123,7 @@ Her2.LumB.diff <- rep(NA,nrow(gex.data))
 
 # loop through the genes
 pb = txtProgressBar(min = 0, max = nrow(gex.data), initial = 0, style = 3)
-for (i in 1:2) { #nrow(gex.data)
+for (i in 1:nrow(gex.data)) { #nrow(gex.data)
     setTxtProgressBar(pb,i)
     
     # set vars
@@ -145,49 +147,49 @@ for (i in 1:2) { #nrow(gex.data)
     close(pb)
 }
 
-
-
-
-#######################################################################
-# 5. Process the output
-#######################################################################
+# Process the output
 
 # create the final output
-results <- gex_data_log %>% add_column(H2vsLA_pvalue = H2vsLA_pvalue,H2vsLB_pvalue = H2vsLB_pvalue,H2vsLA_diff = H2vsLA_diff,H2vsLB_diff = H2vsLB_diff) %>% dplyr::select(H2vsLA_pvalue,H2vsLB_pvalue,H2vsLA_diff,H2vsLB_diff)
+DE.res <- gex.data %>% add_column(
+    Her2.LumA.pval = Her2.LumA.pval,
+    Her2.LumB.pval = Her2.LumB.pval,
+    Her2.LumA.diff = Her2.LumA.diff, 
+    Her2.LumB.diff = Her2.LumB.diff) %>% 
+    dplyr::select(Her2.LumA.pval,Her2.LumB.pval,
+                  Her2.LumA.diff,Her2.LumB.diff)
 
 # adjust p value 
-results$H2vsLA_padj <- p.adjust(results$H2vsLA_pvalue, "fdr")
-results$H2vsLB_padj <- p.adjust(results$H2vsLB_pvalue, "fdr")
+DE.res$Her2.LumA.padj <- p.adjust(DE.res$Her2.LumA.pval, "fdr")
+DE.res$Her2.LumB.padj <- p.adjust(DE.res$Her2.LumB.pval, "fdr")
 
 # up or down (refers to the situation in lumHer2 subtype; e.g. "up" indicates a gene whose expression is upregulated in lumHer2 compared to lumB or lumA)
-results <- results %>% mutate(H2vsLA_de =
-                                  case_when(H2vsLA_diff <= 0 ~ "down",
-                                            H2vsLA_diff >= 0 ~ "up"))
-results <- results %>% mutate(H2vsLB_de =
-                                  case_when(H2vsLB_diff <= 0 ~ "down",
-                                            H2vsLB_diff >= 0 ~ "up"))
+DE.res <- DE.res %>% mutate(Her2.LumA.de =
+                                  case_when(Her2.LumA.diff <= 0 ~ "down",
+                                            Her2.LumA.diff >= 0 ~ "up"))
+DE.res <- DE.res %>% mutate(Her2.LumB.de =
+                                  case_when(Her2.LumB.diff <= 0 ~ "down",
+                                            Her2.LumB.diff >= 0 ~ "up"))
 
 # save the file
-save(results, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/complete_DE_results.RData",sep = ""))
-#load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/complete_DE_results.RData",sep = ""))
+save(DE.res,file = paste(data.path,"DE_results.RData",sep="") )
 
 # final result 
-# Her2 vs LumA
-H2vsLA_DEGs <- results %>% filter(H2vsLA_padj <= 0.05) %>% dplyr::select(H2vsLA_de, H2vsLA_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLA_DEGs_up <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLA_DEGs_down <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
-
-# Her2 vs LumB
-H2vsLB_DEGs <- results %>% filter(H2vsLB_padj <= 0.05) %>% dplyr::select(H2vsLB_de, H2vsLB_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLB_DEGs_up <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLB_DEGs_down <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
-
-# compare overlap
-venn.diagram(
-    x = list(H2vsLB_DEGs$Gene, H2vsLA_DEGs$Gene),
-    category.names = c("H2vsLB" , "H2vsLA"),
-    filename = 'venn_diagramm.png',
-    output=TRUE)
+# # Her2 vs LumA
+# H2vsLA_DEGs <- results %>% filter(H2vsLA_padj <= 0.05) %>% dplyr::select(H2vsLA_de, H2vsLA_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
+# H2vsLA_DEGs_up <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
+# H2vsLA_DEGs_down <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
+# 
+# # Her2 vs LumB
+# H2vsLB_DEGs <- results %>% filter(H2vsLB_padj <= 0.05) %>% dplyr::select(H2vsLB_de, H2vsLB_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
+# H2vsLB_DEGs_up <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
+# H2vsLB_DEGs_down <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
+# 
+# # compare overlap
+# venn.diagram(
+#     x = list(H2vsLB_DEGs$Gene, H2vsLA_DEGs$Gene),
+#     category.names = c("H2vsLB" , "H2vsLA"),
+#     filename = 'venn_diagramm.png',
+#     output=TRUE)
 
 # #######################################################################
 # # 6. Prepare export for the functional enrichment analysis
