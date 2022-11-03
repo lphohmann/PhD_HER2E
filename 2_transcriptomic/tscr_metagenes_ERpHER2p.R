@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB (or METABRIC - no data)
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"

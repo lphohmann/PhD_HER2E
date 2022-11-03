@@ -1,5 +1,4 @@
 # Function definitions for transcriptomic data analyses
-#TODO just write one quickplot function and one ttest function with enough parameters to adapt them to all situations
 
 ################################################################################
 # functions
@@ -29,34 +28,6 @@ mgscore <- function(metagene,metagene.def,gex.data) {
     
     return(result)
 }
-
-# DELETE THIS ONE AFTER CHANGING THE SCRIPT
-### functions for metagenes script (HER2pHER2E,HER2p) ###
-
-# quickplot function for her2p samples
-her2p_quickplot <- function(mg.anno, metagene, pher2e.sig, pher2e.pos, nonher2e.sig, nonher2e.pos, ylim) { 
-    plot <- ggplot(mg.anno, aes(x=as.factor(Group),y=.data[[metagene]],fill=as.factor(Group))) +
-        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-        xlab("Subtype") +
-        ylab("Metagene score") +
-        ggtitle(paste(
-            metagene," metagene scores in HER2 subtypes (ERp)",sep="")) +
-        theme(axis.text.x = element_text(size = 30),
-              axis.title.x = element_text(size = 35),
-              axis.text.y = element_text(size = 30),
-              axis.title.y = element_text(size = 35),
-              plot.title = element_text(size=30),
-              legend.position = "none") +
-        scale_fill_manual(values=c(HER2p_nonHER2E = "#d8b365", HER2p_HER2E = "#5ab4ac", HER2n_HER2E ="#d334eb")) +
-        scale_x_discrete(limits = levels(mg.anno$Group)) +
-        ylim(ylim) +
-        geom_signif(comparisons=list(c("HER2n_HER2E", "HER2p_nonHER2E")), annotations=nonher2e.sig, tip_length = 0.02, vjust=0.01, y_position = nonher2e.pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("HER2n_HER2E", "HER2p_HER2E")), annotations=pher2e.sig, tip_length = 0.02, vjust=0.01, y_position = pher2e.pos, size = 2, textsize = 15) 
-        
-    return(plot)
-}
-
-### functions for singlegex script ###
 
 # get gex, sampleid, pam50
 get_gex <- function(id,gex.data,anno) {
@@ -124,30 +95,7 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
     return(data.frame(var_pair,pval,signif))
 }
 
-
-# boxplot function for pam50 groups
-uni_quickplot <- function(data, group.var, test.var, lumb.pos, lumb.sign, luma.pos, luma.sign, ylim, xlab="PAM50 subtype",
-                           ylab, title) {
-    plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
-        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-        xlab(xlab) +
-        ylab(ylab) +
-        ylim(ylim) +
-        ggtitle(title) +
-        geom_signif(comparisons=list(c("Her2", "LumA")), annotations=luma.sign, tip_length = 0.02, vjust=0.01, y_position = luma.pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c("Her2", "LumB")), annotations=lumb.sign, tip_length = 0.02, vjust=0.01, y_position = lumb.pos, size = 2, textsize = 15) + 
-        theme(axis.text.x = element_text(size = 30),
-              axis.title.x = element_text(size = 35),
-              axis.text.y = element_text(size = 30),
-              axis.title.y = element_text(size = 35),
-              plot.title = element_text(size=30),
-              legend.position = "none") +
-        scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb")) +
-        scale_x_discrete(limits = c("LumA","LumB","Her2"), labels = c("LUMA","LUMB","HER2E")) # check that these are in the correct order
-    return(plot)
-}
-
-# boxplot real unviersal now
+# boxplot for 3 groups
 three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title) {
     
     # make color palette vector
