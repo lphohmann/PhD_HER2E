@@ -1,5 +1,5 @@
 # Script: differential expression analysis; cohorts=SCANB, METABRIC
-#TODO
+#TODO: try to not filter based on sd but change the ttest function to give na in case of error
 
 # empty environment
 rm(list=ls())
@@ -71,6 +71,8 @@ if (cohort=="SCANB") {
     
     # log transformed FPKM data
     gex.data <- as.data.frame(log2(gex.data + 1))
+    # filter based on stdev cutoff before z-transform
+    gex.data <- gex.data %>% mutate(stdev=rowSds(as.matrix(.[colnames(gex.data)]))) %>% filter(stdev >= 0.5) %>% dplyr::select(-c(stdev)) 
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
     
@@ -121,6 +123,18 @@ Her2.LumB.pval <- rep(NA,nrow(gex.data))
 Her2.LumA.diff <- rep(NA,nrow(gex.data))
 Her2.LumB.diff <- rep(NA,nrow(gex.data))
 
+# alternative
+# you_function <- function(currRow){
+#     res <- try(t.test(currRow[4:6], currRow[1:3])$p.value)
+#     if(grepl(pattern = "Error", x = res)){ 
+#         return(NA)
+#     } else {
+#         res
+#     }
+# }
+# out <- apply(dat, 1,you_function )
+# names(out) <- colnames(dat)
+
 # loop through the genes
 pb = txtProgressBar(min = 0, max = nrow(gex.data), initial = 0, style = 3)
 for (i in 1:nrow(gex.data)) { #nrow(gex.data)
@@ -132,6 +146,7 @@ for (i in 1:nrow(gex.data)) { #nrow(gex.data)
     lumb.data <- as.numeric(gex.data[i,LumB.cols])
     
     # for Her2 vs LumA
+    print(rownames(gex.data)[i]) # remove
     res.A <- var_ttest(her2.data,luma.data)
     
     # save results
@@ -139,7 +154,7 @@ for (i in 1:nrow(gex.data)) { #nrow(gex.data)
     Her2.LumA.diff[i] <- res.A$estimate[1]-res.A$estimate[2]
     
     # for Her2 vs LumB
-    res.B <- var_ttest(her2.data,luma.data)
+    res.B <- var_ttest(her2.data,lumb.data)
     
     # save results
     Her2.LumB.pval[i] <- res.B$p.value
@@ -172,182 +187,33 @@ DE.res <- DE.res %>% mutate(Her2.LumB.de =
 
 # save the file
 save(DE.res,file = paste(data.path,"DE_results.RData",sep="") )
+load(file = paste(data.path,"DE_results.RData",sep=""))
+
+# DEGs
+DEGs <- DE.res %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
+
+# check if FGFR in DE
+#fgfr4 ENSG00000160867
+is.element('ENSG00000160867', DEGs$Gene)
+#fgfr1 ENSG00000077782 
+is.element('ENSG00000077782', DEGs$Gene)
+#fgfr2 ENSG00000066468
+is.element('ENSG00000066468', DEGs$Gene)
+#fgfr3 ENSG00000068078
+is.element('ENSG00000068078', DEGs$Gene)
 
 # final result 
-# # Her2 vs LumA
-# H2vsLA_DEGs <- results %>% filter(H2vsLA_padj <= 0.05) %>% dplyr::select(H2vsLA_de, H2vsLA_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-# H2vsLA_DEGs_up <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-# H2vsLA_DEGs_down <- results %>% filter(H2vsLA_padj <= 0.05) %>% filter(H2vsLA_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
+# Her2 vs LumA
+H2vsLA.DEGs <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% dplyr::select(Her2.LumA.de, Her2.LumA.padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLA.DEGs.up <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% filter(Her2.LumA.de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLA.DEGs.down <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% filter(Her2.LumA.de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
 # 
 # # Her2 vs LumB
-# H2vsLB_DEGs <- results %>% filter(H2vsLB_padj <= 0.05) %>% dplyr::select(H2vsLB_de, H2vsLB_padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-# H2vsLB_DEGs_up <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-# H2vsLB_DEGs_down <- results %>% filter(H2vsLB_padj <= 0.05) %>% filter(H2vsLB_de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
-# 
-# # compare overlap
-# venn.diagram(
-#     x = list(H2vsLB_DEGs$Gene, H2vsLA_DEGs$Gene),
-#     category.names = c("H2vsLB" , "H2vsLA"),
-#     filename = 'venn_diagramm.png',
-#     output=TRUE)
+H2vsLB.DEGs <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% dplyr::select(Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLB.DEGs.up <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% filter(Her2.LumB.de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLB.DEGs.down <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% filter(Her2.LumB.de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
 
-# #######################################################################
-# # 6. Prepare export for the functional enrichment analysis
-# #######################################################################
-# 
-# # i think i have to strip the endings of the ids because the webtools dont recognize these identifiers
-# H2vsLA_DEGs_up$Gene <- gsub("\\..*","",H2vsLA_DEGs_up$Gene)
-# H2vsLA_DEGs_down$Gene <- gsub("\\..*","",H2vsLA_DEGs_down$Gene)
-# H2vsLB_DEGs_up$Gene <- gsub("\\..*","",H2vsLB_DEGs_up$Gene)
-# H2vsLB_DEGs_down$Gene <- gsub("\\..*","",H2vsLB_DEGs_down$Gene)
-# 
-# # export for functional enrichment analysis
-# #write.table(H2vsLB_DEGs_up$Gene, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/H2vsLB_DEGs_up.txt",sep = ""), sep="\t", row.names = FALSE)
-# #write.table(H2vsLB_DEGs_down$Gene, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/H2vsLB_DEGs_down.txt",sep = ""), sep="\t", row.names = FALSE)
-# #write.table(H2vsLA_DEGs_up$Gene, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/H2vsLA_DEGs_up.txt",sep = ""), sep="\t", row.names = FALSE)
-# #write.table(H2vsLA_DEGs_down$Gene, file = paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/H2vsLA_DEGs_down.txt",sep = ""), sep="\t", row.names = FALSE)
-# 
-# #######################################################################
-# # 7. PCA
-# #######################################################################
-# 
-# pca_pam50anno <- sample_info %>% column_to_rownames(var="sampleID") %>% dplyr::rename(PAM50_subtype = PAM50)
-# pca_data_analysis <- t(gex_data_log)
-# pca_data_plotting <- merge(pca_data_analysis,pca_pam50anno,by=0) %>% column_to_rownames(var = "Row.names")
-# 
-# pca_res <- prcomp(pca_data_analysis) #, scale=T
-# pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Transcriptomics/",cohort,"/pca_plot.pdf",sep =""))
-# autoplot(pca_res, data=pca_data_plotting, colour="PAM50_subtype", main= "Principal component analysis of gene expression data") +
-#     theme(legend.position=c(0.9,0.9))
-# dev.off()
-# 
-# #######################################################################
-# # 8. compare bonferroni vs. fdr DEGs
-# #######################################################################
-# 
-# # load scan-b fdr DEGs
-# output_dir <- "SCANB"
-# load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/complete_DE_results.RData",sep = ""))
-# scanb_DEGs <- results
-# scanb_DEGs <- scanb_DEGs %>% dplyr::rename(H2vsLA_padj_fdr = H2vsLA_padj,
-#                                     H2vsLB_padj_fdr = H2vsLB_padj)
-# 
-# # load tcga fdr DEGs
-# output_dir <- "TCGA"
-# load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/complete_DE_results.RData",sep = ""))
-# tcga_DEGs <- results
-# tcga_DEGs <- tcga_DEGs %>% dplyr::rename(H2vsLA_padj_fdr = H2vsLA_padj,
-#                                   H2vsLB_padj_fdr = H2vsLB_padj)
-# 
-# # add bf adjustments
-# # tcga
-# tcga_DEGs$H2vsLA_padj_bf <- p.adjust(tcga_DEGs$H2vsLA_pvalue,"bonferroni")
-# tcga_DEGs$H2vsLB_padj_bf <- p.adjust(tcga_DEGs$H2vsLB_pvalue, "bonferroni")
-# # scanb
-# scanb_DEGs$H2vsLA_padj_bf <- p.adjust(scanb_DEGs$H2vsLA_pvalue,"bonferroni")
-# scanb_DEGs$H2vsLB_padj_bf <- p.adjust(scanb_DEGs$H2vsLB_pvalue, "bonferroni")
-# 
-# # DEGs
-# H2vsLA_DEGs_tcga_fdr <- tcga_DEGs %>% dplyr::filter(H2vsLA_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLB_DEGs_tcga_fdr <- tcga_DEGs %>% dplyr::filter(H2vsLB_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLA_DEGs_tcga_bf <- tcga_DEGs %>% dplyr::filter(H2vsLA_padj_bf <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLB_DEGs_tcga_bf <- tcga_DEGs %>% dplyr::filter(H2vsLB_padj_bf <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# 
-# H2vsLA_DEGs_scanb_fdr <- scanb_DEGs %>% dplyr::filter(H2vsLA_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLB_DEGs_scanb_fdr <- scanb_DEGs %>% dplyr::filter(H2vsLB_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLA_DEGs_scanb_bf <- scanb_DEGs %>% dplyr::filter(H2vsLA_padj_bf <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# H2vsLB_DEGs_scanb_bf <- scanb_DEGs %>% dplyr::filter(H2vsLB_padj_bf <= 0.05) %>% rownames_to_column("Gene") %>% dplyr::pull(Gene)
-# 
-# # compare overlap
-# # her2 vs lumA
-# venn.diagram(
-#     x = list(H2vsLA_DEGs_scanb_fdr, H2vsLA_DEGs_scanb_bf),
-#     category.names = c("FDR" , "BONFERRONI"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_H2vsLA_DEGs.png",
-#     main = "Comparison FDR vs. BF DEGs (Her2/LumA - SCANB)")
-# 
-# venn.diagram(
-#     x = list(H2vsLA_DEGs_tcga_fdr, H2vsLA_DEGs_tcga_bf),
-#     category.names = c("FDR" , "BONFERRONI"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/tcga_H2vsLA_DEGs.png",
-#     main = "Comparison FDR vs. BF DEGs (Her2/LumA - TCGA)")
-# 
-# # her2 vs lumB
-# venn.diagram(
-#     x = list(H2vsLB_DEGs_scanb_fdr, H2vsLB_DEGs_scanb_bf),
-#     category.names = c("FDR" , "BONFERRONI"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_H2vsLB_DEGs.png",
-#     main = "Comparison FDR vs. BF DEGs (Her2/LumB - SCANB)")
-# 
-# venn.diagram(
-#     x = list(H2vsLB_DEGs_tcga_fdr, H2vsLB_DEGs_tcga_bf),
-#     category.names = c("FDR" , "BONFERRONI"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/tcga_H2vsLB_DEGs.png",
-#     main = "Comparison FDR vs. BF DEGs (Her2/LumB - SCANB)")
-# 
-# # scanb vs tcga DEGs
-# # FDR Her2-LumB
-# venn.diagram(
-#     x = list(H2vsLB_DEGs_tcga_fdr, H2vsLB_DEGs_scanb_fdr),
-#     category.names = c("TCGA DEGs" , "SCAN-B DEGs"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_vs_tcga_H2vsLB_DEGs_fdr.png",
-#     main = "Shared Her2/LumB-DEGs between TCGA and SCAN-B (core set)")
-# 
-# # BF Her2-LumB
-# venn.diagram(
-#     x = list(H2vsLB_DEGs_tcga_bf, H2vsLB_DEGs_scanb_bf),
-#     category.names = c("TCGA" , "SCANB"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_vs_tcga_H2vsLB_DEGs_bf.png",
-#     main = "Comparison Bonferroni-DEGs (Her2/LumB)")
-# 
-# # FDR Her2-LumA
-# venn.diagram(
-#     x = list(H2vsLA_DEGs_tcga_fdr, H2vsLA_DEGs_scanb_fdr),
-#     category.names = c("TCGA DEGs" , "SCAN-B DEGs"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_vs_tcga_H2vsLA_DEGs_fdr.png",
-#     main = "Shared Her2/LumA-DEGs between TCGA and SCAN-B (core set)")
-# 
-# # BF Her2-LumA
-# venn.diagram(
-#     x = list(H2vsLA_DEGs_tcga_bf, H2vsLA_DEGs_scanb_bf),
-#     category.names = c("TCGA" , "SCANB"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/intercohort/scanb_vs_tcga_H2vsLA_DEGs_bf.png",
-#     main = "Comparison Bonferroni-DEGs (Her2/LumA)")
-# 
-# #######################################################################
-# # 9. compare the DEGs identified using count data to the ones 
-# # identified using FPKM data
-# #######################################################################
-# 
-# # load tcga fdr DEGs
-# output_dir <- "TCGA"
-# load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/complete_DE_results.RData",sep = ""))
-# tcga_fpkm_DEGs <- results
-# tcga_fpkm_DEGs <- tcga_fpkm_DEGs %>% dplyr::rename(H2vsLA_padj_fdr = H2vsLA_padj,
-#                                   H2vsLB_padj_fdr = H2vsLB_padj)
-# 
-# # DEGs
-# H2vsLA_DEGs_tcga_fpkm_fdr <- tcga_fpkm_DEGs %>% filter(H2vsLA_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% pull(Gene)
-# H2vsLB_DEGs_tcga_fpkm_fdr <- tcga_fpkm_DEGs %>% filter(H2vsLB_padj_fdr <= 0.05) %>% rownames_to_column("Gene") %>% pull(Gene)
-# 
-# 
-# # load count DEGs
-# load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/gex_count_luma_diffExp.RData", sep =""))
-# 
-# load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",output_dir,"/gex_count_lumb_diffExp.RData", sep =""))
-# 
-# H2vsLA_DEGs_tcga_counts <- res_table_luma %>% filter(padj <= 0.05) %>% dplyr::rename(Gene = genename_luma) %>% pull(Gene)
-# H2vsLB_DEGs_tcga_counts <- res_table_lumb %>% filter(padj <= 0.05) %>% dplyr::rename(Gene = genename_lumb) %>% pull(Gene)
-# 
-# # compare
-# venn.diagram(
-#     x = list(H2vsLB_DEGs_tcga_counts, H2vsLB_DEGs_tcga_fpkm_fdr),
-#     category.names = c("counts" , "FPKM"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/TCGA/count_vs_fpkm_H2vsLB_DEGs.png",
-#     main = "TCGA: Comparison DEGs identified using count and FPKM data (Her2/LumB)")
-# 
-# venn.diagram(
-#     x = list(H2vsLA_DEGs_tcga_counts, H2vsLA_DEGs_tcga_fpkm_fdr),
-#     category.names = c("counts" , "FPKM"),
-#     filename = "~/Desktop/MTP_project/Output/Plots/Transcriptomics/TCGA/count_vs_fpkm_H2vsLA_DEGs.png",
-#     main = "TCGA: Comparison DEGs identified using count and FPKM data (Her2/LumA)")
+H2vsLB.DEGs %>% filter(Gene=="ENSG00000160867")

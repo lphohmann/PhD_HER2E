@@ -54,11 +54,14 @@ get_stats <- function(data,grouping_var,stat_var) {
 # ttest function with equal var check
 var_ttest <- function(dat1,dat2) {
     # equal var check
-    if (var.test(dat1,dat2)$p.value <= 0.05) {
-        res <- t.test(dat1,dat2, var.equal = FALSE)
-    } else {
+    vres <- var.test(dat1,dat2)
+    print(vres)
+    if (!is.na(vres$p.value) & vres$p.value >= 0.05) {
         res <- t.test(dat1,dat2, var.equal = TRUE)
+    } else {
+        res <- t.test(dat1,dat2, var.equal = FALSE)
     }
+    
     return(res)
 }
 
@@ -115,10 +118,11 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
               axis.title.y = element_text(size = 35),
-              plot.title = element_text(size=30),
+              plot.title = element_text(size=25),
               legend.position = "none") +
         scale_fill_manual(values=colors) +
-        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
+        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) + # check that these are in the correct order
+        scale_y_continuous(breaks = seq(floor(ylim[1]), ceiling(ylim[2]), 1))
     
     return(plot)
 }

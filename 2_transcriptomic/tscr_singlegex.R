@@ -181,6 +181,74 @@ if (cohort=="SCANB") {
                       ylim = c(-2,8),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," (ENSG00000160867) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGFR1-----------------------------------------------------------------
+    
+    fgfr1.gex <- get_gex("ENSG00000077782",gex.data,anno)
+    # base statistics
+    get_stats(fgfr1.gex,"PAM50","ENSG00000077782")
+    # test
+    res <- pair_ttest(fgfr1.gex, 
+                      group.var = "PAM50",
+                      test.var = "ENSG00000077782", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        three_boxplot(fgfr1.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000077782",
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 7, g3.sign = res[2,3],
+                      g2.pos = 8.5, g2.sign = res[1,3],
+                      ylim = c(-5,10),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("FGFR1")," (ENSG00000077782) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGFR2-----------------------------------------------------------------
+    
+    fgfr2.gex <- get_gex("ENSG00000066468",gex.data,anno)
+    # base statistics
+    get_stats(fgfr2.gex,"PAM50","ENSG00000066468")
+    # test
+    res <- pair_ttest(fgfr2.gex, 
+                      group.var = "PAM50",
+                      test.var = "ENSG00000066468", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        three_boxplot(fgfr2.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000066468",
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 6.5, g3.sign = res[2,3],
+                      g2.pos = 7.5, g2.sign = res[1,3],
+                      ylim = c(-3.5,9),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("FGFR2")," (ENSG00000066468) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGFR3-----------------------------------------------------------------
+    
+    fgfr3.gex <- get_gex("ENSG00000068078",gex.data,anno)
+    # base statistics
+    get_stats(fgfr3.gex,"PAM50","ENSG00000068078")
+    # test
+    res <- pair_ttest(fgfr3.gex, 
+                      group.var = "PAM50",
+                      test.var = "ENSG00000068078", 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # plot
+    plot.list <- append(plot.list, list(
+        three_boxplot(fgfr3.gex,
+                      group.var = "PAM50",
+                      test.var = "ENSG00000068078",
+                      g1="Her2",g2="LumA",g3="LumB",
+                      g3.pos = 5, g3.sign = res[2,3],
+                      g2.pos = 6, g2.sign = res[1,3],
+                      ylim = c(-2,8),
+                      ylab = "Expression (log2)", 
+                      title = substitute(paste(italic("FGFR3")," (ENSG00000068078) expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    
 
 #######################################################################
 
