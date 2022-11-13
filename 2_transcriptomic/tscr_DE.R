@@ -224,36 +224,3 @@ H2vsLB.DEGs.down <- H2vsLB.DEGs %>%
     filter(Her2.LumB.de == "down") %>% 
     rownames_to_column("Gene") #%>% pull(Gene)
 
-#######################################################################
-# Check how many PAM50 genes are DE and plot their expression
-#######################################################################
-
-pam50.genes <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt")) %>% pull(HGNC)
-
-# convert to entrez ids
-mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                         dataset = "hsapiens_gene_ensembl",
-                         host = "http://www.ensembl.org")
-
-res <- getBM(filters = "ensembl_gene_id",
-             attributes = c("ensembl_gene_id","hgnc_symbol"),
-             values = DEGs[,"Gene"], 
-             mart = mart)
-
-View(res)
-intersect(DEGs[,"Gene"],pam50.genes)
-pam50.DEGs <- res %>% 
-    filter(hgnc_symbol %in% pam50.genes) %>% 
-    pull(hgnc_symbol)
-
-
-
-# save plots
-pdf(file = paste(output.path,cohort,"_HER2n_selectedgenes.pdf", sep=""), 
-    onefile = TRUE, width = 15, height = 15) 
-
-for (i in 1:length(plot.list)) {
-    print(plot.list[[i]])
-}
-
-dev.off()
