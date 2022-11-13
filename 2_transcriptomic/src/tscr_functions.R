@@ -51,17 +51,33 @@ get_stats <- function(data,grouping_var,stat_var) {
     return(res)
 }
 
+# ttest function that can catch errors (because of Error: data are essentially constant if I dont filter based on sd before)
+e.ttest <- function(vec1,vec2,var.flag) {
+    res <- tryCatch(
+        expr = {
+            if (var.flag) {
+                t.test(vec1,vec2, var.equal = TRUE)
+            } else {
+                t.test(vec1,vec2, var.equal = FALSE)
+            }
+        },
+        error = function(e) {
+            list(p.value=c(NA),estimate=c(NA,NA))
+        }
+    )
+    return(res)
+}
+
 # ttest function with equal var check
+# switched out t.test() for e.ttest()
 var_ttest <- function(dat1,dat2) {
     # equal var check
     vres <- var.test(dat1,dat2)
-    print(vres)
     if (!is.na(vres$p.value) & vres$p.value >= 0.05) {
-        res <- t.test(dat1,dat2, var.equal = TRUE)
+        res <- e.ttest(dat1,dat2, TRUE)
     } else {
-        res <- t.test(dat1,dat2, var.equal = FALSE)
+        res <- e.ttest(dat1,dat2, FALSE)
     }
-    
     return(res)
 }
 

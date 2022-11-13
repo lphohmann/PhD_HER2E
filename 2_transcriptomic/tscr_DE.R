@@ -1,5 +1,6 @@
 # Script: differential expression analysis; cohorts=SCANB, METABRIC
 #TODO: try to not filter based on sd but change the ttest function to give na in case of error
+# 
 
 # empty environment
 rm(list=ls())
@@ -72,7 +73,7 @@ if (cohort=="SCANB") {
     # log transformed FPKM data
     gex.data <- as.data.frame(log2(gex.data + 1))
     # filter based on stdev cutoff before z-transform
-    gex.data <- gex.data %>% mutate(stdev=rowSds(as.matrix(.[colnames(gex.data)]))) %>% filter(stdev >= 0.5) %>% dplyr::select(-c(stdev)) 
+    #gex.data <- gex.data %>% mutate(stdev=rowSds(as.matrix(.[colnames(gex.data)]))) %>% filter(stdev >= 0.5) %>% dplyr::select(-c(stdev)) 
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
     
@@ -111,6 +112,7 @@ if (cohort=="SCANB") {
 #######################################################################
 # 4. Perform t-test for each gene
 #######################################################################
+source("./scripts/2_transcriptomic/src/tscr_functions.R")
 
 # sampleIDs per pam50 subtype
 Her2.cols <- anno %>% filter(PAM50=="Her2") %>% pull(sampleID)
@@ -123,18 +125,6 @@ Her2.LumB.pval <- rep(NA,nrow(gex.data))
 Her2.LumA.diff <- rep(NA,nrow(gex.data))
 Her2.LumB.diff <- rep(NA,nrow(gex.data))
 
-# alternative
-# you_function <- function(currRow){
-#     res <- try(t.test(currRow[4:6], currRow[1:3])$p.value)
-#     if(grepl(pattern = "Error", x = res)){ 
-#         return(NA)
-#     } else {
-#         res
-#     }
-# }
-# out <- apply(dat, 1,you_function )
-# names(out) <- colnames(dat)
-
 # loop through the genes
 pb = txtProgressBar(min = 0, max = nrow(gex.data), initial = 0, style = 3)
 for (i in 1:nrow(gex.data)) { #nrow(gex.data)
@@ -146,7 +136,6 @@ for (i in 1:nrow(gex.data)) { #nrow(gex.data)
     lumb.data <- as.numeric(gex.data[i,LumB.cols])
     
     # for Her2 vs LumA
-    print(rownames(gex.data)[i]) # remove
     res.A <- var_ttest(her2.data,luma.data)
     
     # save results
@@ -174,16 +163,17 @@ DE.res <- gex.data %>% add_column(
                   Her2.LumA.diff,Her2.LumB.diff)
 
 # adjust p value 
-DE.res$Her2.LumA.padj <- p.adjust(DE.res$Her2.LumA.pval, "fdr")
-DE.res$Her2.LumB.padj <- p.adjust(DE.res$Her2.LumB.pval, "fdr")
+DE.res$Her2.LumA.padj <- p.adjust(DE.res$Her2.LumA.pval, "bonferroni")
+DE.res$Her2.LumB.padj <- p.adjust(DE.res$Her2.LumB.pval, "bonferroni")
 
 # up or down (refers to the situation in lumHer2 subtype; e.g. "up" indicates a gene whose expression is upregulated in lumHer2 compared to lumB or lumA)
-DE.res <- DE.res %>% mutate(Her2.LumA.de =
-                                  case_when(Her2.LumA.diff <= 0 ~ "down",
-                                            Her2.LumA.diff >= 0 ~ "up"))
-DE.res <- DE.res %>% mutate(Her2.LumB.de =
-                                  case_when(Her2.LumB.diff <= 0 ~ "down",
-                                            Her2.LumB.diff >= 0 ~ "up"))
+DE.res <- DE.res %>% 
+    mutate(Her2.LumA.de = case_when(
+        Her2.LumA.diff <= 0 ~ "down", 
+        Her2.LumA.diff >= 0 ~ "up")) %>% 
+    mutate(Her2.LumB.de = case_when(
+        Her2.LumB.diff <= 0 ~ "down", 
+        Her2.LumB.diff >= 0 ~ "up"))
 
 # save the file
 save(DE.res,file = paste(data.path,"DE_results.RData",sep="") )
@@ -197,23 +187,73 @@ DEGs <- DE.res %>%
 
 # check if FGFR in DE
 #fgfr4 ENSG00000160867
-is.element('ENSG00000160867', DEGs$Gene)
+#is.element('ENSG00000160867', DEGs$Gene)
 #fgfr1 ENSG00000077782 
-is.element('ENSG00000077782', DEGs$Gene)
+#is.element('ENSG00000077782', DEGs$Gene)
 #fgfr2 ENSG00000066468
-is.element('ENSG00000066468', DEGs$Gene)
+#is.element('ENSG00000066468', DEGs$Gene)
 #fgfr3 ENSG00000068078
-is.element('ENSG00000068078', DEGs$Gene)
+#is.element('ENSG00000068078', DEGs$Gene)
 
 # final result 
 # Her2 vs LumA
-H2vsLA.DEGs <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% dplyr::select(Her2.LumA.de, Her2.LumA.padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLA.DEGs.up <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% filter(Her2.LumA.de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLA.DEGs.down <- DE.res %>% filter(Her2.LumA.padj <= 0.05) %>% filter(Her2.LumA.de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLA.DEGs <- DE.res %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumA.de, Her2.LumA.padj) %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLA.DEGs.up <- H2vsLA.DEGs %>% 
+    filter(Her2.LumA.de == "up") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLA.DEGs.down <- H2vsLA.DEGs %>% 
+    filter(Her2.LumA.de == "down") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
 # 
 # # Her2 vs LumB
-H2vsLB.DEGs <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% dplyr::select(Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLB.DEGs.up <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% filter(Her2.LumB.de == "up") %>% rownames_to_column("Gene") #%>% pull(Gene)
-H2vsLB.DEGs.down <- DE.res %>% filter(Her2.LumB.padj <= 0.05) %>% filter(Her2.LumB.de == "down") %>% rownames_to_column("Gene") #%>% pull(Gene)
+H2vsLB.DEGs <- DE.res %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumB.de, Her2.LumB.padj) %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
 
-H2vsLB.DEGs %>% filter(Gene=="ENSG00000160867")
+H2vsLB.DEGs.up <- H2vsLB.DEGs %>% 
+    filter(Her2.LumB.de == "up") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLB.DEGs.down <- H2vsLB.DEGs %>% 
+    filter(Her2.LumB.de == "down") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+#######################################################################
+# Check how many PAM50 genes are DE and plot their expression
+#######################################################################
+
+pam50.genes <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt")) %>% pull(HGNC)
+
+# convert to entrez ids
+mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                         dataset = "hsapiens_gene_ensembl",
+                         host = "http://www.ensembl.org")
+
+res <- getBM(filters = "ensembl_gene_id",
+             attributes = c("ensembl_gene_id","hgnc_symbol"),
+             values = DEGs[,"Gene"], 
+             mart = mart)
+
+View(res)
+intersect(DEGs[,"Gene"],pam50.genes)
+pam50.DEGs <- res %>% 
+    filter(hgnc_symbol %in% pam50.genes) %>% 
+    pull(hgnc_symbol)
+
+
+
+# save plots
+pdf(file = paste(output.path,cohort,"_HER2n_selectedgenes.pdf", sep=""), 
+    onefile = TRUE, width = 15, height = 15) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()
