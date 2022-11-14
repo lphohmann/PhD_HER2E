@@ -1,6 +1,6 @@
 # Script: differential expression analysis; cohorts=SCANB, METABRIC
-#TODO: try to not filter based on sd but change the ttest function to give na in case of error
-# 
+#TODO: 
+# Filter based on diff in expression absolute (add column)
 
 # empty environment
 rm(list=ls())
