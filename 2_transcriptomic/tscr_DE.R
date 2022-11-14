@@ -37,8 +37,6 @@ library(biomaRt)
 # the clinical ER+Her2- subtyped samples
 #######################################################################
 
-# TODO: FORGOT I HAVE TO FILTER ROWS WITH LOW STDev
-
 # for SCANB
 if (cohort=="SCANB") {
     
@@ -77,7 +75,7 @@ if (cohort=="SCANB") {
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
     
-    #-----------------------------------------------------------------------#
+#-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
     
@@ -103,7 +101,6 @@ if (cohort=="SCANB") {
     gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
         mutate_all(function(x) as.numeric(x))
     
-    
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
@@ -112,7 +109,7 @@ if (cohort=="SCANB") {
 #######################################################################
 # 4. Perform t-test for each gene
 #######################################################################
-source("./scripts/2_transcriptomic/src/tscr_functions.R")
+#source("./scripts/2_transcriptomic/src/tscr_functions.R")
 
 # sampleIDs per pam50 subtype
 Her2.cols <- anno %>% filter(PAM50=="Her2") %>% pull(sampleID)
@@ -178,49 +175,3 @@ DE.res <- DE.res %>%
 # save the file
 save(DE.res,file = paste(data.path,"DE_results.RData",sep="") )
 load(file = paste(data.path,"DE_results.RData",sep=""))
-
-# DEGs
-DEGs <- DE.res %>% 
-    filter(Her2.LumA.padj <= 0.05) %>% 
-    filter(Her2.LumB.padj <= 0.05) %>% 
-    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
-
-# check if FGFR in DE
-#fgfr4 ENSG00000160867
-#is.element('ENSG00000160867', DEGs$Gene)
-#fgfr1 ENSG00000077782 
-#is.element('ENSG00000077782', DEGs$Gene)
-#fgfr2 ENSG00000066468
-#is.element('ENSG00000066468', DEGs$Gene)
-#fgfr3 ENSG00000068078
-#is.element('ENSG00000068078', DEGs$Gene)
-
-# final result 
-# Her2 vs LumA
-H2vsLA.DEGs <- DE.res %>% 
-    filter(Her2.LumA.padj <= 0.05) %>% 
-    dplyr::select(Her2.LumA.de, Her2.LumA.padj) %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-
-H2vsLA.DEGs.up <- H2vsLA.DEGs %>% 
-    filter(Her2.LumA.de == "up") %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-
-H2vsLA.DEGs.down <- H2vsLA.DEGs %>% 
-    filter(Her2.LumA.de == "down") %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-# 
-# # Her2 vs LumB
-H2vsLB.DEGs <- DE.res %>% 
-    filter(Her2.LumB.padj <= 0.05) %>% 
-    dplyr::select(Her2.LumB.de, Her2.LumB.padj) %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-
-H2vsLB.DEGs.up <- H2vsLB.DEGs %>% 
-    filter(Her2.LumB.de == "up") %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-
-H2vsLB.DEGs.down <- H2vsLB.DEGs %>% 
-    filter(Her2.LumB.de == "down") %>% 
-    rownames_to_column("Gene") #%>% pull(Gene)
-

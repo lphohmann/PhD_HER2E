@@ -32,21 +32,119 @@ library(janitor)
 library(biomaRt)
 
 #######################################################################
-# 1. set parameters
-#######################################################################
-
-# 1.1 input for which cohort the analysis should be run
-cohort <- "SCANB" # Metabric or SCANB 
-
-#######################################################################
 # 2. Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
 #######################################################################
+
+# for SCANB
+if (cohort=="SCANB") {
+    
+    # load annotation data
+    clin.rel4 <- as.data.frame(
+        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) #coltypes='text'
+    
+    # load gex data
+    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
+    
+    # select subgroup data
+    anno <- clin.rel4 %>% 
+        filter(Follow.up.cohort==TRUE) %>% 
+        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+        filter(ER=="Positive" & HER2=="Negative") %>% 
+        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+    
+    # filter to select subgroup gex data
+    # modfiy ensembl ids to remove version annotation
+    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
+        rownames_to_column("ensembl_gene_id") %>% 
+        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id))  %>% # remove characters after dot 
+        drop_na(ensembl_gene_id) %>% 
+        distinct(ensembl_gene_id,.keep_all = TRUE) %>% 
+        column_to_rownames("ensembl_gene_id") %>% 
+        select_if(~ !any(is.na(.))) # need this here because i scale/row-center
+    
+    # exclude samples from anno without associated gex data
+    anno <- anno %>% 
+        filter(sampleID %in% colnames(gex.data))
+    
+    # log transformed FPKM data
+    gex.data <- as.data.frame(log2(gex.data + 1))
+    # filter based on stdev cutoff before z-transform
+    #gex.data <- gex.data %>% mutate(stdev=rowSds(as.matrix(.[colnames(gex.data)]))) %>% filter(stdev >= 0.5) %>% dplyr::select(-c(stdev)) 
+    # z-transform
+    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
+    
+#-----------------------------------------------------------------------#
+    
+} else if (cohort=="METABRIC") {
+    
+    # load annotation data
+    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
+    
+    # load gex data
+    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>%
+        row_to_names(row_number = 1) %>% 
+        mutate_all(na_if,"") %>% 
+        drop_na(Hugo_Symbol) %>% 
+        distinct(Hugo_Symbol,.keep_all = TRUE) %>% 
+        column_to_rownames(var="Hugo_Symbol") %>% 
+        dplyr::select(-c(Entrez_Gene_Id)) 
+    
+    # extract relevant variables
+    anno <- anno %>% 
+        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+        filter(grepl('ERpHER2n', ClinGroup)) %>% 
+        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+    
+    # filter to select subgroup gex data HERE
+    gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
+        mutate_all(function(x) as.numeric(x))
+    
+    
+    # exclude samples from anno without associated gex data
+    anno <- anno %>% 
+        filter(sampleID %in% colnames(gex.data))
+}
 
 #######################################################################
 # 4. Load DEGs of different cohorts and define the core set
 #######################################################################
 load(file = paste(data.path,"DE_results.RData",sep=""))
+# DEGs
+DEGs <- DE.res %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
+
+# final result 
+# Her2 vs LumA
+H2vsLA.DEGs <- DE.res %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumA.de, Her2.LumA.padj) %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLA.DEGs.up <- H2vsLA.DEGs %>% 
+    filter(Her2.LumA.de == "up") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLA.DEGs.down <- H2vsLA.DEGs %>% 
+    filter(Her2.LumA.de == "down") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+# 
+# # Her2 vs LumB
+H2vsLB.DEGs <- DE.res %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    dplyr::select(Her2.LumB.de, Her2.LumB.padj) %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLB.DEGs.up <- H2vsLB.DEGs %>% 
+    filter(Her2.LumB.de == "up") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
+H2vsLB.DEGs.down <- H2vsLB.DEGs %>% 
+    filter(Her2.LumB.de == "down") %>% 
+    rownames_to_column("Gene") #%>% pull(Gene)
+
 
 # load scan-b fdr DEGs
 load(paste("~/Desktop/MTP_project/Output/Transcriptomics/","SCANB","/complete_DE_results.RData",sep = ""))
