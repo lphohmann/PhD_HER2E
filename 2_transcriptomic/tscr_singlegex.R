@@ -163,6 +163,9 @@ if (cohort=="SCANB") {
     #FGFR4-----------------------------------------------------------------
     
     fgfr4.gex <- get_gex("ENSG00000160867",gex.data,anno)
+    # save for later analysis
+    save(fgfr4.gex,file = paste(data.path,"fgfr4.gex.RData",sep=""))
+    
     # base statistics
     get_stats(fgfr4.gex,"PAM50","ENSG00000160867")
     # test
