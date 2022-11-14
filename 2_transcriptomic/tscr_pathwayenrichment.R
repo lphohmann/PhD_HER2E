@@ -1,4 +1,4 @@
-# Script: check if pam50 genes are in the DEGs
+# Script: Pathway enrichment analyses for different gene sets
 #TODO: 
 
 # empty environment
@@ -32,9 +32,8 @@ library(janitor)
 library(biomaRt)
 
 #######################################################################
-#load data
+# load data for boxplot comparisons
 #######################################################################
-
 
 # for SCANB
 if (cohort=="SCANB") {
@@ -72,7 +71,7 @@ if (cohort=="SCANB") {
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
     
-    #-----------------------------------------------------------------------#
+#-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
     
@@ -109,7 +108,7 @@ load(file = paste(data.path,"DE_results.RData",sep=""))
 pam50.genes <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt")) %>% pull(HGNC)
 
 #######################################################################
-# Check how many PAM50 genes are DE 
+# GENESET 1: PAM50 DEGs 
 #######################################################################
 
 # DEGs
@@ -117,14 +116,6 @@ DEGs <- DE.res %>%
     filter(Her2.LumA.padj <= 0.05) %>% 
     filter(Her2.LumB.padj <= 0.05) %>% 
     dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
-
-# top DEGs (high difference in )
-top.DEGs <- DE.res %>% 
-    filter(Her2.LumA.padj <= 0.05) %>% 
-    filter(Her2.LumB.padj <= 0.05) %>% 
-    filter(abs(Her2.LumA.diff) >= 1.5) %>% 
-    filter(abs(Her2.LumB.diff) >= 1.5) %>% 
-    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") %>% pull(Gene)
 
 # convert to entrez ids
 mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
@@ -140,24 +131,12 @@ pam50.DEGs <- mart.res %>%
     filter(hgnc_symbol %in% pam50.genes) %>% 
     pull(hgnc_symbol)
 
-for (i in 1:length(top.DEGs)) {
-    geneID <- mart.res %>% 
-        filter(ensembl_gene_id == top.DEGs[i]) %>% 
-        pull(hgnc_symbol)
-    print(geneID)
-}
-
-#######################################################################
-# plot expression
-#######################################################################
+#-----------------------plot expression-------------------------------#
 
 # plot expression
 plot.list <- list()
 
-
 if (cohort == "SCANB") {
-    # MUSS HIER DIE ENSEMBL IDS VON RES NEHMEN, DAS ANDERE DINS DIE GENE SYMBOLS 
-    
     for (i in 1:length(pam50.DEGs)) {
         geneID <- mart.res %>% 
             filter(hgnc_symbol == pam50.DEGs[i]) %>% 
@@ -218,9 +197,25 @@ for (i in 1:length(plot.list)) {
 dev.off()
 
 #######################################################################
-# plot expression of top DEGs
+# GENESET 1: PAM50 DEGs 
 #######################################################################
 
+# top DEGs (high difference in )
+top.DEGs <- DE.res %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    filter(abs(Her2.LumA.diff) >= 1.5) %>% 
+    filter(abs(Her2.LumB.diff) >= 1.5) %>% 
+    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") %>% pull(Gene)
+
+for (i in 1:length(top.DEGs)) {
+    geneID <- mart.res %>% 
+        filter(ensembl_gene_id == top.DEGs[i]) %>% 
+        pull(hgnc_symbol)
+    print(geneID)
+}
+
+#-----------------------plot expression-------------------------------#
 
 # plot expression
 plot.list <- list()
