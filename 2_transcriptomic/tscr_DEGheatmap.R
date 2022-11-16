@@ -107,14 +107,19 @@ if (cohort=="SCANB") {
 }
 
 #######################################################################
-# 4. Load DEGs of different cohorts and define the core set
+# 4. Load DEGs of different cohorts and define the set by filtering based on fold change differences
 #######################################################################
 load(file = paste(data.path,"DE_results.RData",sep=""))
+
 # DEGs
 DEGs <- DE.res %>% 
     filter(Her2.LumA.padj <= 0.05) %>% 
     filter(Her2.LumB.padj <= 0.05) %>% 
+    filter(abs(Her2.LumA.diff) >= 1) %>% 
+    filter(abs(Her2.LumB.diff) >= 1) %>% 
     dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
+
+#######################################################################
 
 # final result 
 # Her2 vs LumA
