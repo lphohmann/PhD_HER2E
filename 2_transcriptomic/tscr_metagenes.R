@@ -225,8 +225,8 @@ mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals),
 # make combined data and anno object for plotting
 mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","PAM50")],by="sampleID")
 
-#mg.anno.list <- list(mg.anno, mg.pvals)
-#save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
+mg.anno.list <- list(mg.anno, mg.pvals)
+save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 
 #######################################################################
 # 5. Boxplots

@@ -95,7 +95,7 @@ if (cohort=="SCANB") {
     anno <- anno %>% 
         filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
         filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+        dplyr::rename(sampleID=METABRIC_ID, NHG = Grade) # rename to match SCANB variables
     
     # filter to select subgroup gex data HERE
     gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
@@ -110,7 +110,7 @@ if (cohort=="SCANB") {
 # Heatmap parameters
 #######################################################################
 
-n.tree <- 12  # nbr of branches/clusters 
+n.tree <- 10  # nbr of branches/clusters 
 nbr.c <- 2 # color palette size = max value
 breaksList = seq(-2, nbr.c, by = 0.1) # this defines the color palette range
 my.link.method <- "ward.D" 
@@ -156,9 +156,9 @@ load(paste("./data/",cohort,"/2_transcriptomic/processed/mg_anno.RData",sep = ""
 
 # create hm annotaiton object
 hm.anno <- merge(
-    mg.anno[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
+    mg.anno.list[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
     relocate(NHG, .after = PAM50) %>% 
-    dplyr::select(-c(ER, HER2)) %>% 
+    #dplyr::select(-c(ER, HER2)) %>% 
     column_to_rownames(var = "sampleID")
     
 # handle missing NHG values
