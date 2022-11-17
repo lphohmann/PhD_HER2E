@@ -142,3 +142,20 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
     
     return(plot)
 }
+
+
+
+# heatmap 
+
+# bin continuous anno variables to color them correctly (e.g. the metagene scores)
+mg_converter <- function(mg) {
+    mg.class<-rep(NA,length(mg)) # global variable or what????
+    mg.class[which(mg <= -2)] <- "<= -2"
+    mg.class[which((mg <= -1) & (mg > -2) )] <- "-1 to -2"
+    mg.class[which((mg <= -0.5) & (mg > -1) )] <- "-0.5 to -1"
+    mg.class[which((mg >= -0.5) & (mg < 0.5) )] <- "-0.5 to 0.5"
+    mg.class[which((mg >= 0.5) & (mg < 1) )] <- "0.5 to 1"
+    mg.class[which((mg >= 1) & (mg < 2) )] <- "1 to 2"
+    mg.class[which(mg >= 2)] <- ">= 2"
+    return(mg.class)
+}
