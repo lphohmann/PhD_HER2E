@@ -93,17 +93,26 @@ if (cohort=="SCANB") {
     
     # extract relevant variables
     anno <- anno %>% 
-        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(grepl('ERpHER2n', ClinGroup)) %>% 
+        mutate(ER = if_else("ERp" %in% ClinGroup,"Positive","Negative")) %>% 
+        mutate(HER2 = if_else("HER2p" %in% ClinGroup,"Positive","Negative")) %>% 
+        filter(ER == "Positive") %>% 
+        mutate(Group = case_when(
+            HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
+            HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
+            HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
+        filter(Group %in% 
+                   c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E")) %>% 
         dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
     
     # filter to select subgroup gex data HERE
     gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
-        mutate_all(function(x) as.numeric(x))
+        mutate_all(function(x) as.numeric(x)) %>% 
+        select_if(~ !any(is.na(.))) 
     
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
+
 }
 
 #######################################################################
