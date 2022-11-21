@@ -26,6 +26,9 @@ library(tidyverse)
 library(reshape)
 library(openxlsx)
 
+# list to store plots
+plot.list <- list()
+
 #######################################################################
 # Load data
 #######################################################################
@@ -57,7 +60,8 @@ data <- pam50ann_correlations %>%
 data_mod <- melt(data, measure.vars=colnames(data)[5:9])
 
 # creating boxplot
-ggplot(data_mod) + 
+plot.list <- append(plot.list,list(
+    ggplot(data_mod) + 
     geom_boxplot(aes(x=variable, y=value,fill=as.factor(variable)),alpha=0.7, size=1.5, outlier.size = 5) +
     xlab("PAM50 Centroid") +
     ylab("Correlation") +
@@ -68,12 +72,7 @@ ggplot(data_mod) +
           axis.text.y = element_text(size = 20),
           axis.title.y = element_text(size = 25),
           legend.position = "none") +
-    scale_fill_manual(values=c(meanLumA = "#2176d5", meanLumB = "#34c6eb", meanHer2 ="#d334eb", meanBasal ="#c41b0e", meanNormal="#64c25d"))
-
-ggsave(filename=paste(output.path,cohort,"_","HER2E_PAM50correlations.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_fill_manual(values=c(meanLumA = "#2176d5", meanLumB = "#34c6eb", meanHer2 ="#d334eb", meanBasal ="#c41b0e", meanNormal="#64c25d"))))
 
 #######################################################################
 # Crosstable with 2nd best PAM50 match for all samples
@@ -92,7 +91,8 @@ data <- pam50ann_correlations %>%
 
 confusion_matrix <- as.data.frame(table(data$majorityNearest,data$majoritySecondBest,dnn=c("majorityNearest","majoritySecondBest")))
 
-ggplot(data = confusion_matrix,
+plot.list <- append(plot.list,list(
+    ggplot(data = confusion_matrix,
        mapping = aes(x = majorityNearest,
                      y = majoritySecondBest)) +
     scale_x_discrete(limits = rev(levels(confusion_matrix$majorityNearest))) +
@@ -109,12 +109,7 @@ ggplot(data = confusion_matrix,
           axis.title.x = element_text(size = 25),
           axis.text.y = element_text(size = 20),
           axis.title.y = element_text(size = 25),
-          legend.position = "none") 
-
-ggsave(filename=paste(output.path,cohort,"_","CM_PAM50class.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+          legend.position = "none")))
 
 # small table for her2e
 her2e_matrix <- confusion_matrix %>% 
@@ -124,8 +119,6 @@ her2e_matrix <- confusion_matrix %>%
     column_to_rownames(var="majoritySecondBest")
 her2e_matrix <- as.data.frame(t(her2e_matrix)) %>% dplyr::select(-c(2))
 write.xlsx(her2e_matrix, file = paste(data.path,"PAM50_HER2E_2ndbest.xlsx",sep=""),overwrite = TRUE)
-
-
 
 #######################################################################
 # Distinctiveness: Boxplot the difference between the best and second 
@@ -147,7 +140,8 @@ data <- pam50ann_correlations %>%
 data <- data %>% rowwise() %>% mutate(Diff = abs(get(paste("mean",majorityNearest,sep=""))) - abs(get(paste("mean",majoritySecondBest,sep=""))))
 
 # plot
-ggplot(data) + 
+plot.list <- append(plot.list,list(
+    ggplot(data) + 
     geom_boxplot(aes(x=majorityNearest, y=Diff,fill=as.factor(majorityNearest)),alpha=0.7, size=1.5, outlier.size = 5) +
     xlab("PAM50 Class") +
     ylab("Correlation diff (1st-2nd)") +
@@ -158,12 +152,7 @@ ggplot(data) +
           axis.text.y = element_text(size = 20),
           axis.title.y = element_text(size = 25),
           legend.position = "none") +
-    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d"))
-
-ggsave(filename=paste(output.path,cohort,"_","PAM50class_distinctiveness.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d"))))
 
 #######################################################################
 # HER2E specific distinctiveness: Boxplot for the her2e samples the difference between the best (her2e) and second best correlation matches
@@ -187,9 +176,10 @@ data <- pam50ann_correlations %>%
 data <- data %>% rowwise() %>% mutate(HER2Diff = abs(get(paste("mean",majorityNearest,sep=""))) - abs(get(paste("mean",majoritySecondBest,sep=""))))
 
 # plot
-ggplot(data) + 
+plot.list <- append(plot.list,list(
+    ggplot(data) + 
     geom_boxplot(aes(x=majoritySecondBest, y=HER2Diff,fill=as.factor(majoritySecondBest)),alpha=0.7, size=1.5, outlier.size = 5) +
-    xlab("PAM50 Class") +
+    xlab("Second-best PAM50 Class") +
     ylab("Correlation diff (1st-2nd)") +
     ggtitle("PAM50-HER2E distinctiveness in ERpHER2nHER2E") +
     theme(plot.title = element_text(size = 25),
@@ -198,19 +188,15 @@ ggplot(data) +
           axis.text.y = element_text(size = 20),
           axis.title.y = element_text(size = 25),
           legend.position = "none") +
-    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d")) 
-
-ggsave(filename=paste(output.path,cohort,"_","HER2E_distinctiveness.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_fill_manual(values=c(LumA = "#2176d5", LumB = "#34c6eb", Her2 ="#d334eb", Basal ="#c41b0e", Normal="#64c25d"))))
 
 # further investigate the luma,lumb,basal samples
 # creating modified dataframe
 data_mod <- data %>% dplyr::select(c(majoritySecondBest,HER2Diff,meanHer2))
 
 # all samples
-ggplot(data_mod) + 
+plot.list <- append(plot.list,list(
+    ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=HER2Diff,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
     xlab("HER2E correlation (mean)") +
     ylab("Correlation diff (1st-2nd)") +
@@ -224,18 +210,14 @@ ggplot(data_mod) +
           legend.text=element_text(size = 15),
           legend.title=element_text(size = 20)) +
     scale_color_manual("2nd Subtype",values=c(LumA = "#2176d5", LumB = "#34c6eb", Basal ="#c41b0e")) +
-    scale_x_continuous(breaks=seq(0, 0.8, 0.1))
-
-ggsave(filename=paste(output.path,cohort,"_","HER2E_distinctiveness_scatter.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_x_continuous(breaks=seq(0, 0.8, 0.1))))
 
 # correlation between subtype and her2 centroid correlations
 # luma
 data_mod <- data %>% filter(majoritySecondBest == "LumA")
 
-ggplot(data_mod) + 
+plot.list <- append(plot.list,list(
+    ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=meanLumA,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
     xlab("HER2E correlation") +
     ylab("LumA correlation") +
@@ -248,17 +230,13 @@ ggplot(data_mod) +
           legend.position = "none") +
     scale_color_manual("Subtype",values=c(LumA = "#2176d5", LumB = "#34c6eb", Basal ="#c41b0e")) +
     scale_x_continuous(limits = c(0.2, 0.8),breaks=seq(0, 0.8, 0.1)) +
-    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1)) 
-
-ggsave(filename=paste(output.path,cohort,"_","HER2E_LUMA_scatter.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1))))
 
 # lumb
 data_mod <- data %>% filter(majoritySecondBest == "LumB")
 
-ggplot(data_mod) + 
+plot.list <- append(plot.list,list(
+    ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=meanLumB,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
     xlab("HER2E correlation") +
     ylab("LumB correlation") +
@@ -271,17 +249,13 @@ ggplot(data_mod) +
           legend.position = "none") +
     scale_color_manual("Subtype",values=c(LumA = "#2176d5", LumB = "#34c6eb", Basal ="#c41b0e")) +
     scale_x_continuous(limits = c(0.2, 0.8),breaks=seq(0, 0.8, 0.1)) +
-    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1)) 
-
-ggsave(filename=paste(output.path,cohort,"_","HER2E_LUMB_scatter.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1))))
 
 # basal
 data_mod <- data %>% filter(majoritySecondBest == "Basal")
 
-ggplot(data_mod) + 
+plot.list <- append(plot.list,list(
+    ggplot(data_mod) + 
     geom_point(aes(x=meanHer2, y=meanBasal,color=as.factor(majoritySecondBest)),alpha=0.7, size=5) +
     xlab("HER2E correlation") +
     ylab("Basal correlation") +
@@ -294,9 +268,14 @@ ggplot(data_mod) +
           legend.position = "none") +
     scale_color_manual("Subtype",values=c(LumA = "#2176d5", LumB = "#34c6eb", Basal ="#c41b0e")) +
     scale_x_continuous(limits = c(0.2, 0.8),breaks=seq(0, 0.8, 0.1)) +
-    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1)) 
+    scale_y_continuous(limits = c(0,0.6),breaks=seq(0, 0.6, 0.1))))
 
-ggsave(filename=paste(output.path,cohort,"_","HER2E_BASAL_scatter.pdf",sep=""), 
-       width = 260,
-       height = 210,
-       units = "mm")
+# save plots
+pdf(file = paste(output.path,cohort,"_PAM50correlation.pdf", sep=""), 
+    onefile = TRUE, width = 21, height = 14.8) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()

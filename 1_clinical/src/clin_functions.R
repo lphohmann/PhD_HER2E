@@ -46,12 +46,12 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
         break.x.by = 500, # break X axis in time intervals of x (what is nicest here? maybe 365)
         break.y.by = 0.1)
     
-    print(plot)
+    return(plot)
     
 }
 
 # function that created univariate Cox proportional hazards model forest plot
-unicox <- function(data,surv) {
+unicox <- function(data,surv,title) {
     
     # Model construction
     main.pam50 <- coxph(surv~PAM50, data=data)
@@ -60,11 +60,11 @@ unicox <- function(data,surv) {
     print(summary(main.pam50))
 
     # forest 
-    ggforest(main.pam50,fontsize = 1,data=data)
+    ggforest(main.pam50,fontsize = 2,data=data,main=title)
 }
 
 # function that created multivariate Cox proportional hazards model forest plot
-mvcox <- function(data,surv) {
+mvcox <- function(data,surv,title) {
     
     # Model construction 
     # parameters to incl: PAM50, Age, Grade, TumSize
@@ -74,7 +74,7 @@ mvcox <- function(data,surv) {
     print(summary(main.all))
     
     # Plot forest 
-    ggforest(main.all,fontsize = 3,cpositions = c(0.01,0.13,0.35),data=data)
+    ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)
 }
 
 # function that creates KM plot for HER2p for specified OM

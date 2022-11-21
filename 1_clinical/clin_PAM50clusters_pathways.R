@@ -52,7 +52,7 @@ dbs <- listEnrichrDbs() # see avaiable dbs and select
 dbs <- c("KEGG_2021_Human") #"GO_Molecular_Function_2021", "GO_Biological_Process_2021
 
 # for each cluster
-pdf(file = paste(output.path,cohort,"_PAM50coreclust_pwe.pdf", sep=""), onefile = TRUE )
+pdf(file = paste(output.path,cohort,"_PAM50clusters_pwe.pdf", sep=""), onefile = TRUE )
 for(i in 1:length(unique(clust.anno$ClusterNumber))) { 
     data <- clust.anno %>% filter(ClusterNumber == i)
     clust <- paste("core.cluster.", i, sep = "")
@@ -64,8 +64,6 @@ for(i in 1:length(unique(clust.anno$ClusterNumber))) {
     } else {}
     assign(clust, res)
 }
-
-dev.off()
 
 #######################################################################
 # Spiral clusters
@@ -91,7 +89,6 @@ dbs <- listEnrichrDbs() # see avaiable dbs and select
 dbs <- c("KEGG_2021_Human") #"GO_Molecular_Function_2021", "GO_Biological_Process_2021
 
 # for each cluster
-pdf(file = paste(output.path,cohort,"_PAM50spiralclust_pwe.pdf", sep=""), onefile = TRUE )
 for(i in 1:length(unique(clust.anno$ClusterNumber))) { 
     data <- clust.anno %>% filter(ClusterNumber == i)
     clust <- paste("spiral.cluster.", i, sep = "")

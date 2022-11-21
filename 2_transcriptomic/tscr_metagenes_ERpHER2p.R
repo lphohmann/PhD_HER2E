@@ -30,6 +30,7 @@ library(biomaRt)
 library(gridExtra)
 library(ggsignif)
 library(forcats)
+library(janitor)
 
 #######################################################################
 # load metagene definitions

@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "Metabric" # Metabric or SCANB 
+cohort <- "SCANB" # Metabric or SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -27,6 +27,9 @@ library(survival)
 library(tidyverse)
 library(survminer)
 library(grid)
+
+# list to store plots
+plot.list <- list()
 
 #######################################################################
 # Cohort-specific data preprocessing including selection of  
@@ -108,7 +111,7 @@ survdata$RFIbin <- as.numeric(survdata$RFIbin)
 # filter to only include subjects that are PAM50 == Her2 | LumA | LumB
 survdata <- survdata %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) # basal
 survdata$PAM50 <- droplevels(survdata$PAM50) # drop empty levels
-barplot(table(survdata$PAM50))
+#barplot(table(survdata$PAM50))
 
 #######################################################################
 # 3. Relevel to use HER2E as base for comparison
@@ -131,32 +134,21 @@ EC_group.surv <- Surv(EC_group[["RFI"]], EC_group[["RFIbin"]])
 ##########################
 
 # univariate cox regression + forest plot
-unicox(EC_group,EC_group.surv)
+plot.list <- append(plot.list,list(unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, RFI, cohort=",cohort,")"))))
 
 ##########################
 
 # KM plot
-KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
+plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
        OMstring = "Recurrence-free interval",
        OM = EC_group$RFI,
        OMbin = EC_group$RFIbin,
-       sdata = EC_group)
-
-# save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_EC.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
+       sdata = EC_group)))
 
 ##########################
 
 # Multivariate Cox proportional hazards model
-mvcox(EC_group,EC_group.surv)
-
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_EC.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
+plot.list <- append(plot.list,list(mvcox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, RFI, cohort=",cohort,")"))))
 
 #######################################################################
 # 7. Investigate the Endo treatment group
@@ -170,32 +162,31 @@ E_group.surv <- Surv(E_group[["RFI"]], E_group[["RFIbin"]])
 ##########################
 
 # univariate cox regression + forest plot
-unicox(E_group,E_group.surv)
+plot.list <- append(plot.list,list(unicox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, RFI, cohort=",cohort,")"))))
 
 ##########################
 
 # KM plot
-KMplot(group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
+plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
        OMstring = "Recurrence-free interval",
        OM = E_group$RFI,
        OMbin = E_group$RFIbin,
-       sdata = E_group)
-
-# save
-ggsave(filename=paste(output.path,cohort,"_RFI_KM_E.pdf",sep=""), #_basal
-       width = 325,
-       height = 210,
-       units = "mm")
+       sdata = E_group)))
 
 ##########################
 
 # Multivariate Cox proportional hazards model
-mvcox(E_group,E_group.surv)
-
-ggsave(filename=paste(output.path,cohort,"_RFI_forest_E.pdf",sep=""),
-       width = 560,
-       height = 480,
-       units = "mm")
+plot.list <- append(plot.list,list(mvcox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, RFI, cohort=",cohort,")"))))
 
 #######################################################################
 #######################################################################
+
+# save plots
+pdf(file = paste(output.path,cohort,"_SA.pdf", sep=""), 
+    onefile = TRUE, width = 21, height = 14.8) 
+
+for (i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+}
+
+dev.off()

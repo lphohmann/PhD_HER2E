@@ -1,4 +1,4 @@
-# Script: differential expression analysis; cohorts=SCANB, METABRIC
+# Script: differential expression analysis in HER2p ; cohorts=SCANB, (METABRIC)
 #TODO: 
 # Filter based on diff in expression absolute (add column)
 
@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB (or METABRIC)
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
