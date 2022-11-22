@@ -1,6 +1,6 @@
 # Script: differential expression analysis in HER2p ; cohorts=SCANB, (METABRIC)
 #TODO: 
-# Filter based on diff in expression absolute (add column)
+# JOHAN: ONLY ERPHER2N AND TNBC IN METABRIC DATA
 
 # empty environment
 rm(list=ls())
@@ -42,7 +42,7 @@ if (cohort=="SCANB") {
     
     # load annotation data
     clin.rel4 <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) #coltypes='text'
+        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
     
     # load gex data
     load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
@@ -50,9 +50,14 @@ if (cohort=="SCANB") {
     # select subgroup data
     anno <- clin.rel4 %>% 
         filter(Follow.up.cohort==TRUE) %>% 
-        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(ER=="Positive" & HER2=="Negative") %>% 
-        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+        filter(ER=="Positive") %>% 
+        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
+        mutate(Group = case_when(
+            HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
+            HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
+            HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
+        filter(Group %in% 
+                   c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
     
     # filter to select subgroup gex data
     # modfiy ensembl ids to remove version annotation
@@ -64,20 +69,18 @@ if (cohort=="SCANB") {
         column_to_rownames("ensembl_gene_id") %>% 
         select_if(~ !any(is.na(.))) # need this here because i scale/row-center
     
+    # log transformed FPKM data
+    gex.data <- as.data.frame(log2(gex.data + 1))
+    # z-transform
+    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
+
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
     
-    # log transformed FPKM data
-    gex.data <- as.data.frame(log2(gex.data + 1))
-    # filter based on stdev cutoff before z-transform
-    #gex.data <- gex.data %>% mutate(stdev=rowSds(as.matrix(.[colnames(gex.data)]))) %>% filter(stdev >= 0.5) %>% dplyr::select(-c(stdev)) 
-    # z-transform
-    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-    
 #-----------------------------------------------------------------------#
     
-} else if (cohort=="METABRIC") {
+} else if (cohort=="METABRIC") { # no data
     
     # load annotation data
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")

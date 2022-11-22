@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -44,6 +44,9 @@ if (cohort=="SCANB") {
     clin.rel4 <- as.data.frame(
         read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) #coltypes='text'
     
+    # load gene anno data to convert IDs
+    load("./data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata")
+    
     # load gex data
     load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
     
@@ -58,10 +61,11 @@ if (cohort=="SCANB") {
     # modfiy ensembl ids to remove version annotation
     gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
         rownames_to_column("ensembl_gene_id") %>% 
-        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id))  %>% # remove characters after dot 
-        drop_na(ensembl_gene_id) %>% 
-        distinct(ensembl_gene_id,.keep_all = TRUE) %>% 
-        column_to_rownames("ensembl_gene_id") %>% 
+        mutate(geneID = Gene.ID.ann[which(Gene.ID.ann$Gene.ID==ensembl_gene_id),]$Gene.Name) %>% 
+        dplyr::select(-c(ensembl_gene_id)) %>% 
+        drop_na(geneID) %>% 
+        distinct(geneID,.keep_all = TRUE) %>% 
+        column_to_rownames("geneID") %>% 
         select_if(~ !any(is.na(.))) # need this here because i scale/row-center
     
     # exclude samples from anno without associated gex data

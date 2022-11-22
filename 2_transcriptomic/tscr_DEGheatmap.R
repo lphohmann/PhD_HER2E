@@ -1,5 +1,7 @@
 # Script: Generate heatmaps for DEGs
 #TODO: 
+# exclude other group in pairwise heatmap?
+# adapt group colors
 
 # empty environment
 rm(list=ls())
@@ -44,6 +46,8 @@ if (cohort=="SCANB") {
     clin.rel4 <- as.data.frame(
         read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) #coltypes='text'
     
+    # load gene anno data to convert IDs
+    load("./data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata")
     # load gex data
     load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
     
@@ -58,10 +62,11 @@ if (cohort=="SCANB") {
     # modfiy ensembl ids to remove version annotation
     gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
         rownames_to_column("ensembl_gene_id") %>% 
-        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id))  %>% # remove characters after dot 
-        drop_na(ensembl_gene_id) %>% 
-        distinct(ensembl_gene_id,.keep_all = TRUE) %>% 
-        column_to_rownames("ensembl_gene_id") %>% 
+        mutate(geneID = Gene.ID.ann[which(Gene.ID.ann$Gene.ID==ensembl_gene_id),]$Gene.Name) %>% 
+        dplyr::select(-c(ensembl_gene_id)) %>% 
+        drop_na(geneID) %>% 
+        distinct(geneID,.keep_all = TRUE) %>% 
+        column_to_rownames("geneID") %>% 
         select_if(~ !any(is.na(.))) # need this here because i scale/row-center
     
     # exclude samples from anno without associated gex data
@@ -106,6 +111,17 @@ if (cohort=="SCANB") {
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
 }
+
+#######################################################################
+# Load DE results and convert ids
+#######################################################################
+
+# load DE results
+load(file = "./data/SCANB/2_transcriptomic/processed/DE_results.RData")
+DE.res.scanb <- DE.res
+load(file = "./data/METABRIC/2_transcriptomic/processed/DE_results.RData")
+DE.res.metabric <- DE.res
+
 #######################################################################
 # Heatmap parameters
 #######################################################################
@@ -116,39 +132,47 @@ breaksList = seq(-2, nbr.c, by = 0.1) # this defines the color palette range
 my.link.method <- "ward.D" 
 my.dist.method <- "euclidean" #"correlation" "euclidean"
 
+mg_colors <- c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00")
 # colors
 my_colour = list(
     Cluster=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A"),
-    PAM50 = c("Her2" = "red" , "LumA" = "blue" , "LumB" = "yellow"),
-    NHG = c("missing"="white","1"="#E41A1C","2"="lightblue","3"="#4DAF4A"),
-    Basal = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    Early_response = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    IR = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    Lipid = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    Mitotic_checkpoint = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    Mitotic_progression = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    SR = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"),
-    Stroma = c("<= -2"="#2e4053","-1 to -2"="#5d6d7e","-0.5 to -1"="#aeb6bf","-0.5 to 0.5"="#ecf0f1","0.5 to 1"="#edbb99","1 to 2"="#dc7633",">= 2"="#ba4a00"))
+    PAM50 = c("Her2" = "#d334eb" , "LumA" = "#2176d5" , "LumB" = "#34c6eb"),
+    NHG = c("missing"="white","1"="#fecc5c","2"="#fd8d3c","3"="#e31a1c"),
+    Basal = mg_colors,
+    Early_response = mg_colors,
+    IR = mg_colors,
+    Lipid = mg_colors,
+    Mitotic_checkpoint = mg_colors,
+    Mitotic_progression = mg_colors,
+    SR = mg_colors,
+    Stroma = mg_colors)
 
 #######################################################################
-# Heatmap data
+# Heatmap 1: Top DEGs
 #######################################################################
-
-# load DE results
-load(file = paste(data.path,"DE_results.RData",sep=""))
 
 # define DEG set
-DEGs <- DE.res %>% 
+top.DEGs.scanb <- DE.res.scanb %>% 
     filter(Her2.LumA.padj <= 0.05) %>% 
     filter(Her2.LumB.padj <= 0.05) %>% 
     filter(abs(Her2.LumA.diff) >= 1) %>% 
     filter(abs(Her2.LumB.diff) >= 1) %>% 
-    dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") %>% pull(Gene)
+    rownames_to_column("Gene") %>% pull(Gene)
+
+top.DEGs.metabric <- DE.res.metabric %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    filter(abs(Her2.LumA.diff) >= 1) %>% 
+    filter(abs(Her2.LumB.diff) >= 1) %>% 
+    rownames_to_column("Gene") %>% pull(Gene) 
+
+# core top gex
+top.DEGs.core <- intersect(top.DEGs.scanb,top.DEGs.metabric)
 
 # get gex of selected genes
 top.gex <- gex.data %>% 
     rownames_to_column("Gene") %>% 
-    filter(Gene %in% DEGs) %>% 
+    filter(Gene %in% top.DEGs.core) %>% 
     column_to_rownames(var="Gene") 
 
 # load metagene scores for hm annotation
@@ -187,9 +211,87 @@ final.hm.anno <- data.frame(
     Stroma=factor(mg_converter(hm.anno$Stroma)))
 rownames(final.hm.anno) <- rownames(hm.anno)
 
+# create the heatmap
+pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+         clustering_distance_rows = my.dist.method,
+         clustering_distance_cols = my.dist.method, 
+         clustering_method = my.link.method,
+         show_rownames=F, show_colnames=F, 
+         main=paste(
+             "Top HER2E core DEGs (ERpHER2n; ",cohort,")",sep = ""), 
+         cutree_cols=n.tree, legend = T,
+         color=colorRampPalette(
+             c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
+         annotation_col=
+             final.hm.anno[,
+                           c("Stroma","SR","Mitotic_checkpoint",
+                             "Lipid","IR","Basal","NHG","PAM50")], 
+         annotation_colors=my_colour,breaks=breaksList,
+         filename= paste(output.path,cohort,"_coretop_heatmap.pdf",sep = ""))
+
+
 #######################################################################
-# Heatmap plotting
+# Heatmap 2: HER2E vs. LumA
 #######################################################################
+
+# load metagene scores for hm annotation
+load(paste("./data/",cohort,"/2_transcriptomic/processed/mg_anno.RData",sep = ""))
+
+# create hm annotaiton object
+hm.anno <- merge(
+    mg.anno.list[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
+    relocate(NHG, .after = PAM50) %>% 
+    filter(PAM50 %in% c("Her2","LumA")) %>% 
+    column_to_rownames(var = "sampleID")
+
+# handle missing NHG values
+hm.anno$NHG <- as.character(hm.anno$NHG)
+hm.anno$NHG[hm.anno$NHG == ""] <- "missing"
+
+# define DEG set
+LumA.DEGs.scanb <- DE.res.scanb %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(abs(Her2.LumA.diff) >= 1) %>% 
+    rownames_to_column("Gene") %>% 
+    pull(Gene)
+
+LumA.DEGs.metabric <- DE.res.metabric %>% 
+    filter(Her2.LumA.padj <= 0.05) %>% 
+    filter(abs(Her2.LumA.diff) >= 1) %>% 
+    rownames_to_column("Gene") %>% 
+    pull(Gene) 
+
+# core top gex
+LumA.DEGs.core <- intersect(LumA.DEGs.scanb,LumA.DEGs.metabric)
+
+# get gex of selected genes
+top.gex <- gex.data %>% 
+    dplyr::select(any_of(rownames(hm.anno))) %>% 
+    rownames_to_column("Gene") %>% 
+    filter(Gene %in% LumA.DEGs.core) %>% 
+    column_to_rownames(var="Gene") 
+
+# cluster samples (prev. with dist())
+c1 <- cutree(hclust(
+    Dist(t(top.gex),method=my.dist.method),method=my.link.method),n.tree)
+
+# add clusters to hm annotation object 
+hm.anno <- merge(hm.anno,as.data.frame(c1),by=0) %>% 
+    column_to_rownames(var = "Row.names") %>% 
+    dplyr::rename(Cluster=c1)
+
+# final hm annotation 
+final.hm.anno <- data.frame(
+    Cluster=factor(hm.anno$Cluster),
+    PAM50=factor(hm.anno$PAM50),
+    NHG=factor(hm.anno$NHG),
+    Basal=factor(mg_converter(hm.anno$Basal)),
+    IR=factor(mg_converter(hm.anno$IR)),
+    Lipid=factor(mg_converter(hm.anno$Lipid)),
+    Mitotic_checkpoint=factor(mg_converter(hm.anno$Mitotic_checkpoint)),
+    SR=factor(mg_converter(hm.anno$SR)),
+    Stroma=factor(mg_converter(hm.anno$Stroma)))
+rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
 pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
@@ -198,13 +300,94 @@ pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_method = my.link.method,
          show_rownames=F, show_colnames=F, 
          main=paste(
-             "Top HER2E DEGs (ERpHER2n; ",cohort,")",sep = ""), 
+             "Core HER2E-LUMA DEGs (ERpHER2n; ",cohort,")",sep = ""), 
          cutree_cols=n.tree, legend = T,
          color=colorRampPalette(
-             c("blue", "white", "yellow"))(length(breaksList)),
+             c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
          annotation_col=
              final.hm.anno[,
                            c("Stroma","SR","Mitotic_checkpoint",
                              "Lipid","IR","Basal","NHG","PAM50")], 
          annotation_colors=my_colour,breaks=breaksList,
-         filename= paste(output.path,cohort,"_top_heatmap.pdf",sep = ""))
+         filename= paste(output.path,cohort,"_LUMA_heatmap.pdf",sep = ""))
+
+#######################################################################
+# Heatmap 3: HER2E vs. LumB
+#######################################################################
+
+# load metagene scores for hm annotation
+load(paste("./data/",cohort,"/2_transcriptomic/processed/mg_anno.RData",sep = ""))
+
+# create hm annotaiton object
+hm.anno <- merge(
+    mg.anno.list[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
+    relocate(NHG, .after = PAM50) %>% 
+    filter(PAM50 %in% c("Her2","LumB")) %>% 
+    column_to_rownames(var = "sampleID")
+
+# handle missing NHG values
+hm.anno$NHG <- as.character(hm.anno$NHG)
+hm.anno$NHG[hm.anno$NHG == ""] <- "missing"
+
+# define DEG set
+LumB.DEGs.scanb <- DE.res.scanb %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    filter(abs(Her2.LumB.diff) >= 1) %>% 
+    rownames_to_column("Gene") %>% 
+    pull(Gene)
+
+LumB.DEGs.metabric <- DE.res.metabric %>% 
+    filter(Her2.LumB.padj <= 0.05) %>% 
+    filter(abs(Her2.LumB.diff) >= 1) %>% 
+    rownames_to_column("Gene") %>% 
+    pull(Gene) 
+
+# core top gex
+LumB.DEGs.core <- intersect(LumB.DEGs.scanb,LumB.DEGs.metabric)
+
+# get gex of selected genes
+top.gex <- gex.data %>% 
+    dplyr::select(any_of(rownames(hm.anno))) %>% 
+    rownames_to_column("Gene") %>% 
+    filter(Gene %in% LumB.DEGs.core) %>% 
+    column_to_rownames(var="Gene") 
+
+# cluster samples (prev. with dist())
+c1 <- cutree(hclust(
+    Dist(t(top.gex),method=my.dist.method),method=my.link.method),n.tree)
+
+# add clusters to hm annotation object 
+hm.anno <- merge(hm.anno,as.data.frame(c1),by=0) %>% 
+    column_to_rownames(var = "Row.names") %>% 
+    dplyr::rename(Cluster=c1)
+
+# final hm annotation 
+final.hm.anno <- data.frame(
+    Cluster=factor(hm.anno$Cluster),
+    PAM50=factor(hm.anno$PAM50),
+    NHG=factor(hm.anno$NHG),
+    Basal=factor(mg_converter(hm.anno$Basal)),
+    IR=factor(mg_converter(hm.anno$IR)),
+    Lipid=factor(mg_converter(hm.anno$Lipid)),
+    Mitotic_checkpoint=factor(mg_converter(hm.anno$Mitotic_checkpoint)),
+    SR=factor(mg_converter(hm.anno$SR)),
+    Stroma=factor(mg_converter(hm.anno$Stroma)))
+rownames(final.hm.anno) <- rownames(hm.anno)
+
+# create the heatmap
+pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+         clustering_distance_rows = my.dist.method,
+         clustering_distance_cols = my.dist.method, 
+         clustering_method = my.link.method,
+         show_rownames=F, show_colnames=F, 
+         main=paste(
+             "Core HER2E-LUMB DEGs (ERpHER2n; ",cohort,")",sep = ""), 
+         cutree_cols=n.tree, legend = T,
+         color=colorRampPalette(
+             c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
+         annotation_col=
+             final.hm.anno[,
+                           c("Stroma","SR","Mitotic_checkpoint",
+                             "Lipid","IR","Basal","NHG","PAM50")], 
+         annotation_colors=my_colour,breaks=breaksList,
+         filename= paste(output.path,cohort,"_LUMB_heatmap.pdf",sep = ""))
