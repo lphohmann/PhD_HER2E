@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -50,18 +50,9 @@ metagene.def <- as.data.frame(read_excel(
 # for SCANB
 if (cohort=="SCANB") {
     
-    # load annotation data
-    clin.rel4 <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
-    
-    # load gene anno data to convert IDs
-    load("./data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata")
-    
-    # load gex data
-    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
-    
-    # select subgroup data
-    anno <- clin.rel4 %>% 
+    # load annotation data and select subgroup data
+    anno <- as.data.frame(
+        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
         filter(Follow.up.cohort==TRUE) %>% 
         filter(ER=="Positive") %>% 
         dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
@@ -72,59 +63,30 @@ if (cohort=="SCANB") {
         filter(Group %in% 
                    c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
     
-    # filter to select subgroup gex data
-    # modfiy ensembl ids to remove version annotation
-    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
-        rownames_to_column("ensembl_gene_id") %>% 
-        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id)) # remove characters after dot
+    # load gex data
+    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>% 
+        dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex 
+        select_if(~ !any(is.na(.))) %>% # otherwise error when scaling
+        filter(row.names(.) %in% metagene.def$entrezgene_id) # get metagene gex
     
-    # convert to entrez ids
-    mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                              dataset = "hsapiens_gene_ensembl",
-                              host = "http://www.ensembl.org")
-    res <- getBM(filters = "ensembl_gene_id",
-                  attributes = c("ensembl_gene_id","entrezgene_id"),
-                  values = gex.data$ensembl_gene_id, 
-                  mart = mart)
-    save(res,file = paste(data.path,"mart_res.RData",sep="") )
-    #load(paste(data.path,"mart_res.RData",sep=""))
-    
-    # get final metagene gex data
-    gex.data <- as.data.frame(merge(gex.data, res, by="ensembl_gene_id")) %>% 
-        filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
-        column_to_rownames(var="entrezgene_id") %>% 
-        dplyr::select(-c(ensembl_gene_id)) %>% 
-        select_if(~ !any(is.na(.)))
-    
-    # exclude samples from anno without associated gex data
-    anno <- anno %>% 
-        filter(sampleID %in% colnames(gex.data))
-    
-    # log transformed FPKM data
+    # log transform FPKM data
     gex.data <- as.data.frame(log2(gex.data + 1))
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
     
-    #-----------------------------------------------------------------------#
+#-----------------------------------------------------------------------#
     
 } else if (cohort=="METABRIC") {
     
     # load annotation data
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
     
-    # load gex data
-    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>%
-        row_to_names(row_number = 1) %>% 
-        mutate_all(na_if,"") %>% 
-        drop_na(Entrez_Gene_Id) %>% 
-        distinct(Entrez_Gene_Id,.keep_all = TRUE) %>% 
-        column_to_rownames(var="Entrez_Gene_Id") %>% 
-        dplyr::select(-c(Hugo_Symbol)) 
-    
     # extract relevant variables
     anno <- anno %>% 
-        mutate(ER = if_else("ERp" %in% ClinGroup,"Positive","Negative")) %>% 
-        mutate(HER2 = if_else("HER2p" %in% ClinGroup,"Positive","Negative")) %>% 
+        mutate(ER = if_else(
+            ER_IHC_status=="pos","Positive","Negative")) %>% 
+        mutate(HER2 = if_else(
+            HER2_SNP6_state=="GAIN","Positive","Negative")) %>% 
         filter(ER == "Positive") %>% 
         mutate(Group = case_when(
             HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
@@ -134,17 +96,16 @@ if (cohort=="SCANB") {
                    c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E")) %>% 
         dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
     
-    # filter to select subgroup gex data HERE
-    gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
-        rownames_to_column("entrezgene_id") %>% 
-        filter(entrezgene_id %in% metagene.def$entrezgene_id) %>% 
-        column_to_rownames(var="entrezgene_id") %>% 
+    # load and select subgroup data
+    gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Entrez_Gene_Id") %>% 
+        dplyr::select(any_of(anno$sampleID)) %>% 
         mutate_all(function(x) as.numeric(x)) %>% 
-        select_if(~ !any(is.na(.))) 
+        filter(row.names(.) %in% metagene.def$entrezgene_id) # get metagene gex
     
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
+    
 }
 
 #######################################################################
@@ -239,7 +200,6 @@ mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c(
 #######################################################################
 # 5. Boxplots
 #######################################################################
-source("./scripts/2_transcriptomic/src/tscr_functions.R")
 # plot
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 
