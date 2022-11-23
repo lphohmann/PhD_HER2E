@@ -4,6 +4,69 @@
 # functions
 ################################################################################
 
+# loads RData data file and allows to assign it directly to variable
+loadRData <- function(file.path){
+    load(file.path)
+    get(ls()[ls() != "file.path"])
+}
+
+# preprocessing scanb gex data to have hgnc as the gene ids
+scanb_gex_load <- function(gex.path,geneanno.path,ID.type) {
+    
+    # load gex data
+    gex.data <- as.data.frame(loadRData(gex.path))
+    
+    # load gene anno data to convert IDs
+    gene.anno <- as.data.frame(loadRData(geneanno.path))
+    
+    # process
+    gex.data <- gex.data %>% 
+        rownames_to_column("ensembl_gene_id") %>% 
+        mutate(geneID = gene.anno[which(gene.anno$Gene.ID==ensembl_gene_id),][[ID.type]]) %>% #gene.name=Idtype
+        dplyr::select(-c(ensembl_gene_id)) %>% 
+        drop_na(geneID) %>% 
+        distinct(geneID,.keep_all = TRUE) %>% 
+        column_to_rownames("geneID")
+    
+    return(gex.data)
+    
+}
+
+# preprocessing metabric gex data to have hgnc as the gene ids
+metabric_gex_load <- function(gex.path,ID.type) {
+    
+    # load gex data
+    gex.data <- as.data.frame(read.table(gex.path, sep="\t"))
+    
+    # the other gene id to remove
+    if(ID.type=="Hugo_Symbol") {
+        ID.remove <- "Entrez_Gene_Id"
+    } else {ID.remove <- "Hugo_Symbol"}
+    
+    # process
+    gex.data <- gex.data %>% 
+        row_to_names(row_number = 1) %>% 
+        mutate_all(na_if,"") %>% 
+        drop_na(!!rlang::ensym(ID.type)) %>% 
+        distinct(!!rlang::ensym(ID.type),.keep_all = TRUE) %>% 
+        column_to_rownames(var=ID.type) %>% 
+        dplyr::select(-c(!!rlang::ensym(ID.remove))) 
+    
+    return(gex.data)
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
 # define "not in" operator 
 '%!in%' <- function(x,y)!('%in%'(x,y))
 

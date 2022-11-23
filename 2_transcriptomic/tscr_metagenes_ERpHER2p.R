@@ -55,6 +55,9 @@ if (cohort=="SCANB") {
     clin.rel4 <- as.data.frame(
         read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
     
+    # load gene anno data to convert IDs
+    load("./data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata")
+    
     # load gex data
     load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
     

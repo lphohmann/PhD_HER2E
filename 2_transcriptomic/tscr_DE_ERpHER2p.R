@@ -40,15 +40,10 @@ library(biomaRt)
 # for SCANB
 if (cohort=="SCANB") {
     
-    # load annotation data
-    clin.rel4 <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
     
-    # load gex data
-    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
-    
-    # select subgroup data
-    anno <- clin.rel4 %>% 
+    # load annotation data and select subgroup data
+    anno <- as.data.frame(
+        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
         filter(Follow.up.cohort==TRUE) %>% 
         filter(ER=="Positive") %>% 
         dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
@@ -59,45 +54,29 @@ if (cohort=="SCANB") {
         filter(Group %in% 
                    c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
     
-    # filter to select subgroup gex data
-    # modfiy ensembl ids to remove version annotation
-    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
-        rownames_to_column("ensembl_gene_id") %>% 
-        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id))  %>% # remove characters after dot 
-        drop_na(ensembl_gene_id) %>% 
-        distinct(ensembl_gene_id,.keep_all = TRUE) %>% 
-        column_to_rownames("ensembl_gene_id") %>% 
-        select_if(~ !any(is.na(.))) # need this here because i scale/row-center
+    # load gex data
+    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "Gene.Name") %>% 
+        dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex 
+        select_if(~ !any(is.na(.))) # otherwise error when scaling
     
-    # log transformed FPKM data
+    # log transform FPKM data
     gex.data <- as.data.frame(log2(gex.data + 1))
     # z-transform
     gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-
-    # exclude samples from anno without associated gex data
-    anno <- anno %>% 
-        filter(sampleID %in% colnames(gex.data))
     
 #-----------------------------------------------------------------------#
     
-} else if (cohort=="METABRIC") { # no data
+} else if (cohort=="METABRIC") {
     
     # load annotation data
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
     
-    # load gex data
-    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>%
-        row_to_names(row_number = 1) %>% 
-        mutate_all(na_if,"") %>% 
-        drop_na(Hugo_Symbol) %>% 
-        distinct(Hugo_Symbol,.keep_all = TRUE) %>% 
-        column_to_rownames(var="Hugo_Symbol") %>% 
-        dplyr::select(-c(Entrez_Gene_Id)) 
-    
     # extract relevant variables
     anno <- anno %>% 
-        mutate(ER = if_else("ERp" %in% ClinGroup,"Positive","Negative")) %>% 
-        mutate(HER2 = if_else("HER2p" %in% ClinGroup,"Positive","Negative")) %>% 
+        mutate(ER = if_else(
+            "ERp" %in% ClinGroup,"Positive","Negative")) %>% 
+        mutate(HER2 = if_else(
+            "HER2p" %in% ClinGroup,"Positive","Negative")) %>% 
         filter(ER == "Positive") %>% 
         mutate(Group = case_when(
             HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
@@ -107,10 +86,10 @@ if (cohort=="SCANB") {
                    c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E")) %>% 
         dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
     
-    # filter to select subgroup gex data HERE
-    gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
-        mutate_all(function(x) as.numeric(x)) %>% 
-        select_if(~ !any(is.na(.))) 
+    # load and select subgroup data
+    gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
+        dplyr::select(any_of(anno$sampleID)) %>% 
+        mutate_all(function(x) as.numeric(x))
     
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
