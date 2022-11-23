@@ -1,7 +1,6 @@
-# Script: Metagene analysis for HER2E and ERpHER2p contrast groups in SCAN-B 
+# Script: Metagene analysis for HER2E and ERpHER2p contrast groups in SCAN-B and METABRIC
 
 # TODO:
-# no data for metabric (only erpher2n or tnbc in dataset)
 
 # empty environment
 rm(list=ls())
@@ -10,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB (or METABRIC - no data)
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"

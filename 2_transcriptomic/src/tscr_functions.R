@@ -56,17 +56,6 @@ metabric_gex_load <- function(gex.path,ID.type) {
     
 }
 
-
-
-
-
-
-
-
-
-
-
-
 # define "not in" operator 
 '%!in%' <- function(x,y)!('%in%'(x,y))
 

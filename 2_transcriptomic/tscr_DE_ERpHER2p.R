@@ -1,6 +1,5 @@
-# Script: differential expression analysis in HER2p ; cohorts=SCANB, (METABRIC)
+# Script: differential expression analysis in HER2p ; cohorts=SCANB, METABRIC
 #TODO: 
-# JOHAN: ONLY ERPHER2N AND TNBC IN METABRIC DATA
 
 # empty environment
 rm(list=ls())
@@ -9,7 +8,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB (or METABRIC)
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -74,9 +73,9 @@ if (cohort=="SCANB") {
     # extract relevant variables
     anno <- anno %>% 
         mutate(ER = if_else(
-            "ERp" %in% ClinGroup,"Positive","Negative")) %>% 
+            ER_IHC_status=="pos","Positive","Negative")) %>% 
         mutate(HER2 = if_else(
-            "HER2p" %in% ClinGroup,"Positive","Negative")) %>% 
+            HER2_SNP6_state=="GAIN","Positive","Negative")) %>% 
         filter(ER == "Positive") %>% 
         mutate(Group = case_when(
             HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
@@ -100,18 +99,17 @@ if (cohort=="SCANB") {
 #######################################################################
 # 4. Perform t-test for each gene
 #######################################################################
-#source("./scripts/2_transcriptomic/src/tscr_functions.R")
 
 # sampleIDs per pam50 subtype
-Her2.cols <- anno %>% filter(PAM50=="Her2") %>% pull(sampleID)
-LumA.cols <- anno %>% filter(PAM50=="LumA") %>% pull(sampleID)
-LumB.cols <- anno %>% filter(PAM50=="LumB") %>% pull(sampleID)
+g1.cols <- anno %>% filter(Group=="HER2n_HER2E") %>% pull(sampleID) #HER2n_HER2E
+g2.cols <- anno %>% filter(Group=="HER2p_nonHER2E") %>% pull(sampleID) # luma HER2p_nonHER2E
+g3.cols <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sampleID) #lumb g3 HER2p_HER2E
 
 # initialize vector of stored p-values and expression differences (based on mean comparison)
-Her2.LumA.pval <- rep(NA,nrow(gex.data))
-Her2.LumB.pval <- rep(NA,nrow(gex.data))
-Her2.LumA.diff <- rep(NA,nrow(gex.data))
-Her2.LumB.diff <- rep(NA,nrow(gex.data))
+g1.g2.pval <- rep(NA,nrow(gex.data))
+g1.g3.pval <- rep(NA,nrow(gex.data))
+g1.g2.diff <- rep(NA,nrow(gex.data))
+g1.g3.diff <- rep(NA,nrow(gex.data))
 
 # loop through the genes
 pb = txtProgressBar(min = 0, max = nrow(gex.data), initial = 0, style = 3)
@@ -119,23 +117,23 @@ for (i in 1:nrow(gex.data)) { #nrow(gex.data)
     setTxtProgressBar(pb,i)
     
     # set vars
-    her2.data <- as.numeric(gex.data[i,Her2.cols])
-    luma.data <- as.numeric(gex.data[i,LumA.cols])
-    lumb.data <- as.numeric(gex.data[i,LumB.cols])
+    g1.data <- as.numeric(gex.data[i,g1.cols])
+    g2.data <- as.numeric(gex.data[i,g2.cols])
+    g3.data <- as.numeric(gex.data[i,g3.cols])
     
-    # for Her2 vs LumA
-    res.A <- var_ttest(her2.data,luma.data)
-    
-    # save results
-    Her2.LumA.pval[i] <- res.A$p.value
-    Her2.LumA.diff[i] <- res.A$estimate[1]-res.A$estimate[2]
-    
-    # for Her2 vs LumB
-    res.B <- var_ttest(her2.data,lumb.data)
+    # for g1 vs g2
+    res.A <- var_ttest(g1.data,g2.data)
     
     # save results
-    Her2.LumB.pval[i] <- res.B$p.value
-    Her2.LumB.diff[i] <- res.B$estimate[1]-res.B$estimate[2]
+    g1.g2.pval[i] <- res.A$p.value
+    g1.g2.diff[i] <- res.A$estimate[1]-res.A$estimate[2]
+    
+    # for g1 vs g3
+    res.B <- var_ttest(g1.data,g3.data)
+    
+    # save results
+    g1.g3.pval[i] <- res.B$p.value
+    g1.g3.diff[i] <- res.B$estimate[1]-res.B$estimate[2]
     close(pb)
 }
 
@@ -143,26 +141,31 @@ for (i in 1:nrow(gex.data)) { #nrow(gex.data)
 
 # create the final output
 DE.res <- gex.data %>% add_column(
-    Her2.LumA.pval = Her2.LumA.pval,
-    Her2.LumB.pval = Her2.LumB.pval,
-    Her2.LumA.diff = Her2.LumA.diff, 
-    Her2.LumB.diff = Her2.LumB.diff) %>% 
-    dplyr::select(Her2.LumA.pval,Her2.LumB.pval,
-                  Her2.LumA.diff,Her2.LumB.diff)
+    g1.g2.pval = g1.g2.pval,
+    g1.g3.pval = g1.g3.pval,
+    g1.g2.diff = g1.g2.diff, 
+    g1.g3.diff = g1.g3.diff) %>% 
+    dplyr::select(g1.g2.pval,g1.g3.pval,
+                  g1.g2.diff,g1.g3.diff)
 
 # adjust p value 
-DE.res$Her2.LumA.padj <- p.adjust(DE.res$Her2.LumA.pval, "bonferroni")
-DE.res$Her2.LumB.padj <- p.adjust(DE.res$Her2.LumB.pval, "bonferroni")
+DE.res$g1.g2.padj <- p.adjust(DE.res$g1.g2.pval, "bonferroni")
+DE.res$g1.g3.padj <- p.adjust(DE.res$g1.g3.pval, "bonferroni")
 
 # up or down (refers to the situation in lumHer2 subtype; e.g. "up" indicates a gene whose expression is upregulated in lumHer2 compared to lumB or lumA)
 DE.res <- DE.res %>% 
-    mutate(Her2.LumA.de = case_when(
-        Her2.LumA.diff <= 0 ~ "down", 
-        Her2.LumA.diff >= 0 ~ "up")) %>% 
-    mutate(Her2.LumB.de = case_when(
-        Her2.LumB.diff <= 0 ~ "down", 
-        Her2.LumB.diff >= 0 ~ "up"))
+    mutate(g1.g2.de = case_when(
+        g1.g2.diff <= 0 ~ "down", 
+        g1.g2.diff >= 0 ~ "up")) %>% 
+    mutate(g1.g3.de = case_when(
+        g1.g3.diff <= 0 ~ "down", 
+        g1.g3.diff >= 0 ~ "up"))
+
+# rename columns
+colnames(DE.res) <- gsub("g1", "HER2n_HER2E", colnames(DE.res))
+colnames(DE.res) <- gsub("g2", "HER2p_nonHER2E", colnames(DE.res))
+colnames(DE.res) <- gsub("g3", "HER2p_HER2E", colnames(DE.res))
 
 # save the file
-save(DE.res,file = paste(data.path,"DE_results.RData",sep="") )
-load(file = paste(data.path,"DE_results.RData",sep=""))
+save(DE.res,file = paste(data.path,"HER2p_DE_results.RData",sep="") )
+#load(file = paste(data.path,"DE_results.RData",sep=""))
