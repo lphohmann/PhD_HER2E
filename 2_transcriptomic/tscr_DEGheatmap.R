@@ -362,3 +362,4 @@ pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
                              "Lipid","IR","Basal","NHG","PAM50")], 
          annotation_colors=my_colour,breaks=breaksList,
          filename= paste(output.path,cohort,"_LUMB_heatmap.pdf",sep = ""))
+
