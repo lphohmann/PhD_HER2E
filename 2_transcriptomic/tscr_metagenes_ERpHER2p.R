@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -64,10 +64,10 @@ if (cohort=="SCANB") {
                    c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
     
     # load gex data
-    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>% 
-        dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex 
-        select_if(~ !any(is.na(.))) %>% # otherwise error when scaling
-        filter(row.names(.) %in% metagene.def$entrezgene_id) # get metagene gex
+    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>%
+      dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex
+      filter(row.names(.) %in% metagene.def$entrezgene_id) %>% 
+      select_if(~ !any(is.na(.))) # otherwise error when scaling 
     
     # log transform FPKM data
     gex.data <- as.data.frame(log2(gex.data + 1))
@@ -98,16 +98,17 @@ if (cohort=="SCANB") {
     
     # load and select subgroup data
     gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Entrez_Gene_Id") %>% 
-        dplyr::select(any_of(anno$sampleID)) %>% 
-        mutate_all(function(x) as.numeric(x)) %>% 
-        filter(row.names(.) %in% metagene.def$entrezgene_id) # get metagene gex
+      dplyr::select(any_of(anno$sampleID)) %>% 
+      mutate_all(function(x) as.numeric(x)) %>% 
+      filter(row.names(.) %in% metagene.def$entrezgene_id) %>% 
+      select_if(~ !any(is.na(.))) 
     
     # exclude samples from anno without associated gex data
     anno <- anno %>% 
         filter(sampleID %in% colnames(gex.data))
     
 }
-
+#View(head(gex.data))
 #######################################################################
 # 4. calc. score for each metagene in each sample
 #######################################################################

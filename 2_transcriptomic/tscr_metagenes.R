@@ -60,8 +60,8 @@ if (cohort=="SCANB") {
       dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
     
     # load gex data
-    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>% 
-      dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex 
+    gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>%
+      dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex
       filter(row.names(.) %in% metagene.def$entrezgene_id) %>% 
       select_if(~ !any(is.na(.))) # otherwise error when scaling 
 
