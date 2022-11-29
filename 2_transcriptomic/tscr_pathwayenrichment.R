@@ -37,79 +37,55 @@ library(biomaRt)
 
 # for SCANB
 if (cohort=="SCANB") {
-    
-    # load annotation data
-    clin.rel4 <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx"))
-    
-    # load gex data
-    load("data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata")
-    
-    # select subgroup data
-    anno <- clin.rel4 %>% 
-        filter(Follow.up.cohort==TRUE) %>% 
-        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(ER=="Positive" & HER2=="Negative") %>% 
-        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
-    
-    # filter to select subgroup gex data
-    # modfiy ensembl ids to remove version annotation
-    gex.data <- as.data.frame(genematrix_noNeg[,colnames(genematrix_noNeg) %in% anno$sampleID]) %>% 
-        rownames_to_column("ensembl_gene_id") %>% 
-        mutate(ensembl_gene_id = gsub("\\..*","",ensembl_gene_id))  %>% # remove characters after dot 
-        drop_na(ensembl_gene_id) %>% 
-        distinct(ensembl_gene_id,.keep_all = TRUE) %>% 
-        column_to_rownames("ensembl_gene_id") %>% 
-        select_if(~ !any(is.na(.))) # need this here because i scale/row-center
-    
-    # exclude samples from anno without associated gex data
-    anno <- anno %>% 
-        filter(sampleID %in% colnames(gex.data))
-    
-    # log transformed FPKM data
-    gex.data <- as.data.frame(log2(gex.data + 1))
-    # z-transform
-    gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
-    
-#-----------------------------------------------------------------------#
-    
+  
+  # load annotation data and select subgroup data
+  anno <- as.data.frame(
+    read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
+    filter(Follow.up.cohort==TRUE) %>% 
+    filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+    filter(ER=="Positive" & HER2=="Negative") %>% 
+    dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+  
+  # load gex data
+  gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "Gene.Name") %>% 
+    dplyr::select(any_of(anno$sampleID)) %>% # select subgroup gex 
+    select_if(~ !any(is.na(.))) # otherwise error when scaling
+  
+  # log transform FPKM data
+  gex.data <- as.data.frame(log2(gex.data + 1))
+  # z-transform
+  gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
+  
+  #---------------------------------------------------------------------#
+  
 } else if (cohort=="METABRIC") {
-    
-    # load annotation data
-    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
-    
-    # load gex data
-    gex.data <- as.data.frame(read.table("data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt", sep="\t")) %>%
-        row_to_names(row_number = 1) %>% 
-        mutate_all(na_if,"") %>% 
-        drop_na(Hugo_Symbol) %>% 
-        distinct(Hugo_Symbol,.keep_all = TRUE) %>% 
-        column_to_rownames(var="Hugo_Symbol") %>% 
-        dplyr::select(-c(Entrez_Gene_Id)) 
-    
-    # extract relevant variables
-    anno <- anno %>% 
-        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
-    
-    # filter to select subgroup gex data HERE
-    gex.data <- gex.data[,colnames(gex.data) %in% anno$sampleID] %>% 
-        mutate_all(function(x) as.numeric(x))
-    
-    
-    # exclude samples from anno without associated gex data
-    anno <- anno %>% 
-        filter(sampleID %in% colnames(gex.data))
+  
+  # load annotation data
+  load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
+  
+  # extract relevant variables
+  anno <- anno %>% 
+    filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
+    filter(grepl('ERpHER2n', ClinGroup)) %>% 
+    dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+  
+  # load and select subgroup data
+  gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
+    dplyr::select(any_of(anno$sampleID)) %>% 
+    mutate_all(function(x) as.numeric(x))
+  
+  # exclude samples from anno without associated gex data
+  anno <- anno %>% 
+    filter(sampleID %in% colnames(gex.data))
 }
-
-load(file = paste(data.path,"DE_results.RData",sep=""))
-
-pam50.genes <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt")) %>% pull(HGNC)
 
 #######################################################################
 # GENESET 1: PAM50 DEGs 
 #######################################################################
+
+# load data
+DE.res <- loadRData(paste(data.path,"DE_results.RData",sep=""))
+pam50.genes <- as.data.frame(read_table("data/SCANB/1_clinical/raw/Spiral_SRIQ_PAM50_Gex_Clusters_6_Info_ann.txt")) %>% pull(HGNC)
 
 # DEGs
 DEGs <- DE.res %>% 
@@ -117,19 +93,9 @@ DEGs <- DE.res %>%
     filter(Her2.LumB.padj <= 0.05) %>% 
     dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene")
 
-# convert to entrez ids
-mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                         dataset = "hsapiens_gene_ensembl",
-                         host = "http://www.ensembl.org")
-
-mart.res <- getBM(filters = "ensembl_gene_id",
-             attributes = c("ensembl_gene_id","hgnc_symbol"),
-             values = DEGs[,"Gene"], 
-             mart = mart)
-
-pam50.DEGs <- mart.res %>% 
-    filter(hgnc_symbol %in% pam50.genes) %>% 
-    pull(hgnc_symbol)
+pam50.DEGs <- DEGs %>% 
+    filter(Gene %in% pam50.genes) %>% 
+    pull(Gene)
 
 #-----------------------plot expression-------------------------------#
 
