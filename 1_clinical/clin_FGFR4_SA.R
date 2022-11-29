@@ -1,4 +1,4 @@
-# Script: Survival analyses in HER2E-FGFR4 high and low expression groups in SCANB
+# Script: Survival analyses in HER2E-FGFR4 expression groups in SCANB
 
 # TODO:
 
@@ -57,8 +57,13 @@ fgfr4.gex <- fgfr4.gex %>% filter(sampleID %in% clin.rel4$sampleID) %>% dplyr::s
 
 clin.rel4 <- merge(clin.rel4,fgfr4.gex,by="sampleID")
 
-clin.rel4<- clin.rel4 %>% 
-    mutate(FGFR4= ifelse(ENSG00000160867>=1.66,"high","low"))
+#clin.rel4< - clin.rel4 %>% 
+    #mutate(FGFR4= ifelse(FGFR4>=1.66,"high","low"))
+
+clin.rel4 <- clin.rel4  %>%
+  mutate(FGFR4_expr = ntile(FGFR4, 3)) %>%
+  mutate(FGFR4_expr = if_else(FGFR4_expr == 1, 'Low', if_else(FGFR4_expr == 2, 'Medium', 'High'))) %>%
+  arrange(FGFR4)
 
 # plot
 
@@ -66,13 +71,11 @@ clin.rel4<- clin.rel4 %>%
 pdf(file = paste(output.path,cohort,"_","HER2n_FGFR4_KMplots.pdf", sep=""), onefile = TRUE, width = 21, height = 14.8) 
 
 # OS
-
-    
 # surv object
 data.surv <- Surv(clin.rel4$OS_rel4, clin.rel4$OSbin_rel4) 
     
 # fit
-fit <- survminer::surv_fit(data.surv~FGFR4, data=clin.rel4, conf.type="log-log") # weird bug: survival::survfit() cant be passed data in function call ?! so i use survminer::surv_fit()
+fit <- survminer::surv_fit(data.surv~FGFR4_expr, data=clin.rel4, conf.type="log-log") # weird bug: survival::survfit() cant be passed data in function call ?! so i use survminer::surv_fit()
     #survdiff(data.surv ~ PAM50, data = sdata) 
     
     plot <- ggsurvplot(
@@ -99,15 +102,58 @@ fit <- survminer::surv_fit(data.surv~FGFR4, data=clin.rel4, conf.type="log-log")
                         axis.text.y = element_text(size = 25), #20
                         axis.title.y = element_text(size = 30),
                         plot.title = element_text(size=30)),
-        title= "Overall survival in FGFR4 high and low groups",
+        title= "Overall survival in FGFR4 expression groups",
         legend.title = "FGFR4",
-        legend.labs = c(paste("High"," (",table(clin.rel4[!is.na(clin.rel4$OS_rel4),]$FGFR4)[1],")",sep = ""),
-                        paste("Low"," (",table(clin.rel4[!is.na(clin.rel4$OS_rel4),]$FGFR4)[2],")",sep = "")),
+        legend.labs = c(paste("High"," (",table(clin.rel4[!is.na(clin.rel4$OS_rel4),]$FGFR4_expr)[1],")",sep = ""),
+                        paste("Low"," (",table(clin.rel4[!is.na(clin.rel4$OS_rel4),]$FGFR4_expr)[2],")",sep = ""),
+                        paste("Medium"," (",table(clin.rel4[!is.na(clin.rel4$OS_rel4),]$FGFR4_expr)[3],")",sep = "")),
         break.x.by = 500, # break X axis in time intervals of x (what is nicest here? maybe 365)
         break.y.by = 0.1)
     
     print(plot)
     
-
+# RFI
+# surv object
+data.surv <- Surv(clin.rel4$RFI_rel4, clin.rel4$RFIbin_rel4) 
+    
+# fit
+fit <- survminer::surv_fit(data.surv~FGFR4_expr, data=clin.rel4, conf.type="log-log") # weird bug: survival::survfit() cant be passed data in function call ?! so i use survminer::surv_fit()
+    #survdiff(data.surv ~ PAM50, data = sdata) 
+    
+    plot <- ggsurvplot(
+      fit,
+      censor.size = 8,
+      censor.shape = "|",
+      size = 5,
+      risk.table = FALSE,       
+      pval = TRUE,
+      pval.size = 8,
+      pval.coord = c(0,0.1),
+      conf.int = FALSE,         
+      xlim = c(0,max(clin.rel4$RFI_rel4[is.finite(clin.rel4$RFI_rel4)])),         
+      xlab = "RFI days",
+      ylab = "RFI event probability", # ggf just label as "event probability"
+      ylim = c(0,1),
+      palette = c("#d334eb", "#2176d5", "#34c6eb"), 
+      legend = c(0.9,0.96),
+      ggtheme = theme(legend.title = element_text(size=25), #20
+                      legend.key.size = unit(0.5,"cm"), 
+                      legend.text = element_text(size = 25), #20
+                      axis.text.x = element_text(size = 25), #20
+                      axis.title.x = element_text(size = 30), #25
+                      axis.text.y = element_text(size = 25), #20
+                      axis.title.y = element_text(size = 30),
+                      plot.title = element_text(size=30)),
+      title= "RFI in FGFR4 expression groups",
+      legend.title = "FGFR4",
+      legend.labs = c(paste("High"," (",table(clin.rel4[!is.na(clin.rel4$RFI_rel4),]$FGFR4_expr)[1],")",sep = ""),
+                      paste("Low"," (",table(clin.rel4[!is.na(clin.rel4$RFI_rel4),]$FGFR4_expr)[2],")",sep = ""),
+                      paste("Medium"," (",table(clin.rel4[!is.na(clin.rel4$RFI_rel4),]$FGFR4_expr)[3],")",sep = "")),
+      break.x.by = 500, # break X axis in time intervals of x (what is nicest here? maybe 365)
+      break.y.by = 0.1)
+    
+    print(plot)
+    
 
 dev.off()
+
