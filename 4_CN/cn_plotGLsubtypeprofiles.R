@@ -26,9 +26,9 @@ library(ggplot2)
 library(tidyverse)
 library(plyr)
 
-################################################################################
+###############################################################################
 # loading data
-################################################################################
+###############################################################################
 
 # SCANB (HER2E)
 load(file = "data/SCANB/4_CN/processed/processed_gainloss_matrix")
@@ -56,13 +56,15 @@ chr.lengths$Chr <- as.numeric(gsub("X",23,gsub('^.{3}','',chr.lengths$Chr)))
 
 # vector that has always the middle value for each chromosome (for plotting)
 chr.lengths <- chr.lengths %>% mutate(chrbreaks = genome - length/2)
-################################################################################
+
+#View(cn.data)
+###############################################################################
 # plot
-################################################################################
+###############################################################################
 
 pdf(file = paste(output.path,cohort,"_GLsubtypeprofiles.pdf", sep =""), height = 21.0, width = 72.0)
 
-plot <- ggplot() + #, aes(x=genome_pos) 
+plot <- ggplot() +  
     ggtitle("Genome-wide frequency of gain/loss CN alterations") +
     geom_line(aes(
         x = cn.data[which(!is.na(cn.data$freqgain.HER2E)),]$genome_pos, 

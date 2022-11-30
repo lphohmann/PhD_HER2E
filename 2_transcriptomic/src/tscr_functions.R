@@ -167,11 +167,16 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
 }
 
 # boxplot for 3 groups
-three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title) {
+three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title, break.step=NULL) {
     
     # make color palette vector
     colors <- c(g1.col, g2.col, g3.col)
     names(colors) <- c(g1, g2, g3)
+    
+    # add optinal variable for breaks
+    if(is.null(break.step)) { 
+      break.step <- 1
+    }
     
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
@@ -190,7 +195,7 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
               legend.position = "none") +
         scale_fill_manual(values=colors) +
         scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) + # check that these are in the correct order
-        scale_y_continuous(breaks = seq(floor(ylim[1]), ceiling(ylim[2]), 1))
+        scale_y_continuous(breaks = seq(floor(ylim[1]), ceiling(ylim[2]), break.step))
     
     return(plot)
 }
