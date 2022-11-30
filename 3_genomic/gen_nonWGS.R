@@ -475,72 +475,15 @@ library(GenVisR)
 
 library(reshape2)
 # Melt the clinical data into 'long' format.
+anno <- anno %>% dplyr::rename(sample=sampleID)
 clinical.data <- melt(anno, id.vars = c("sample")) # HERERERERE
 new_samp_order <- as.character(unique(clinical.data[order(clinical.data$variable, clinical.data$value),]$sample))
-
-waterfall(matrix.nf, fileType = "Custom", variant_class_order=c("mutation"), clinDat = clinical.data, mainRecurCutoff = 0.05, maxGenes = 25, plotMutBurden = FALSE, mainGrid = FALSE,sampOrder = new_samp_order)
 
 # plto for each pam50 subtype
 # her2
 Her2_samples <- anno %>% filter(PAM50=="Her2") %>% pull(sample)
 matrix.nf.her2 <- matrix.nf %>% filter(sample %in% Her2_samples)
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Mutations/",cohort,"/waterfall_plot_her2.pdf", sep =""),width=20, height=10)
 waterfall(matrix.nf.her2, fileType = "Custom", variant_class_order=c("mutation"), clinDat = clinical.data, mainRecurCutoff = 0.05, maxGenes = 25, plotMutBurden = FALSE, mainGrid = TRUE,main_geneLabSize=15)
-dev.off()
-# luma
-Luma_samples <- anno %>% filter(PAM50=="LumA") %>% pull(sample)
-matrix.nf.luma <- matrix.nf %>% filter(sample %in% Luma_samples)
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Mutations/",cohort,"/waterfall_plot_luma.pdf", sep =""),width=20, height=10)
-waterfall(matrix.nf.luma, fileType = "Custom", variant_class_order=c("mutation"), clinDat = clinical.data, mainRecurCutoff = 0.05, maxGenes = 25, plotMutBurden = FALSE, mainGrid = FALSE,main_geneLabSize=15)
-dev.off()
-#lumb
-Lumb_samples <- anno %>% filter(PAM50=="LumB") %>% pull(sample)
-matrix.nf.lumb <- matrix.nf %>% filter(sample %in% Lumb_samples)
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Mutations/",cohort,"/waterfall_plot_lumb.pdf", sep =""),width=20, height=10)
-waterfall(matrix.nf.lumb, fileType = "Custom", variant_class_order=c("mutation"), clinDat = clinical.data, mainRecurCutoff = 0.05, maxGenes = 25, plotMutBurden = FALSE, mainGrid = FALSE,main_geneLabSize=15)
-dev.off()
-
-
-#######################################################################
-# 4. Investigating P53 and PI3K mutation groups metagene scores
-#######################################################################
-# define the mutation groups
-tp53.pos.samples <- as.data.frame(t(mut.data)) %>% filter(TP53==1)
-tp53.pos.samples <- row.names(tp53.pos.samples)
-pik3ca.pos.samples <- as.data.frame(t(mut.data)) %>% filter(PIK3CA==1)
-pik3ca.pos.samples <- row.names(pik3ca.pos.samples)
-
-anno <- anno %>% mutate(TP53 = ifelse(sampleID %in% tp53.pos.samples,1,0)) %>% mutate(PIK3CA = ifelse(sampleID %in% pik3ca.pos.samples,1,0))
-
-
-# load metagene scores
-load(paste("~/Desktop/MTP_project/Output/Transcriptomics/",cohort,"/sample_metagene_scores.RData",sep = ""))
-
-mut.mg_scores <-  scaled_mg_scores %>% rownames_to_column(var="sampleID") %>% 
-    mutate(mut_status = case_when(
-        sampleID %in% anno[which(anno$TP53 == 1),]$sampleID & sampleID %in% anno[which(anno$PIK3CA == 1),]$sampleID ~ "TP53 & PIK3CA",
-        sampleID %in% anno[which(anno$TP53 == 1),]$sampleID & sampleID %in% anno[which(anno$PIK3CA == 0),]$sampleID ~ "TP53",
-        sampleID %in% anno[which(anno$TP53 == 0),]$sampleID & sampleID %in% anno[which(anno$PIK3CA == 1),]$sampleID ~ "PIK3CA",
-        sampleID %in% anno[which(anno$TP53 == 0),]$sampleID & sampleID %in% anno[which(anno$PIK3CA == 0),]$sampleID ~ "none")) %>% drop_na(mut_status) %>% column_to_rownames(var="sampleID")
-
-# create pdf with all the boxplots
-pdf(file = paste("~/Desktop/MTP_project/Output/Plots/Mutations/",cohort,"/tp53_pik3ca_metagene_plots.pdf", sep =""), onefile= TRUE)
-
-for(i in c(1:8)) {
-    plot <- ggplot(mut.mg_scores, aes(x=as.factor(mut_status),y=mut.mg_scores[,i])) +
-        geom_boxplot(fill="slateblue",alpha=0.2) +
-        xlab("Mutation status") +
-        ylab(paste(colnames(mut.mg_scores)[i],"metagene score", sep = " ")) +
-        ggtitle(colnames(mut.mg_scores)[i]) +
-        geom_text(data=as.data.frame(dplyr::count(x=mut.mg_scores, mut_status)), aes(y = 0, label = paste("n=",n,sep = "")),nudge_y = -2,nudge_x = 0.3,size=5) +
-        theme(axis.text.x = element_text(size = 15),
-              axis.title.x = element_text(size = 20),
-              axis.text.y = element_text(size = 15),
-              axis.title.y = element_text(size = 20))
-    print(plot)
-}
-
-dev.off()
 
 #######################################################################
 # METABRIC cohort
