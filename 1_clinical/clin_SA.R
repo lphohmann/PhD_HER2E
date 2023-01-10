@@ -54,8 +54,7 @@ if (cohort=="Metabric") {
         mutate(Treatment = case_when(Chemotherapy==1 & Endocrine==1 ~ "CE",
                                      Chemotherapy==0 & Endocrine==1 ~ "E")) %>% 
         mutate(LN = ifelse(lymph_nodes_positive > 0, "N+", "N0")) %>% 
-        dplyr::select(-c(lymph_nodes_positive)) %>% 
-        mutate(across(c(OS,DSS,DRFI,RFI,IDFS), (function(years) return(years*365)))) %>% 
+        dplyr::select(-c(lymph_nodes_positive)) %>% #mutate(across(c(OS,DSS,DRFI,RFI,IDFS), (function(years) return(years*365)))) %>% 
         filter(grepl('ERpHER2n', ClinGroup))
     
     # getting correct structure
@@ -68,26 +67,52 @@ if (cohort=="Metabric") {
     
 # for SCANB cohort
 } else if (cohort=="SCANB") {
-    # load data
-    load("data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_with_ExternalReview_Bosch_data.RData")
-    # extract relevant variables
-    survdata <- pam50.frame %>% 
-        filter(fuV8 == 1) %>% 
-        filter(!is.na(treatment_Bosch)) %>% # only include the review data
-        mutate(relapse_Bosch = ifelse(relapse_Bosch,1,0)) %>% 
-        filter(ERpHER2n_Bosch==1) %>%
-        mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
-                                     !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
-        dplyr::rename(
-            RFI = relapseTime_Bosch,
-            RFIbin = relapse_Bosch, 
-            TumSize = TumSize_Bosch,
-            PAM50 = PAM50_NCN_rel4,
-            Grade = NHG_Bosch,
-            LN = LNstatus_Bosch) %>%
-        dplyr::select(
-            rba_rel4, PAM50, OS, OSbin, TumSize, 
-            Age, Grade, LN, RFI, RFIbin, Treatment)
+  # OS from whole release, RFI and RDFS from Bosch review
+  
+    # # load data
+    # load("data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_with_ExternalReview_Bosch_data.RData")
+    # # extract relevant variables
+    # survdata <- pam50.frame %>% 
+    #     filter(fuV8 == 1) %>% 
+    #     filter(!is.na(treatment_Bosch)) %>% # only include the review data
+    #     mutate(relapse_Bosch = ifelse(relapse_Bosch,1,0)) %>% 
+    #     filter(ERpHER2n_Bosch==1) %>%
+    #     mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
+    #                                  !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
+    #     dplyr::rename(
+    #         RFI = relapseTime_Bosch,
+    #         RFIbin = relapse_Bosch, 
+    #         TumSize = TumSize_Bosch,
+    #         PAM50 = PAM50_NCN_rel4,
+    #         Grade = NHG_Bosch,
+    #         LN = LNstatus_Bosch) %>%
+    #     dplyr::select(
+    #         rba_rel4, PAM50, OS, OSbin, TumSize, 
+    #         Age, Grade, LN, RFI, RFIbin, Treatment)
+
+  # load data and get right format
+  survdata <- loadRData("data/SCANB/1_clinical/processed/SCANB_clinData.RData") %>% 
+    filter(Follow.up.cohort == TRUE) %>% 
+    filter(!is.na(Bosch_RS1)) %>% # only include the review data
+    filter(ERpHER2n_Bosch==1) %>%
+    mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
+                                 !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
+    dplyr::select(c("GEX.assay","Sample","Treatment","Age",
+                    "ER","PR","HER2","NCN.PAM50","OS","OSbin",
+                    "Bosch_RS1","DRFI_bin_Bosch","DRFI_Bosch","RFI_bin_Bosch","RFI_Bosch",
+                    "IDFS_bin_Bosch","IDFS_Bosch","ERpHER2n_Bosch",
+                    "Chemo_Bosch","ET_Bosch","AI_Bosch","Tamoxifen_Bosch","TumSize_Bosch","NHG_Bosch","LNstatus_Bosch","Ki67_Bosch","Ki67_Bosch_RS2","HER2_Low")) %>% 
+    dplyr::rename(
+      RFI = RFI_Bosch,
+      RFIbin = RFI_bin_Bosch, 
+      DRFI = DRFI_Bosch,
+      DRFIbin = DRFI_bin_Bosch, 
+      IDFS = IDFS_Bosch,
+      IDFSbin = IDFS_bin_Bosch, 
+      TumSize = TumSize_Bosch,
+      PAM50 = NCN.PAM50,
+      Grade = NHG_Bosch,
+      LN = LNstatus_Bosch) 
 }
 
 # getting correct structure for common variables
@@ -103,6 +128,8 @@ survdata$OS <- as.numeric(survdata$OS)
 survdata$OSbin <- as.numeric(survdata$OSbin)
 survdata$RFI <- as.numeric(survdata$RFI)
 survdata$RFIbin <- as.numeric(survdata$RFIbin)
+survdata$IDFS <- as.numeric(survdata$IDFS)
+survdata$IDFSbin <- as.numeric(survdata$IDFSbin)
 
 #######################################################################
 # Defining the PAM50 subtypes of interest
@@ -119,36 +146,38 @@ survdata$PAM50 <- droplevels(survdata$PAM50) # drop empty levels
 
 # relevel and check
 levels(survdata$PAM50)
-survdata$PAM50 <- relevel(survdata$PAM50, ref = "Her2")
+survdata$PAM50 <- relevel(survdata$PAM50, ref = "LumA")
 levels(survdata$PAM50)
 
 #######################################################################
 # 4. Investigate the EC treatment group
 #######################################################################
-
+OM="IDFS"
+OMbin="IDFSbin"
 # define the group
 EC_group <- survdata %>% filter(Treatment == "CE")
-EC_group.surv <- Surv(EC_group[["RFI"]], EC_group[["RFIbin"]])
+EC_group.surv <- Surv(EC_group[[OM]], EC_group[[OMbin]])
 #table(EC_group$PAM50) 
 
 ##########################
 
 # univariate cox regression + forest plot
-plot.list <- append(plot.list,list(unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, RFI, cohort=",cohort,")"))))
+plot.list <- append(plot.list,list(unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))))
 
 ##########################
 
 # KM plot
 plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
-       OMstring = "Recurrence-free interval",
-       OM = EC_group$RFI,
-       OMbin = EC_group$RFIbin,
+       OMstring = OM,
+       OM = EC_group[[OM]],
+       OMbin = EC_group[[OMbin]],
        sdata = EC_group)))
 
 ##########################
 
 # Multivariate Cox proportional hazards model
-plot.list <- append(plot.list,list(mvcox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, RFI, cohort=",cohort,")"))))
+plot.list <- append(plot.list,list(mvcox(data=EC_group,
+                                         surv=EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))))
 
 #######################################################################
 # 7. Investigate the Endo treatment group
@@ -156,33 +185,33 @@ plot.list <- append(plot.list,list(mvcox(EC_group,EC_group.surv,title=paste("Haz
 
 # define the group
 E_group <- survdata %>% filter(Treatment == "E")
-E_group.surv <- Surv(E_group[["RFI"]], E_group[["RFIbin"]])
+E_group.surv <- Surv(E_group[[OM]], E_group[[OMbin]])
 #table(E_group$PAM50)
 
 ##########################
 
 # univariate cox regression + forest plot
-plot.list <- append(plot.list,list(unicox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, RFI, cohort=",cohort,")"))))
+plot.list <- append(plot.list,list(unicox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))))
 
 ##########################
 
 # KM plot
 plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
-       OMstring = "Recurrence-free interval",
-       OM = E_group$RFI,
-       OMbin = E_group$RFIbin,
+       OMstring = OM,
+       OM = E_group[[OM]],
+       OMbin = E_group[[OMbin]],
        sdata = E_group)))
 
 ##########################
 
 # Multivariate Cox proportional hazards model
-plot.list <- append(plot.list,list(mvcox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, RFI, cohort=",cohort,")"))))
+plot.list <- append(plot.list,list(mvcox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))))
 
 #######################################################################
 #######################################################################
 
 # save plots
-pdf(file = paste(output.path,cohort,"_SA.pdf", sep=""), 
+pdf(file = paste(output.path,cohort,"_SA_new.pdf", sep=""), 
     onefile = TRUE, width = 21, height = 14.8) 
 
 for (i in 1:length(plot.list)) {
