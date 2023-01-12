@@ -1,4 +1,4 @@
-# Script: Metagene analysis for HER2E and ERpHER2p contrast groups in SCAN-B and METABRIC
+# Script: Metagene analysis for ERpHER2nHER2E and ERpHER2p contrast groups in SCAN-B and METABRIC
 
 # TODO:
 
@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -51,17 +51,17 @@ metagene.def <- as.data.frame(read_excel(
 if (cohort=="SCANB") {
     
     # load annotation data and select subgroup data
-    anno <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
-        filter(Follow.up.cohort==TRUE) %>% 
-        filter(ER=="Positive") %>% 
-        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
-        mutate(Group = case_when(
-            HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
-            HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
-            HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
-        filter(Group %in% 
-                   c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
+    anno <- loadRData("./data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data.RData") %>% 
+      filter(Follow.up.cohort==TRUE) %>% 
+      filter(fuV8==TRUE) %>% 
+      filter(ER=="Positive") %>% 
+      dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
+      mutate(Group = case_when(
+        HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
+        HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
+        HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
+      filter(Group %in% 
+               c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
     
     # load gex data
     gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>%
@@ -85,8 +85,10 @@ if (cohort=="SCANB") {
     anno <- anno %>% 
         mutate(ER = if_else(
             ER_IHC_status=="pos","Positive","Negative")) %>% 
-        mutate(HER2 = if_else(
-            HER2_SNP6_state=="GAIN","Positive","Negative")) %>% 
+        mutate(HER2 = case_when(
+            HER2_SNP6_state == "GAIN" ~ "Positive",
+            HER2_SNP6_state == "UNDEF" ~ "Undefined",
+            HER2_SNP6_state %in% c("LOSS","NEUT") ~ "Negative")) %>%
         filter(ER == "Positive") %>% 
         mutate(Group = case_when(
             HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
@@ -192,11 +194,24 @@ for(i in 1:ncol(metagene.scores)) {
 }
 
 # name column and set rownames
-mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals), 
-        new = c("metagene", "HER2n_HER2E.HER2p_nonHER2E.pval", "HER2n_HER2E.HER2p_nonHER2E.signif", "HER2n_HER2E.HER2p_HER2E.pval", "HER2n_HER2E.HER2p_HER2E.signif")) %>% column_to_rownames(var="metagene")
+#mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals), new = c("metagene", "HER2n_HER2E.HER2p_nonHER2E.pval", "HER2n_HER2E.HER2p_nonHER2E.signif", "HER2n_HER2E.HER2p_HER2E.pval", "HER2n_HER2E.HER2p_HER2E.signif")) %>% column_to_rownames(var="metagene")
+
+# name column and set rownames
+mg.pvals <- mg.pvals %>% 
+  data.table::setnames(., old = colnames(mg.pvals),
+                       new = c("metagene",
+                               paste(res$var_pair[1],".pval",sep=""),
+                               paste(res$var_pair[1],".symb",sep=""),
+                               paste(res$var_pair[2],".pval",sep=""),
+                               paste(res$var_pair[2],".symb",sep=""))) %>% 
+  column_to_rownames(var="metagene")
+
 
 # create group label column (ERpHER2nHER2E, ERpHER2p, ERpHER2pHER2E)
 mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","Group")],by="sampleID")
+
+mg.anno.list <- list(mg.anno, mg.pvals)
+save(mg.anno.list,file = paste(data.path,"mg_anno_HER2p.RData",sep=""))
 
 #######################################################################
 # 5. Boxplots

@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -52,11 +52,12 @@ metagene.def <- as.data.frame(read_excel(
 if (cohort=="SCANB") {
     
     # load annotation data and select subgroup data
-    anno <- as.data.frame(
-      read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
+    anno <- loadRData("./data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data.RData") %>% 
       filter(Follow.up.cohort==TRUE) %>% 
-      filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-      filter(ER=="Positive" & HER2=="Negative") %>% 
+      filter(fuV8==TRUE) %>% 
+      filter(ER=="Positive") %>% 
+      filter(HER2=="Negative") %>% 
+      filter(NCN.PAM50 %in% c("LumA","LumB","Her2")) %>% 
       dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
     
     # load gex data
@@ -171,17 +172,28 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 mg.pvals <- data.frame()
 for(i in 1:ncol(metagene.scores)) {
     mg <- colnames(metagene.scores)[i]
+    #print(mg)
     res <- pair_ttest(metagene.scores,
                anno = anno,
                group.var = "PAM50",
                test.var = mg, 
                g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    #print(res)
     mg.pvals <- rbind(mg.pvals, c(mg,res$pval[1],res$signif[1],res$pval[2],res$signif[2]))
 }
 
+
 # name column and set rownames
-mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals), 
-         new = c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")) %>% column_to_rownames(var="metagene")
+mg.pvals <- mg.pvals %>% 
+  data.table::setnames(., old = colnames(mg.pvals),
+                       new = c("metagene",
+                       paste(res$var_pair[1],".pval",sep=""),
+                       paste(res$var_pair[1],".symb",sep=""),
+                       paste(res$var_pair[2],".pval",sep=""),
+                       paste(res$var_pair[2],".symb",sep=""))) %>% 
+  column_to_rownames(var="metagene")
+
+#mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals),new = c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")) %>% column_to_rownames(var="metagene")
 
 # make combined data and anno object for plotting
 mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","PAM50")],by="sampleID")
@@ -205,8 +217,8 @@ if (cohort=="SCANB") {
                   group.var = "PAM50",
                   test.var = "Basal",
                   g1="Her2",g2="LumA",g3="LumB",
-                  g3.pos = 1, g3.sign = mg.pvals["Basal","Her2.LumB.signif"],
-                  g2.pos = 2.9, g2.sign = mg.pvals["Basal","Her2.LumA.signif"],
+                  g3.pos = 1, g3.sign = mg.pvals["Basal","Her2.LumB.symb"],
+                  g2.pos = 2.9, g2.sign = mg.pvals["Basal","Her2.LumA.symb"],
                   ylim = c(-1.5,4),
                   ylab = "Metagene score", 
                   title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -216,8 +228,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Early_response",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Early_response","Her2.LumB.signif"],
-                      g2.pos = 3.6, g2.sign = mg.pvals["Early_response","Her2.LumA.signif"],
+                      g3.pos = 2.5, g3.sign = mg.pvals["Early_response","Her2.LumB.symb"],
+                      g2.pos = 3.6, g2.sign = mg.pvals["Early_response","Her2.LumA.symb"],
                       ylim = c(-2,4.6),
                       ylab = "Metagene score", 
                       title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -227,8 +239,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "IR",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 4, g3.sign = mg.pvals["IR","Her2.LumB.signif"],
-                      g2.pos = 4.6, g2.sign = mg.pvals["IR","Her2.LumA.signif"],
+                      g3.pos = 4, g3.sign = mg.pvals["IR","Her2.LumB.symb"],
+                      g2.pos = 4.6, g2.sign = mg.pvals["IR","Her2.LumA.symb"],
                       ylim = c(-2,5.6),
                       ylab = "Metagene score", 
                       title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -238,8 +250,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Lipid",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Lipid","Her2.LumB.signif"],
-                      g2.pos = 3.1, g2.sign = mg.pvals["Lipid","Her2.LumA.signif"],
+                      g3.pos = 2.2, g3.sign = mg.pvals["Lipid","Her2.LumB.symb"],
+                      g2.pos = 3.1, g2.sign = mg.pvals["Lipid","Her2.LumA.symb"],
                       ylim = c(-1.5,4),
                       ylab = "Metagene score", 
                       title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -249,8 +261,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Mitotic_checkpoint",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3.7, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.signif"],
-                      g2.pos = 4.2, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.signif"],
+                      g3.pos = 3.7, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.symb"],
+                      g2.pos = 4.2, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.symb"],
                       ylim = c(-2,5),
                       ylab = "Metagene score", 
                       title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -260,8 +272,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Mitotic_progression",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3.6, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.signif"],
-                      g2.pos = 4.1, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.signif"],
+                      g3.pos = 3.6, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.symb"],
+                      g2.pos = 4.1, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.symb"],
                       ylim = c(-2,5),
                       ylab = "Metagene score", 
                       title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -271,8 +283,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "SR",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 1.8, g3.sign = mg.pvals["SR","Her2.LumB.signif"],
-                      g2.pos = 2.3, g2.sign = mg.pvals["SR","Her2.LumA.signif"],
+                      g3.pos = 1.8, g3.sign = mg.pvals["SR","Her2.LumB.symb"],
+                      g2.pos = 2.3, g2.sign = mg.pvals["SR","Her2.LumA.symb"],
                       ylim = c(-1.5,4),
                       ylab = "Metagene score", 
                       title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -282,8 +294,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Stroma",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.signif"],
-                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.signif"],
+                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.symb"],
+                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.symb"],
                       ylim = c(-3.5,3.5),
                       ylab = "Metagene score", 
                       title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -298,8 +310,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Basal",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 0.8, g3.sign = mg.pvals["Basal","Her2.LumB.signif"],
-                      g2.pos = 2.1, g2.sign = mg.pvals["Basal","Her2.LumA.signif"],
+                      g3.pos = 0.8, g3.sign = mg.pvals["Basal","Her2.LumB.symb"],
+                      g2.pos = 2.1, g2.sign = mg.pvals["Basal","Her2.LumA.symb"],
                       ylim = c(-1.5,3),
                       ylab = "Metagene score", 
                       title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -309,8 +321,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Early_response",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Early_response","Her2.LumB.signif"],
-                      g2.pos = 2.7, g2.sign = mg.pvals["Early_response","Her2.LumA.signif"],
+                      g3.pos = 2.2, g3.sign = mg.pvals["Early_response","Her2.LumB.symb"],
+                      g2.pos = 2.7, g2.sign = mg.pvals["Early_response","Her2.LumA.symb"],
                       ylim = c(-2,4),
                       ylab = "Metagene score", 
                       title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -320,8 +332,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "IR",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3, g3.sign = mg.pvals["IR","Her2.LumB.signif"],
-                      g2.pos = 3.6, g2.sign = mg.pvals["IR","Her2.LumA.signif"],
+                      g3.pos = 3, g3.sign = mg.pvals["IR","Her2.LumB.symb"],
+                      g2.pos = 3.6, g2.sign = mg.pvals["IR","Her2.LumA.symb"],
                       ylim = c(-2,4.6),
                       ylab = "Metagene score", 
                       title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -331,8 +343,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Lipid",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Lipid","Her2.LumB.signif"],
-                      g2.pos = 3.3, g2.sign = mg.pvals["Lipid","Her2.LumA.signif"],
+                      g3.pos = 2.5, g3.sign = mg.pvals["Lipid","Her2.LumB.symb"],
+                      g2.pos = 3.3, g2.sign = mg.pvals["Lipid","Her2.LumA.symb"],
                       ylim = c(-1.5,4),
                       ylab = "Metagene score", 
                       title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -342,8 +354,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Mitotic_checkpoint",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.signif"],
-                      g2.pos = 2.7, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.signif"],
+                      g3.pos = 2.2, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.symb"],
+                      g2.pos = 2.7, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.symb"],
                       ylim = c(-2,4),
                       ylab = "Metagene score", 
                       title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -353,8 +365,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Mitotic_progression",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.signif"],
-                      g2.pos = 3, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.signif"],
+                      g3.pos = 2.5, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.symb"],
+                      g2.pos = 3, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.symb"],
                       ylim = c(-2,4),
                       ylab = "Metagene score", 
                       title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -364,8 +376,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "SR",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.1, g3.sign = mg.pvals["SR","Her2.LumB.signif"],
-                      g2.pos = 2.6, g2.sign = mg.pvals["SR","Her2.LumA.signif"],
+                      g3.pos = 2.1, g3.sign = mg.pvals["SR","Her2.LumB.symb"],
+                      g2.pos = 2.6, g2.sign = mg.pvals["SR","Her2.LumA.symb"],
                       ylim = c(-1.5,3.5),
                       ylab = "Metagene score", 
                       title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
@@ -375,8 +387,8 @@ if (cohort=="SCANB") {
                       group.var = "PAM50",
                       test.var = "Stroma",
                       g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.signif"],
-                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.signif"],
+                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.symb"],
+                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.symb"],
                       ylim = c(-3.5,3.5),
                       ylab = "Metagene score", 
                       title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))

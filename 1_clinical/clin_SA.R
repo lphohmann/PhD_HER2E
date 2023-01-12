@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # Metabric or SCANB 
+cohort <- "Metabric" # Metabric or SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -38,6 +38,9 @@ plot.list <- list()
 
 # for metabric cohort
 if (cohort=="Metabric") {
+    OM="IDFS"# put this IN THE COHORT SPECIFC ONES I.E. IDFS FOR SCANB AND RFI FOR METABRIC
+    OMbin="IDFSbin"
+    
     # load data
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
     anno$Chemotherapy[is.na(anno$Chemotherapy)] <- 0
@@ -67,6 +70,8 @@ if (cohort=="Metabric") {
     
 # for SCANB cohort
 } else if (cohort=="SCANB") {
+  OM="IDFS"# put this IN THE COHORT SPECIFC ONES I.E. IDFS FOR SCANB AND RFI FOR METABRIC
+  OMbin="IDFSbin"
   # OS from whole release, RFI and RDFS from Bosch review
   
     # # load data
@@ -140,20 +145,29 @@ survdata <- survdata %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) # basal
 survdata$PAM50 <- droplevels(survdata$PAM50) # drop empty levels
 #barplot(table(survdata$PAM50))
 
+# define the other comparison groups 
+survdata <- survdata %>% 
+  mutate(Comp1_groups = if_else(PAM50=="LumA","LUMA","LUMB+HER2E")) %>% 
+  mutate(Comp2_groups = if_else(PAM50=="Her2","HER2E","LUMA+LUMB"))
+
 #######################################################################
 # 3. Relevel to use HER2E as base for comparison
 #######################################################################
 
 # relevel and check
-levels(survdata$PAM50)
+#levels(survdata$Comp2_groups)
 survdata$PAM50 <- relevel(survdata$PAM50, ref = "LumA")
-levels(survdata$PAM50)
+survdata$Comp1_groups <- as.factor(survdata$Comp1_groups)
+survdata$Comp1_groups <- relevel(survdata$Comp1_groups, ref = "LUMA")
+survdata$Comp2_groups <- as.factor(survdata$Comp2_groups)
+survdata$Comp2_groups <- relevel(survdata$Comp2_groups, ref = "LUMA+LUMB")
 
 #######################################################################
 # 4. Investigate the EC treatment group
 #######################################################################
-OM="IDFS"
-OMbin="IDFSbin"
+
+# 4.1 HER2E vs. LUMA vs. LUMB
+
 # define the group
 EC_group <- survdata %>% filter(Treatment == "CE")
 EC_group.surv <- Surv(EC_group[[OM]], EC_group[[OMbin]])
@@ -167,7 +181,7 @@ plot.list <- append(plot.list,list(unicox(EC_group,EC_group.surv,title=paste("Ha
 ##########################
 
 # KM plot
-plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
+plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparison 1: CT+ET (cohort: ",cohort,")",sep=""),
        OMstring = OM,
        OM = EC_group[[OM]],
        OMbin = EC_group[[OMbin]],
@@ -178,6 +192,39 @@ plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("CT+ET (c
 # Multivariate Cox proportional hazards model
 plot.list <- append(plot.list,list(mvcox(data=EC_group,
                                          surv=EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))))
+
+# 4.2 LUMA vs. HER2E + LUMB 
+source("scripts/1_clinical/src/clin_functions.R")
+
+# need to do 2 gorup km function and 2 group mvcox function
+plot.list <- append(plot.list,list(
+  TwoGroup.KMplot(group.cohort.version = paste("Comparison 2: CT+ET (cohort: ",cohort,")",sep=""),
+       OMstring = OM,
+       OM = EC_group[[OM]],
+       OMbin = EC_group[[OMbin]],
+       sdata = EC_group,
+       comp.var = "Comp1_groups",
+       palette = c("#2176d5", "#bf80ff"),
+       legend.labs = 
+         c(paste(
+            names(table(EC_group[!is.na(OM),]$Comp1_groups)[1]),
+            " (",table(EC_group[!is.na(OM),]$Comp1_groups)[1],")",sep=""),
+           paste(
+             names(table(EC_group[!is.na(OM),]$Comp1_groups)[2]),
+             " (",table(EC_group[!is.na(OM),]$Comp1_groups)[2],")",sep="")))))
+
+# 4.2 HER2E vs. LUMA + LUMB 
+plot.list <- append(plot.list,list(
+  TwoGroup.KMplot(group.cohort.version = paste("Comparison 3: CT+ET (cohort: ",cohort,")",sep=""),
+                  OMstring = OM,
+                  OM = EC_group[[OM]],
+                  OMbin = EC_group[[OMbin]],
+                  sdata = EC_group,
+                  comp.var = "Comp2_groups",
+                  palette = c("#0066ff", "#d334eb"),
+                  legend.labs = c(
+                    paste(names(table(EC_group[!is.na(OM),]$Comp2_groups)[1])," (",table(EC_group[!is.na(OM),]$Comp2_groups)[1],")",sep=""),
+                    paste(names(table(EC_group[!is.na(OM),]$Comp2_groups)[2])," (",table(EC_group[!is.na(OM),]$Comp2_groups)[2],")",sep="")))))
 
 #######################################################################
 # 7. Investigate the Endo treatment group
@@ -196,7 +243,7 @@ plot.list <- append(plot.list,list(unicox(E_group,E_group.surv,title=paste("Haza
 ##########################
 
 # KM plot
-plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
+plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparison 1: ET (cohort: ",cohort,")",sep=""),
        OMstring = OM,
        OM = E_group[[OM]],
        OMbin = E_group[[OMbin]],
