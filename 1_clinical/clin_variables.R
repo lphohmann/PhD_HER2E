@@ -328,44 +328,96 @@ ln.df
 #######################################################################
 
 # save
-write.xlsx(final_matrix, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
+#write.xlsx(final_matrix, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
 
 ########################################################################
 # 2. review data vars
 
 #######################################################################
+# % reviewed 
+#######################################################################
+
+# matrix
+rev.count <- as.data.frame(matrix(ncol=length(col.names)))
+names(rev.count) <- col.names
+rev.count$Variable <- "Reviewed"
+
+t.rev <- table(anno[which(anno$Bosch_RS1==1),]$PAM50)
+t.all <- table(anno$PAM50)
+
+# add count data
+rev.count$`HER2E(ref)`[1] <- t.rev[1]
+rev.count$LUMA[1] <- t.rev[2]
+rev.count$LUMB[1] <- t.rev[3]
+
+# add % data
+rev.count$`HER2E.%`[1] <- (t.rev[1]/t.all[1])*100
+rev.count$`LUMA.%`[1] <- (t.rev[2]/t.all[2])*100
+rev.count$`LUMB.%`[1] <- (t.rev[3]/t.all[3])*100
+
+rev.count
+
+#######################################################################
 # HER2low frequency (2x2 contingency table)
 #######################################################################
 
+h2low.data <- anno %>% filter(!is.na(HER2_Low))
+table(anno$PAM50,anno$HER2_Low)
+
+# matrix
+h2low.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
+names(h2low.df) <- col.names
+h2low.df$Variable <- c("0","1")
+
 # for Her2 vs LumA
-a_hl <- subset(anno,PAM50 %in% c("Her2","LumA")) %>% droplevels()
-a_cont_table <- table(a_hl$PAM50,a_hl$HER2_Low)
-a_result <- fisher.test(a_cont_table)
+luma.ct <- table(h2low.data$PAM50,h2low.data$HER2_Low)[c("Her2","LumA"),]
+h2low.df$LUMA.pval <- fisher.test(luma.ct)$p.value
 
 # for Her2 vs LumB
-b_hl <- subset(anno,PAM50 %in% c("Her2","LumB")) %>% droplevels()
-b_cont_table <- table(b_hl$PAM50,b_hl$HER2_Low)
-b_result <- fisher.test(b_cont_table) 
+lumb.ct <- table(h2low.data$PAM50,h2low.data$HER2_Low)[c("Her2","LumB"),]
+h2low.df$LUMB.pval <- fisher.test(lumb.ct)$p.value
 
-H_tot <- a_cont_table[1] + a_cont_table[3]
-A_tot <- a_cont_table[2] + a_cont_table[4]
-B_tot <- b_cont_table[2] + b_cont_table[4]
+groups <- c("Her2","LumA","LumB")
+cols <- c("HER2E","LUMA","LUMB")
+for (i in 1:3) {
+  type <- groups[i]
+  col <- cols[i]
+  type.dat <- h2low.data[which(h2low.data$PAM50==type),]
+  type.dat$PAM50 <- droplevels(type.dat$PAM50)
+  type.counts <- table(type.dat$PAM50,type.dat$HER2_Low)
+  
+  # count column
+  if (col=="HER2E") {
+    h2low.df[[paste(col,"(ref)",sep="")]][1] <- type.counts[1]
+    h2low.df[[paste(col,"(ref)",sep="")]][2] <- type.counts[2]
+  } else {
+    h2low.df[[col]][1] <- type.counts[1]
+    h2low.df[[col]][2] <- type.counts[2]
+  }
+  # % column
+  h2low.df[[paste(col,".%",sep="")]][1] <- round(type.counts[1]/sum(type.counts)*100)
+  h2low.df[[paste(col,".%",sep="")]][2] <- round(type.counts[2]/sum(type.counts)*100)
+} 
 
-#her2e
-final_matrix$`HER2E(ref)`[2] <- a_cont_table[3]
-final_matrix$`HER2E.%`[2] <- round(a_cont_table[3]/H_tot*100)
+h2low.df
 
-#luma
-final_matrix$LUMA[2] <- a_cont_table[4]
-final_matrix$`LUMA.%`[2] <- round(a_cont_table[4]/A_tot*100)
-final_matrix$LUMA.pval[2] <- a_result$p.value
+#######################################################################
+# LN Bosch
+#######################################################################
 
-#lumb
-final_matrix$LUMB[2] <- b_cont_table[4]
-final_matrix$`LUMB.%`[2] <- round(b_cont_table[4]/B_tot*100)
-final_matrix$LUMB.pval[2] <- b_result$p.value
-    
-final_matrix
+#######################################################################
+# Size Bosch
+#######################################################################
 
+#######################################################################
+# NHG Bosch
+#######################################################################
 
+#######################################################################
+# Age?
+#######################################################################
+
+#######################################################################
+# PR?
+#######################################################################
 
