@@ -10,6 +10,20 @@ loadRData <- function(file.path){
   get(ls()[ls() != "file.path"])
 }
 
+# function to ttest two groups
+TwoGroups.ttest <- function(g1.dat,g2.dat) {
+  if (var.test(unlist(g1.dat),unlist(g2.dat), alternative = "two.sided")$p.value <= 0.05) {
+    
+    result <- t.test(g1.dat, g2.dat, var.equal = FALSE)
+  } else {
+    result <- t.test(g1.dat, g2.dat, var.equal = TRUE)  
+  }
+  
+  return(result)
+}
+
+
+
 # function that creates KM plot for specified OM for 3 Her2e, luma , lumb
 KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
     
