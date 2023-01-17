@@ -151,15 +151,9 @@ age.df <- as.data.frame(matrix(ncol=length(col.names)))
 names(age.df) <- col.names
 age.df$Variable <- "Age"
 
-# for Her2 vs LumA
-# store result
-age.df$`HER2E(ref)` <-  mean(age.data[which(age.data$PAM50=="Her2"),]$Age)
-age.df$LUMA <-          mean(age.data[which(age.data$PAM50=="LumA"),]$Age)
-age.df$LUMA.pval <-     TwoGroups.ttest(age.data[Her2.ids,"Age"],age.data[LumA.ids,"Age"])$p.value
-
-# store result
-age.df$LUMB <-          mean(age.data[which(age.data$PAM50=="LumB"),]$Age)
-age.df$LUMB.pval <-     TwoGroups.ttest(age.data[Her2.ids,"Age"],age.data[LumB.ids,"Age"])$p.value
+age.df <- test.cont(data = age.data,
+                    var.df = age.df,
+                    var = "Age")
 
 age.df
 
@@ -175,17 +169,9 @@ size.df <- as.data.frame(matrix(ncol=length(col.names)))
 names(size.df) <- col.names
 size.df$Variable <- "Size"
 
-# for Her2 vs LumA
-# store result
-size.df$`HER2E(ref)` <-  mean(
-  size.data[which(size.data$PAM50=="Her2" & !is.na(size.data$Size)),]$Size)
-size.df$LUMA <-          mean(size.data[which(size.data$PAM50=="LumA" & !is.na(size.data$Size)),]$Size)
-size.df$LUMA.pval <-     TwoGroups.ttest(size.data[Her2.ids,"Size"],size.data[LumA.ids,"Size"])$p.value
-
-# for Her2 vs LumB
-# store result
-size.df$LUMB <-          mean(size.data[which(size.data$PAM50=="LumB" & !is.na(size.data$Size)),]$Size)
-size.df$LUMB.pval <-     TwoGroups.ttest(size.data[Her2.ids,"Size"],size.data[LumB.ids,"Size"])$p.value
+size.df <- test.cont(data = size.data,
+          var.df = size.df,
+          var = "Size")
 
 size.df
 
@@ -200,36 +186,9 @@ pr.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(pr.df) <- col.names
 pr.df$Variable <- c("Negative","Positive")
 
-# for Her2 vs LumA
-luma.ct <- table(pr.data$PAM50,pr.data$PR)[c("Her2","LumA"),]
-pr.df$LUMA.pval <- fisher.test(luma.ct)$p.value
-
-# for Her2 vs LumB
-lumb.ct <- table(pr.data$PAM50,pr.data$PR)[c("Her2","LumB"),]
-pr.df$LUMB.pval <- fisher.test(lumb.ct)$p.value
-
-groups <- c("Her2","LumA","LumB")
-cols <- c("HER2E","LUMA","LUMB")
-for (i in 1:3) {
-  type <- groups[i]
-  col <- cols[i]
-  type.dat <- pr.data[which(pr.data$PAM50==type),]
-  type.dat$PAM50 <- droplevels(type.dat$PAM50)
-  type.counts <- table(type.dat$PAM50,type.dat$PR)
-  
-  # count column
-  if (col=="HER2E") {
-    pr.df[[paste(col,"(ref)",sep="")]][1] <- type.counts[1]
-    pr.df[[paste(col,"(ref)",sep="")]][2] <- type.counts[2]
-  } else {
-    pr.df[[col]][1] <- type.counts[1]
-    pr.df[[col]][2] <- type.counts[2]
-  }
-  # % column
-  pr.df[[paste(col,".%",sep="")]][1] <- round(type.counts[1]/sum(type.counts)*100)
-  pr.df[[paste(col,".%",sep="")]][2] <- round(type.counts[2]/sum(type.counts)*100)
-} 
-
+pr.df <- test.2x2ct(data = pr.data,
+                    var.df = pr.df,
+                    var = "PR")
 pr.df
 
 #######################################################################
@@ -240,44 +199,15 @@ nhg.data <- anno %>% filter(!is.na(NHG))
 table(anno$PAM50,is.na(anno$NHG))
 
 # matrix
-grade.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 3))
-names(grade.df) <- col.names
-grade.df$Variable <- c("NHG1","NHG2","NHG3")
+nhg.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 3))
+names(nhg.df) <- col.names
+nhg.df$Variable <- c("NHG1","NHG2","NHG3")
 
-# for Her2 vs LumA
-luma.ct <- table(nhg.data$PAM50,nhg.data$NHG)[c("Her2","LumA"),]
-grade.df$LUMA.pval <- fisher.test(luma.ct)$p.value
+nhg.df <-   test.2x3ct(data = nhg.data,
+                       var.df = nhg.df,
+                       var = "NHG")
 
-#GTest(table(a_nhg$PAM50,a_nhg$NHG))
-
-# for Her2 vs LumB
-lumb.ct <- table(nhg.data$PAM50,nhg.data$NHG)[c("Her2","LumB"),]
-grade.df$LUMB.pval <- fisher.test(lumb.ct)$p.value
-
-groups <- c("Her2","LumA","LumB")
-cols <- c("HER2E","LUMA","LUMB")
-for (i in 1:3) {
-  type <- groups[i]
-  col <- cols[i]
-  type.dat <- nhg.data[which(nhg.data$PAM50==type),]
-  type.dat$PAM50 <- droplevels(type.dat$PAM50)
-  type.counts <- table(type.dat$PAM50,type.dat$NHG)
-
-  # count column
-  if (col=="HER2E") {
-    grade.df[[paste(col,"(ref)",sep="")]][1] <- type.counts[1]
-    grade.df[[paste(col,"(ref)",sep="")]][2] <- type.counts[2]
-    grade.df[[paste(col,"(ref)",sep="")]][3] <- type.counts[3]
-  } else {
-  grade.df[[col]][1] <- type.counts[1]
-  grade.df[[col]][2] <- type.counts[2]
-  grade.df[[col]][3] <- type.counts[3]
-  }
-  # % column
-  grade.df[[paste(col,".%",sep="")]][1] <- round(type.counts[1]/sum(type.counts)*100)
-  grade.df[[paste(col,".%",sep="")]][2] <- round(type.counts[2]/sum(type.counts)*100)
-  grade.df[[paste(col,".%",sep="")]][3] <- round(type.counts[3]/sum(type.counts)*100)
-} 
+nhg.df
 
 #######################################################################
 # 4. LN (2x2 contingency table)
@@ -291,37 +221,15 @@ ln.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(ln.df) <- col.names
 ln.df$Variable <- c("N0","N+")
 
-# for Her2 vs LumA
-luma.ct <- table(ln.data$PAM50,ln.data$LN)[c("Her2","LumA"),]
-ln.df$LUMA.pval <- fisher.test(luma.ct)$p.value
+ln.df <- test.2x2ct(data = ln.data,
+           var.df = ln.df,
+           var = "LN")
 
-# for Her2 vs LumB
-lumb.ct <- table(ln.data$PAM50,ln.data$LN)[c("Her2","LumB"),]
-ln.df$LUMB.pval <- fisher.test(lumb.ct)$p.value
+#######################################################################
+# 4. IC10 (only Metabric)
+#######################################################################
 
-groups <- c("Her2","LumA","LumB")
-cols <- c("HER2E","LUMA","LUMB")
-for (i in 1:3) {
-  type <- groups[i]
-  col <- cols[i]
-  type.dat <- ln.data[which(ln.data$PAM50==type),]
-  type.dat$PAM50 <- droplevels(type.dat$PAM50)
-  type.counts <- table(type.dat$PAM50,type.dat$LN)
-  
-  # count column
-  if (col=="HER2E") {
-    ln.df[[paste(col,"(ref)",sep="")]][1] <- type.counts[1]
-    ln.df[[paste(col,"(ref)",sep="")]][2] <- type.counts[2]
-  } else {
-    ln.df[[col]][1] <- type.counts[1]
-    ln.df[[col]][2] <- type.counts[2]
-  }
-  # % column
-  ln.df[[paste(col,".%",sep="")]][1] <- round(type.counts[1]/sum(type.counts)*100)
-  ln.df[[paste(col,".%",sep="")]][2] <- round(type.counts[2]/sum(type.counts)*100)
-} 
 
-ln.df
 
 #######################################################################
 # export to excel
@@ -358,6 +266,10 @@ rev.count$`LUMB.%`[1] <- (t.rev[3]/t.all[3])*100
 rev.count
 
 #######################################################################
+# filter anno to only include review data
+anno <- anno %>% filter(Bosch_RS1 == 1)
+
+#######################################################################
 # HER2low frequency (2x2 contingency table)
 #######################################################################
 
@@ -367,37 +279,12 @@ table(anno$PAM50,anno$HER2_Low)
 # matrix
 h2low.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(h2low.df) <- col.names
-h2low.df$Variable <- c("0","1")
+h2low.df$Variable <- c("0.Bosch","1.Bosch")
 
-# for Her2 vs LumA
-luma.ct <- table(h2low.data$PAM50,h2low.data$HER2_Low)[c("Her2","LumA"),]
-h2low.df$LUMA.pval <- fisher.test(luma.ct)$p.value
+h2low.df <- test.2x2ct(data = h2low.data,
+                       var.df = h2low.df,
+                       var = "HER2_Low")
 
-# for Her2 vs LumB
-lumb.ct <- table(h2low.data$PAM50,h2low.data$HER2_Low)[c("Her2","LumB"),]
-h2low.df$LUMB.pval <- fisher.test(lumb.ct)$p.value
-
-groups <- c("Her2","LumA","LumB")
-cols <- c("HER2E","LUMA","LUMB")
-for (i in 1:3) {
-  type <- groups[i]
-  col <- cols[i]
-  type.dat <- h2low.data[which(h2low.data$PAM50==type),]
-  type.dat$PAM50 <- droplevels(type.dat$PAM50)
-  type.counts <- table(type.dat$PAM50,type.dat$HER2_Low)
-  
-  # count column
-  if (col=="HER2E") {
-    h2low.df[[paste(col,"(ref)",sep="")]][1] <- type.counts[1]
-    h2low.df[[paste(col,"(ref)",sep="")]][2] <- type.counts[2]
-  } else {
-    h2low.df[[col]][1] <- type.counts[1]
-    h2low.df[[col]][2] <- type.counts[2]
-  }
-  # % column
-  h2low.df[[paste(col,".%",sep="")]][1] <- round(type.counts[1]/sum(type.counts)*100)
-  h2low.df[[paste(col,".%",sep="")]][2] <- round(type.counts[2]/sum(type.counts)*100)
-} 
 
 h2low.df
 
@@ -405,19 +292,47 @@ h2low.df
 # LN Bosch
 #######################################################################
 
+ln_bosch.data <- anno %>% filter(!is.na(LN_Bosch))
+table(anno$PAM50,anno$LN_Bosch)
+
+# matrix
+ln_bosch.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
+names(ln_bosch.df) <- col.names
+ln_bosch.df$Variable <- c("N0.Bosch","N+.Bosch")
+
+ln_bosch.df <- test.2x2ct(data = ln_bosch.data,
+                          var.df = ln_bosch.df,
+                          var = "LN_Bosch")
+
+ln_bosch.df
+
 #######################################################################
-# Size Bosch
+# Size Bosch x.data .df VAR
 #######################################################################
+
+size_bosch.data <- anno %>% filter(!is.na(Size_Bosch))
+table(anno$PAM50,is.na(anno$Size_Bosch))
+
+# matrix
+size_bosch.df <- as.data.frame(matrix(ncol=length(col.names)))
+names(size_bosch.df) <- col.names
+size_bosch.df$Variable <- "Size_Bosch"
+
+size_bosch.df <- test.cont(data = size_bosch.data,
+                           var.df = size_bosch.df,
+                           var = "Size_Bosch")
+
+size_bosch.df
 
 #######################################################################
 # NHG Bosch
 #######################################################################
 
 #######################################################################
-# Age?
+# Age for review
 #######################################################################
 
 #######################################################################
-# PR?
+# PR for review
 #######################################################################
 
