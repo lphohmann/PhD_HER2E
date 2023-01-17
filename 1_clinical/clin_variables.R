@@ -21,7 +21,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # Metabric or SCANB 
+cohort <- "Metabric" # Metabric or SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -37,6 +37,7 @@ library(tidyverse)
 library(matrixStats)
 library(DescTools)
 library(openxlsx)
+library(writexl)
 
 #######################################################################
 # Cohort-specific data preprocessing including selection of  
@@ -123,7 +124,7 @@ col.names <- c("Variable","HER2E(ref)","HER2E.%","LUMA","LUMA.%","LUMA.pval","LU
 # matrix
 pam50.count <- as.data.frame(matrix(ncol=length(col.names)))
 names(pam50.count) <- col.names
-pam50.count$Variable <- "PAM50"
+pam50.count$Variable <- "N"
 
 t <- table(anno$PAM50)
 
@@ -184,7 +185,7 @@ pr.data <- anno %>% filter(!is.na(PR))
 # matrix
 pr.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(pr.df) <- col.names
-pr.df$Variable <- c("Negative","Positive")
+pr.df$Variable <- c("PR.neg","PR.pos")
 
 pr.df <- test.2x2ct(data = pr.data,
                     var.df = pr.df,
@@ -219,7 +220,7 @@ table(anno$PAM50,is.na(anno$LN))
 # matrix
 ln.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(ln.df) <- col.names
-ln.df$Variable <- c("N0","N+")
+ln.df$Variable <- c("LN.N0","LN.N+")
 
 ln.df <- test.2x2ct(data = ln.data,
            var.df = ln.df,
@@ -227,17 +228,14 @@ ln.df <- test.2x2ct(data = ln.data,
 
 #######################################################################
 # 4. IC10 (only Metabric)
+if (cohort=="Metabric") {
 #######################################################################
+  # this
+}
 
-
-
-#######################################################################
-# export to excel
-#######################################################################
-
-# save
-#write.xlsx(final_matrix, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
-
+if (cohort=="SCANB") {
+  # review and table exports
+}
 ########################################################################
 # 2. review data vars
 
@@ -248,7 +246,7 @@ ln.df <- test.2x2ct(data = ln.data,
 # matrix
 rev.count <- as.data.frame(matrix(ncol=length(col.names)))
 names(rev.count) <- col.names
-rev.count$Variable <- "Reviewed"
+rev.count$Variable <- "N.Reviewed"
 
 t.rev <- table(anno[which(anno$Bosch_RS1==1),]$PAM50)
 t.all <- table(anno$PAM50)
@@ -279,7 +277,7 @@ table(anno$PAM50,anno$HER2_Low)
 # matrix
 h2low.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(h2low.df) <- col.names
-h2low.df$Variable <- c("0.Bosch","1.Bosch")
+h2low.df$Variable <- c("HER2low.No","HER2low.Yes")
 
 h2low.df <- test.2x2ct(data = h2low.data,
                        var.df = h2low.df,
@@ -287,6 +285,29 @@ h2low.df <- test.2x2ct(data = h2low.data,
 
 
 h2low.df
+
+#######################################################################
+# PAM50 count in review
+#######################################################################
+
+# matrix
+pam50.count.rev <- as.data.frame(matrix(ncol=length(col.names)))
+names(pam50.count.rev) <- col.names
+pam50.count.rev$Variable <- "N.Bosch"
+
+t <- table(anno$PAM50)
+
+# add count data
+pam50.count.rev$`HER2E(ref)`[1] <- t[1]
+pam50.count.rev$LUMA[1] <- t[2]
+pam50.count.rev$LUMB[1] <- t[3]
+
+# add % data
+pam50.count.rev$`HER2E.%`[1] <- (t[1]/length(anno$PAM50))*100
+pam50.count.rev$`LUMA.%`[1] <- (t[2]/length(anno$PAM50))*100
+pam50.count.rev$`LUMB.%`[1] <- (t[3]/length(anno$PAM50))*100
+
+pam50.count.rev
 
 #######################################################################
 # LN Bosch
@@ -298,7 +319,7 @@ table(anno$PAM50,anno$LN_Bosch)
 # matrix
 ln_bosch.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
 names(ln_bosch.df) <- col.names
-ln_bosch.df$Variable <- c("N0.Bosch","N+.Bosch")
+ln_bosch.df$Variable <- c("LN.N0.Bosch","LN.N+.Bosch")
 
 ln_bosch.df <- test.2x2ct(data = ln_bosch.data,
                           var.df = ln_bosch.df,
@@ -316,7 +337,7 @@ table(anno$PAM50,is.na(anno$Size_Bosch))
 # matrix
 size_bosch.df <- as.data.frame(matrix(ncol=length(col.names)))
 names(size_bosch.df) <- col.names
-size_bosch.df$Variable <- "Size_Bosch"
+size_bosch.df$Variable <- "Size.Bosch"
 
 size_bosch.df <- test.cont(data = size_bosch.data,
                            var.df = size_bosch.df,
@@ -328,11 +349,106 @@ size_bosch.df
 # NHG Bosch
 #######################################################################
 
+nhg_bosch.data <- anno %>% filter(!is.na(NHG_Bosch))
+table(anno$PAM50,is.na(anno$NHG_Bosch))
+
+# matrix
+nhg_bosch.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 3))
+names(nhg_bosch.df) <- col.names
+nhg_bosch.df$Variable <- c("NHG1.Bosch","NHG2.Bosch","NHG3.Bosch")
+
+nhg_bosch.df <-   test.2x3ct(data = nhg_bosch.data,
+                       var.df = nhg_bosch.df,
+                       var = "NHG_Bosch")
+
+nhg_bosch.df
+
 #######################################################################
 # Age for review
 #######################################################################
 
+age_bosch.data <- anno %>% filter(!is.na(Age))
+table(anno$PAM50,is.na(anno$Age))
+
+# matrix
+age_bosch.df <- as.data.frame(matrix(ncol=length(col.names)))
+names(age_bosch.df) <- col.names
+age_bosch.df$Variable <- "Age"
+
+age_bosch.df <- test.cont(data = age_bosch.data,
+                    var.df = age_bosch.df,
+                    var = "Age")
+
+age_bosch.df
+
 #######################################################################
 # PR for review
 #######################################################################
+
+pr_bosch.data <- anno %>% filter(!is.na(PR))
+
+# matrix
+pr_bosch.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
+names(pr_bosch.df) <- col.names
+pr_bosch.df$Variable <- c("PR.neg","PR.pos")
+
+pr_bosch.df <- test.2x2ct(data = pr_bosch.data,
+                    var.df = pr_bosch.df,
+                    var = "PR")
+pr_bosch.df
+
+#######################################################################
+# export to excel
+#######################################################################
+
+if (cohort == "SCANB") {
+  
+  # rel4+part of rs1
+  sheet.list.table1 <- list("N" = pam50.count, 
+                           "Age" = age.df,
+                           "PR" = pr.df,
+                           "Size" = size.df,
+                           "NHG" = nhg.df,
+                           "LN" = ln.df,
+                           "%reviewed" = rev.count,
+                           "HER2low" = h2low.df)
+  
+  # rbind
+  table1 <- as.data.frame(do.call("rbind", sheet.list.table1)) %>% mutate_at(vars(colnames(.)[colnames(.) %!in% c("Variable","LUMA.pval","LUMB.pval")]), function(x) {round(x,1)})
+  
+  write_xlsx(table1,"./output/supplementary_data/SCANB_clinpath_table1.xlsx")
+  
+  # review
+  sheet.list.table2 <- list("N" = pam50.count.rev, 
+                            "Age" = age_bosch.df,
+                            "PR" = pr_bosch.df,
+                            "Size" = size_bosch.df,
+                            "NHG" = nhg_bosch.df,
+                            "LN" = ln_bosch.df,
+                            "HER2low" = h2low.df)
+  
+  # rbind
+  table2 <- as.data.frame(do.call("rbind", sheet.list.table2)) %>% mutate_at(vars(colnames(.)[colnames(.) %!in% c("Variable","LUMA.pval","LUMB.pval")]), function(x) {round(x,1)})
+  
+  write_xlsx(table2,"./output/supplementary_data/SCANB_clinpath_review_table2.xlsx")
+  
+} else if (cohort=="Metabric") {
+  # 1 table
+  sheet.list.table1 <- list("N" = pam50.count, 
+                            "Age" = age.df,
+                            "PR" = pr.df,
+                            "Size" = size.df,
+                            "NHG" = nhg.df,
+                            "LN" = ln.df,
+                            "HER2low" = h2low.df)
+  # IC10
+  
+  # rbind
+  table1 <- as.data.frame(do.call("rbind", sheet.list.table1)) %>% mutate_at(vars(colnames(.)[colnames(.) %!in% c("Variable","LUMA.pval","LUMB.pval")]), function(x) {round(x,1)})
+  
+  write_xlsx(table1,"./output/supplementary_data/Metabric_clinpath_table1.xlsx")
+}
+
+# save
+#write.xlsx(final_matrix, file = paste(data.path,"clin_variables.xlsx",sep=""),overwrite = TRUE)
 

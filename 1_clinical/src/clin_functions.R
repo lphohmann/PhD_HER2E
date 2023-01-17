@@ -3,6 +3,8 @@
 ################################################################################
 # functions
 ################################################################################
+# define "not in" operator 
+'%!in%' <- function(x,y)!('%in%'(x,y))
 
 # loads RData data file and allows to assign it directly to variable
 loadRData <- function(file.path){
