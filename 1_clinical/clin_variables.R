@@ -262,12 +262,16 @@ if (cohort=="Metabric") {
     mutate(Freq=case_when(Var1=="Her2" ~ (Freq/table(anno$PAM50)[["Her2"]])*100,
                           Var1=="LumA" ~ (Freq/table(anno$PAM50)[["LumA"]])*100,
                           Var1=="LumB" ~ (Freq/table(anno$PAM50)[["LumB"]])*100))
+  
   # Create grouped barplot using ggplot2
+  pdf(file = paste(output.path,"Metabric_IC10_barplot.pdf",sep=""), 
+      width = 21/2, height = 14.8/2) 
   ggplot(dat,aes(x = Var2, y =Freq, fill = Var1)) +
     geom_bar(stat = "identity", position = "dodge") +
     scale_fill_manual(name = "PAM50 Subtype",values=c("#d334eb", "#2176d5","#34c6eb")) +
     xlab("IC10 Subtype") +
     ylab("Fraction (%)")
+  dev.off()
 }
 
 #######################################################################
