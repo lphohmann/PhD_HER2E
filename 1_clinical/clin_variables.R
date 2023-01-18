@@ -265,7 +265,7 @@ if (cohort=="Metabric") {
   # Create grouped barplot using ggplot2
   ggplot(dat,aes(x = Var2, y =Freq, fill = Var1)) +
     geom_bar(stat = "identity", position = "dodge") +
-    scale_fill_manual(name = "PAM50 Subtype",values=c("#d334eb", "#34c6eb", "#2176d5")) +
+    scale_fill_manual(name = "PAM50 Subtype",values=c("#d334eb", "#2176d5","#34c6eb")) +
     xlab("IC10 Subtype") +
     ylab("Fraction (%)")
 }
