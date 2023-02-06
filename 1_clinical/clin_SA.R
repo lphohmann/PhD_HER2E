@@ -110,37 +110,25 @@ if (cohort=="Metabric") {
   
 }
 
-# getting correct structure for common variables
-# survdata$PAM50 <- as.factor(survdata$PAM50)
-# survdata$Age <- as.numeric(survdata$Age)
-# survdata$TumSize <- as.numeric(survdata$TumSize)
-# survdata$Grade <- as.factor(survdata$Grade) 
-# survdata$LN <- as.factor(survdata$LN) 
-# survdata$LN <- relevel(survdata$LN, ref = "N0")
-
 #######################################################################
-# 3. Relevel to use LumA as base for comparison
+# Part 1: Figure A
 #######################################################################
-
-# relevel and check
-survdata$PAM50 <- relevel(survdata$PAM50, ref = "LumA")
-
-
-#######################################################################
-# 4. Investigate the EC treatment group
-#######################################################################
-
-# 4.1 HER2E vs. LUMA vs. LUMB
+#Fig A: IDFS or RFI DRFI; 2x (KM + uniCox) + 2x FP of mvCox
+# NOTE FOR SELF: DONT FORGET TO CALC THE MEDIAN FOR CENSORED
+################################### Investigate the EC treatment group #
+######################################
 
 # define the group
-EC_group <- survdata %>% filter(Treatment == "CE")
+EC_group <- if(cohort=="SCANB") svdata.rs1 else svdata %>% filter(Treatment == "CE")
 EC_group.surv <- Surv(EC_group[[OM]], EC_group[[OMbin]])
 #table(EC_group$PAM50) 
 
 ##########################
 
-# univariate cox regression + forest plot
-plot.list <- append(plot.list,list(unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))))
+# uv cox
+out <- unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))
+plot.list <- append(plot.list,list(out$plot))
+plot.list <- append(plot.list,list(out$result))
 
 ##########################
 
@@ -151,51 +139,27 @@ plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparis
        OMbin = EC_group[[OMbin]],
        sdata = EC_group)))
 
+# add the median stuff
+dat <- if(cohort=="SCANB") svdata.rs1 else svdata
+median <- median(dat[which(dat[[OMbin]]==0),][[OM]])
+plot.list <- append(plot.list,list(paste("Median ",OM, " for censored patients = ",median,sep="")))
+
 ##########################
 
-# Multivariate Cox proportional hazards model
-plot.list <- append(plot.list,list(mvcox(data=EC_group,
-                                         surv=EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))))
+# mv cox
+out <- mvcox(EC_group, surv=EC_group.surv,
+             title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))
+plot.list <- append(plot.list,list(out$plot))
+plot.list <- append(plot.list,list(out$result))
 
-# 4.2 LUMA vs. HER2E + LUMB 
-source("scripts/1_clinical/src/clin_functions.R")
+#source("scripts/1_clinical/src/clin_functions.R")
 
-# need to do 2 gorup km function and 2 group mvcox function
-plot.list <- append(plot.list,list(
-  TwoGroup.KMplot(group.cohort.version = paste("Comparison 2: CT+ET (cohort: ",cohort,")",sep=""),
-       OMstring = OM,
-       OM = EC_group[[OM]],
-       OMbin = EC_group[[OMbin]],
-       sdata = EC_group,
-       comp.var = "Comp1_groups",
-       palette = c("#2176d5", "#bf80ff"),
-       legend.labs = 
-         c(paste(
-            names(table(EC_group[!is.na(OM),]$Comp1_groups)[1]),
-            " (",table(EC_group[!is.na(OM),]$Comp1_groups)[1],")",sep=""),
-           paste(
-             names(table(EC_group[!is.na(OM),]$Comp1_groups)[2]),
-             " (",table(EC_group[!is.na(OM),]$Comp1_groups)[2],")",sep="")))))
-
-# 4.2 HER2E vs. LUMA + LUMB 
-plot.list <- append(plot.list,list(
-  TwoGroup.KMplot(group.cohort.version = paste("Comparison 3: CT+ET (cohort: ",cohort,")",sep=""),
-                  OMstring = OM,
-                  OM = EC_group[[OM]],
-                  OMbin = EC_group[[OMbin]],
-                  sdata = EC_group,
-                  comp.var = "Comp2_groups",
-                  palette = c("#0066ff", "#d334eb"),
-                  legend.labs = c(
-                    paste(names(table(EC_group[!is.na(OM),]$Comp2_groups)[1])," (",table(EC_group[!is.na(OM),]$Comp2_groups)[1],")",sep=""),
-                    paste(names(table(EC_group[!is.na(OM),]$Comp2_groups)[2])," (",table(EC_group[!is.na(OM),]$Comp2_groups)[2],")",sep="")))))
-
-#######################################################################
-# 7. Investigate the Endo treatment group
-#######################################################################
+########################################
+# Investigate the Endo treatment group # CONTINUE HERE TO ADAPT LIKE ABOVE
+########################################
 
 # define the group
-E_group <- survdata %>% filter(Treatment == "E")
+E_group <- if(cohort=="SCANB") svdata.rs1 else svdata %>% filter(Treatment == "E")
 E_group.surv <- Surv(E_group[[OM]], E_group[[OMbin]])
 #table(E_group$PAM50)
 
@@ -212,6 +176,11 @@ plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparis
        OM = E_group[[OM]],
        OMbin = E_group[[OMbin]],
        sdata = E_group)))
+
+# add the median stuff
+dat <- if(cohort=="SCANB") svdata.rs1 else svdata
+median <- median(dat[which(dat[[OMbin]]==0),][[OM]])
+plot.list <- append(plot.list,list(paste("Median ",OM, " for censored patients = ",median,sep="")))
 
 ##########################
 

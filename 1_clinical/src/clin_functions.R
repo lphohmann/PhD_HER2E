@@ -214,10 +214,12 @@ unicox <- function(data,surv,title) {
     main.pam50 <- coxph(surv~PAM50, data=data)
     
     # Result
-    print(summary(main.pam50))
+    result <- summary(main.pam50)
 
     # forest 
-    ggforest(main.pam50,fontsize = 2,data=data,main=title)
+    plot <- ggforest(main.pam50,fontsize = 2,data=data,main=title)
+    
+    return(out <- list("plot" = plot, "result" = result))
 }
 
 # function that created multivariate Cox proportional hazards model forest plot
@@ -228,10 +230,12 @@ mvcox <- function(data,surv,title) {
     main.all <- coxph(surv~PAM50+Age+LN+TumSize+Grade, data=data) 
     
     # Result
-    print(summary(main.all))
+    result <- summary(main.all)
     
     # Plot forest 
-    ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)
+    plot <- ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)
+    
+    return(out <- list("plot" = plot, "result" = result))
 }
 
 # function that creates KM plot for HER2p for specified OM
