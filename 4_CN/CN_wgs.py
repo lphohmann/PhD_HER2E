@@ -22,7 +22,7 @@ import pandas as pd
 from functools import reduce
 
 # wdir
-wdir = "~/Desktop/MTP_project/"
+wdir = "~/Desktop/Personal_projects/WGS/"
 
 ##############################################################################
 #%%
@@ -60,7 +60,7 @@ fasta_output = args.fastaoutput
 ''' load all files as panda dataframes: i hardcode everything for now; will change later with os etc.'''
 
 # load readme for colnames
-readme_file = pd.read_csv(wdir+'Data/SCAN_B/WGS/ASCATreadme.tsv', sep='\t', header=None)
+readme_file = pd.read_csv(wdir+'ASCATreadme.tsv', sep='\t', header=None)
 #readme_file.info()
 colnames = list(readme_file.iloc[1:9,0].str.strip())
 

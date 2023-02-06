@@ -2,6 +2,14 @@
 
 # TODO:
 
+# per cohort output: 
+# - Fig A: IDFS or RFI DRFI; 2x (KM + uniCox) + 2x FP of mvCox
+# - Fig B: OS; 2x (KM + uniCox) + 2x FP of mvCox
+# notes: 
+# - add median IDFS for censored pts (bin=0)
+# - for SCANB: Fig A based on RS1; Fig B based on rel4
+# - for SCANB: mvCox based on RS1 Age, NHG, Size, LN
+
 # empty environment
 rm(list=ls())
 
@@ -9,7 +17,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "Metabric" # Metabric or SCANB 
+cohort <- "SCANB" # Metabric or SCANB 
 
 # set/create output directory for plots
 output.path <- "output/plots/1_clinical/"
@@ -38,129 +46,85 @@ plot.list <- list()
 
 # for metabric cohort
 if (cohort=="Metabric") {
-    OM="IDFS"# put this IN THE COHORT SPECIFC ONES I.E. IDFS FOR SCANB AND RFI FOR METABRIC
-    OMbin="IDFSbin"
+    
+    # Fig A OM (Fig B is OS for both)
+    OM <- "RFI"
+    OMbin <- "RFIbin"
     
     # load data
-    load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
-    anno$Chemotherapy[is.na(anno$Chemotherapy)] <- 0
-    anno$Endocrine[is.na(anno$Endocrine)] <- 0
+    svdata <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData")
+    svdata$Chemotherapy[is.na(svdata$Chemotherapy)] <- 0
+    svdata$Endocrine[is.na(svdata$Endocrine)] <- 0
     
     # extract relevant variables
-    survdata <- anno %>% 
-        dplyr::select(
-            METABRIC_ID, Age, Grade, TumSize,
-            lymph_nodes_positive, ClinGroup, 
-            PAM50, OS, OSbin, DSS, DSSbin, 
-            DRFI, DRFIbin, RFI, RFIbin, 
-            IDFS, IDFSbin, Chemotherapy, Endocrine) %>% 
+    svdata <- svdata %>% 
         mutate(Treatment = case_when(Chemotherapy==1 & Endocrine==1 ~ "CE",
                                      Chemotherapy==0 & Endocrine==1 ~ "E")) %>% 
         mutate(LN = ifelse(lymph_nodes_positive > 0, "N+", "N0")) %>% 
-        dplyr::select(-c(lymph_nodes_positive)) %>% #mutate(across(c(OS,DSS,DRFI,RFI,IDFS), (function(years) return(years*365)))) %>% 
-        filter(grepl('ERpHER2n', ClinGroup))
-    
-    # getting correct structure
-    survdata$DSS <- as.numeric(survdata$DSS)
-    survdata$DSSbin <- as.numeric(survdata$DSSbin)
-    survdata$DRFI <- as.numeric(survdata$DRFI)
-    survdata$DRFIbin <- as.numeric(survdata$DRFIbin)
-    survdata$IDFS <- as.numeric(survdata$IDFS)
-    survdata$IDFSbin <- as.numeric(survdata$IDFSbin)
+      mutate(across(c(OS,OSbin,RFI,RFIbin,Age,TumSize), as.numeric)) %>% 
+      mutate(Grade = factor(Grade, levels = c("1","2","3"))) %>% 
+      mutate(PAM50 = factor(PAM50, levels = c("LumA","LumB","Her2"))) %>% 
+      mutate(LN = factor(LN, levels = c("N0","N+"))) %>% 
+      dplyr::select(
+        METABRIC_ID, Age, Grade, TumSize,
+        LN, PAM50, OS, OSbin, RFI, RFIbin, 
+        Treatment)
     
 # for SCANB cohort
 } else if (cohort=="SCANB") {
-  OM="IDFS"# put this IN THE COHORT SPECIFC ONES I.E. IDFS FOR SCANB AND RFI FOR METABRIC
-  OMbin="IDFSbin"
-  # OS from whole release, RFI and RDFS from Bosch review
   
-    # # load data
-    # load("data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_with_ExternalReview_Bosch_data.RData")
-    # # extract relevant variables
-    # survdata <- pam50.frame %>% 
-    #     filter(fuV8 == 1) %>% 
-    #     filter(!is.na(treatment_Bosch)) %>% # only include the review data
-    #     mutate(relapse_Bosch = ifelse(relapse_Bosch,1,0)) %>% 
-    #     filter(ERpHER2n_Bosch==1) %>%
-    #     mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
-    #                                  !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
-    #     dplyr::rename(
-    #         RFI = relapseTime_Bosch,
-    #         RFIbin = relapse_Bosch, 
-    #         TumSize = TumSize_Bosch,
-    #         PAM50 = PAM50_NCN_rel4,
-    #         Grade = NHG_Bosch,
-    #         LN = LNstatus_Bosch) %>%
-    #     dplyr::select(
-    #         rba_rel4, PAM50, OS, OSbin, TumSize, 
-    #         Age, Grade, LN, RFI, RFIbin, Treatment)
-
-  # load data and get right format
-  survdata <- loadRData("data/SCANB/1_clinical/processed/SCANB_clinData.RData") %>% 
-    filter(Follow.up.cohort == TRUE) %>% 
-    filter(!is.na(Bosch_RS1)) %>% # only include the review data
-    filter(ERpHER2n_Bosch==1) %>%
+  # Fig A OM
+  OM <- "IDFS"
+  OMbin <- "IDFSbin"
+  
+  # review 1 data
+  svdata.rs1 <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>% filter(!is.na(Bosch_RS1)) %>%
     mutate(Treatment = case_when(Chemo_Bosch & ET_Bosch ~ "CE",
                                  !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
-    dplyr::select(c("GEX.assay","Sample","Treatment","Age",
-                    "ER","PR","HER2","NCN.PAM50","OS","OSbin",
-                    "Bosch_RS1","DRFI_bin_Bosch","DRFI_Bosch","RFI_bin_Bosch","RFI_Bosch",
-                    "IDFS_bin_Bosch","IDFS_Bosch","ERpHER2n_Bosch",
-                    "Chemo_Bosch","ET_Bosch","AI_Bosch","Tamoxifen_Bosch","TumSize_Bosch","NHG_Bosch","LNstatus_Bosch","Ki67_Bosch","Ki67_Bosch_RS2","HER2_Low")) %>% 
+    dplyr::select(c("GEX.assay","Treatment","Age","NCN.PAM50",
+                    "IDFS_bin_Bosch","IDFS_Bosch",
+                    "TumSize_Bosch","NHG_Bosch","LNstatus_Bosch")) %>% 
+    dplyr::rename(IDFS = IDFS_Bosch, IDFSbin = IDFS_bin_Bosch, 
+      TumSize = TumSize_Bosch, PAM50 = NCN.PAM50,
+      Grade = NHG_Bosch, LN = LNstatus_Bosch) %>% 
+    mutate(across(c(IDFS,IDFSbin,Age,TumSize), as.numeric)) %>% 
+    mutate(Grade = factor(Grade, levels = c("1","2","3"))) %>% 
+    mutate(PAM50 = factor(PAM50, levels = c("LumA","LumB","Her2"))) %>% 
+    mutate(LN = factor(LN, levels = c("N0","N+")))
+  
+  # rel4 data
+  svdata.rel4 <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>% 
+    mutate(Treatment = case_when(TreatGroup=="ChemoEndo" ~ "CE",
+                                 TreatGroup=="Endo" ~ "E")) %>% 
+    mutate(LN = ifelse(LN > 0, "N+", "N0")) %>%
+    dplyr::select(c("GEX.assay","Treatment","Age","NCN.PAM50",
+                    "OS","OSbin","Size.mm","NHG","LN")) %>% 
     dplyr::rename(
-      RFI = RFI_Bosch,
-      RFIbin = RFI_bin_Bosch, 
-      DRFI = DRFI_Bosch,
-      DRFIbin = DRFI_bin_Bosch, 
-      IDFS = IDFS_Bosch,
-      IDFSbin = IDFS_bin_Bosch, 
-      TumSize = TumSize_Bosch,
+      TumSize = Size.mm,
       PAM50 = NCN.PAM50,
-      Grade = NHG_Bosch,
-      LN = LNstatus_Bosch) 
+      Grade = NHG) %>% 
+    mutate(across(c(OS,OSbin,Age,TumSize), as.numeric)) %>% 
+    mutate(Grade = factor(Grade, levels = c("1","2","3"))) %>% 
+    mutate(PAM50 = factor(PAM50, levels = c("LumA","LumB","Her2"))) %>% 
+    mutate(LN = factor(LN, levels = c("N0","N+")))
+  
 }
 
 # getting correct structure for common variables
-survdata$PAM50 <- as.factor(survdata$PAM50)
-survdata$Age <- as.numeric(survdata$Age)
-survdata$TumSize <- as.numeric(survdata$TumSize)
-survdata$Grade <- as.factor(survdata$Grade) 
-survdata$LN <- as.factor(survdata$LN) 
-survdata$LN <- relevel(survdata$LN, ref = "N0")
-
-# outcome measures
-survdata$OS <- as.numeric(survdata$OS)
-survdata$OSbin <- as.numeric(survdata$OSbin)
-survdata$RFI <- as.numeric(survdata$RFI)
-survdata$RFIbin <- as.numeric(survdata$RFIbin)
-survdata$IDFS <- as.numeric(survdata$IDFS)
-survdata$IDFSbin <- as.numeric(survdata$IDFSbin)
+# survdata$PAM50 <- as.factor(survdata$PAM50)
+# survdata$Age <- as.numeric(survdata$Age)
+# survdata$TumSize <- as.numeric(survdata$TumSize)
+# survdata$Grade <- as.factor(survdata$Grade) 
+# survdata$LN <- as.factor(survdata$LN) 
+# survdata$LN <- relevel(survdata$LN, ref = "N0")
 
 #######################################################################
-# Defining the PAM50 subtypes of interest
-#######################################################################
-
-# filter to only include subjects that are PAM50 == Her2 | LumA | LumB
-survdata <- survdata %>% filter(PAM50 %in% c("LumA", "LumB", "Her2")) # basal
-survdata$PAM50 <- droplevels(survdata$PAM50) # drop empty levels
-#barplot(table(survdata$PAM50))
-
-# define the other comparison groups 
-survdata <- survdata %>% 
-  mutate(Comp1_groups = if_else(PAM50=="LumA","LUMA","LUMB+HER2E")) %>% 
-  mutate(Comp2_groups = if_else(PAM50=="Her2","HER2E","LUMA+LUMB"))
-
-#######################################################################
-# 3. Relevel to use HER2E as base for comparison
+# 3. Relevel to use LumA as base for comparison
 #######################################################################
 
 # relevel and check
-#levels(survdata$Comp2_groups)
 survdata$PAM50 <- relevel(survdata$PAM50, ref = "LumA")
-survdata$Comp1_groups <- as.factor(survdata$Comp1_groups)
-survdata$Comp1_groups <- relevel(survdata$Comp1_groups, ref = "LUMA")
-survdata$Comp2_groups <- as.factor(survdata$Comp2_groups)
-survdata$Comp2_groups <- relevel(survdata$Comp2_groups, ref = "LUMA+LUMB")
+
 
 #######################################################################
 # 4. Investigate the EC treatment group

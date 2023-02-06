@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -161,6 +161,28 @@ if (cohort=="SCANB") {
                       ylim = c(-2,8),
                       ylab = "Expression (log2)", 
                       title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
+    
+    #FGF19-----------------------------------------------------------------
+    # 
+    # fgf19.gex <- get_gex("FGF19",gex.data,anno)
+    # # base statistics
+    # get_stats(fgf19.gex,"PAM50","FGF19")
+    # # test
+    # res <- pair_ttest(fgf19.gex, 
+    #                   group.var = "PAM50",
+    #                   test.var = "FGF19", 
+    #                   g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # # plot
+    # plot.list <- append(plot.list, list(
+    #   three_boxplot(fgf19.gex,
+    #                 group.var = "PAM50",
+    #                 test.var = "FGF19",
+    #                 g1="Her2",g2="LumA",g3="LumB",
+    #                 g3.pos = 6.5, g3.sign = res[2,3],
+    #                 g2.pos = 7.5, g2.sign = res[1,3],
+    #                 ylim = c(-0.5,1),
+    #                 ylab = "Expression (log2)", 
+    #                 title = substitute(paste(italic("FGF19")," expression in PAM50 subtypes (ERpHER2n)")))))
     
     #FGFR1-----------------------------------------------------------------
     

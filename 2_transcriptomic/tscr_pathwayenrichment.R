@@ -165,6 +165,10 @@ dev.off()
 #######################################################################
 # GENESET 1: PAM50 DEGs 
 #######################################################################
+# quick check FGF19
+# head(DE.res)
+# DE.res <- loadRData(paste(data.path,"DE_results.RData",sep=""))
+# DE.res["FGF19",]
 
 # top DEGs (high difference in )
 top.DEGs <- DE.res %>% 

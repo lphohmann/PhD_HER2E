@@ -7,12 +7,7 @@
 # for METABRIC:
 # - table + IC10
 
-# TODO: - create two output tables, 1 for whole rel4 (+ % review and HER2low) and 1 for review 1 cases
-# - for metabric include ic10 class distribution
-# make table 1 for scanb and mb in one 
-
-# - check that percentage is logical and pvalue
-# - exclude cases that dont have all variables?
+# TODO: - add SD to age and size!
 
 # empty environment
 rm(list=ls())
@@ -264,14 +259,30 @@ if (cohort=="Metabric") {
                           Var1=="LumB" ~ (Freq/table(anno$PAM50)[["LumB"]])*100))
   
   # Create grouped barplot using ggplot2
-  pdf(file = paste(output.path,"Metabric_IC10_barplot.pdf",sep=""), 
-      width = 21/2, height = 14.8/2) 
-  ggplot(dat,aes(x = Var2, y =Freq, fill = Var1)) +
-    geom_bar(stat = "identity", position = "dodge") +
+  ic10.plot <- ggplot(dat,aes(x = Var2, y =Freq, fill = Var1)) +
+    geom_bar(stat = "identity", color="black",width=0.7, position = "dodge") +
     scale_fill_manual(name = "PAM50 Subtype",values=c("#d334eb", "#2176d5","#34c6eb")) +
     xlab("IC10 Subtype") +
     ylab("Fraction (%)")
-  dev.off()
+  
+  #######################################################################
+  # HER2low frequency (2x2 contingency table)
+  #######################################################################
+  
+  h2low.data <- anno %>% filter(!is.na(HER2_Low))
+  table(anno$PAM50,anno$HER2_Low)
+  
+  # matrix
+  h2low.df <- as.data.frame(matrix(ncol=length(col.names),nrow = 2))
+  names(h2low.df) <- col.names
+  h2low.df$Variable <- c("HER2low.No","HER2low.Yes")
+  
+  h2low.df <- test.2x2ct(data = h2low.data,
+                         var.df = h2low.df,
+                         var = "HER2_Low")
+  
+  
+  h2low.df
 }
 
 #######################################################################
@@ -495,11 +506,18 @@ if (cohort=="SCANB") {
                             "Size" = size.df,
                             "NHG" = nhg.df,
                             "LN" = ln.df,
+                            "HER2low" = h2low.df,
                             "IC10" = ic10.df) 
   
   # rbind
   table1 <- as.data.frame(do.call("rbind", sheet.list.table1)) %>% mutate_at(vars(colnames(.)[colnames(.) %!in% c("Variable","LUMA.pval","LUMB.pval")]), function(x) {round(x,1)})
   
   write_xlsx(table1,"./output/supplementary_data/Metabric_clinpath_table1.xlsx")
+  
+  # save plot
+  pdf(file = paste(output.path,"Metabric_IC10_barplot.pdf",sep=""), 
+      width = 21/2, height = 14.8/2) 
+  print(ic10.plot)
+  dev.off()
 }
 
