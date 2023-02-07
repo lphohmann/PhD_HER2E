@@ -214,7 +214,8 @@ unicox <- function(data,surv,title) {
     main.pam50 <- coxph(surv~PAM50, data=data)
     
     # Result
-    result <- summary(main.pam50)
+    res <- summary(main.pam50)
+    result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
 
     # forest 
     plot <- ggforest(main.pam50,fontsize = 2,data=data,main=title)
@@ -230,7 +231,8 @@ mvcox <- function(data,surv,title) {
     main.all <- coxph(surv~PAM50+Age+LN+TumSize+Grade, data=data) 
     
     # Result
-    result <- summary(main.all)
+    res <- summary(main.all)
+    result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
     
     # Plot forest 
     plot <- ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)

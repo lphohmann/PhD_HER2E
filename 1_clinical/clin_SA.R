@@ -35,7 +35,8 @@ library(survival)
 library(tidyverse)
 library(survminer)
 library(grid)
-
+library(gridExtra)
+library(ggplotify)
 # list to store plots
 plot.list <- list()
 
@@ -113,41 +114,49 @@ if (cohort=="Metabric") {
 #######################################################################
 # Part 1: Figure A
 #######################################################################
-#Fig A: IDFS or RFI DRFI; 2x (KM + uniCox) + 2x FP of mvCox
+
+# Fig A: IDFS or RFI DRFI; 2x (KM + uniCox) + 2x FP of mvCox
 # NOTE FOR SELF: DONT FORGET TO CALC THE MEDIAN FOR CENSORED
-################################### Investigate the EC treatment group #
+
+# add aslso ggplot in the uvcox function and mv cox function to print plot later 
+
+######################################
+# Investigate the EC treatment group #
 ######################################
 
 # define the group
-EC_group <- if(cohort=="SCANB") svdata.rs1 else svdata %>% filter(Treatment == "CE")
-EC_group.surv <- Surv(EC_group[[OM]], EC_group[[OMbin]])
-#table(EC_group$PAM50) 
+EC.dat <- (if(cohort=="SCANB") svdata.rs1 else svdata) %>% 
+  filter(Treatment == "CE")
+EC.surv <- Surv(EC.dat[[OM]], EC.dat[[OMbin]])
+#table(EC.dat$PAM50) 
 
 ##########################
 
 # uv cox
-out <- unicox(EC_group,EC_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))
+out <- unicox(EC.dat,EC.surv,title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))
 plot.list <- append(plot.list,list(out$plot))
 plot.list <- append(plot.list,list(out$result))
 
 ##########################
 
 # KM plot
-plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparison 1: CT+ET (cohort: ",cohort,")",sep=""),
+plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("CT+ET (cohort: ",cohort,")",sep=""),
        OMstring = OM,
-       OM = EC_group[[OM]],
-       OMbin = EC_group[[OMbin]],
-       sdata = EC_group)))
+       OM = EC.dat[[OM]],
+       OMbin = EC.dat[[OMbin]],
+       sdata = EC.dat)))
 
 # add the median stuff
-dat <- if(cohort=="SCANB") svdata.rs1 else svdata
-median <- median(dat[which(dat[[OMbin]]==0),][[OM]])
-plot.list <- append(plot.list,list(paste("Median ",OM, " for censored patients = ",median,sep="")))
+median.EC <- median(EC.dat[which(EC.dat[[OMbin]]==0),][[OM]])
+median.EC.plot <- ggplot() + annotate("text", x = 2, y = 2, label = paste(
+             "Median ",OM, " for CT+ET censored patients = ",median.EC,sep="")) +
+  theme_void()
+plot.list <- append(plot.list,list(median.EC.plot))
 
 ##########################
 
 # mv cox
-out <- mvcox(EC_group, surv=EC_group.surv,
+out <- mvcox(EC.dat, surv=EC.surv,
              title=paste("Hazard ratios (ERpHER2n, treatment=CT+ET, ",OM,", cohort=",cohort,")"))
 plot.list <- append(plot.list,list(out$plot))
 plot.list <- append(plot.list,list(out$result))
@@ -159,39 +168,46 @@ plot.list <- append(plot.list,list(out$result))
 ########################################
 
 # define the group
-E_group <- if(cohort=="SCANB") svdata.rs1 else svdata %>% filter(Treatment == "E")
-E_group.surv <- Surv(E_group[[OM]], E_group[[OMbin]])
-#table(E_group$PAM50)
-
+E.dat <- (if(cohort=="SCANB") svdata.rs1 else svdata) %>% 
+  filter(Treatment == "E")
+E.surv <- Surv(E.dat[[OM]], E.dat[[OMbin]])
 ##########################
 
-# univariate cox regression + forest plot
-plot.list <- append(plot.list,list(unicox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))))
+# uv cox
+out <- unicox(E.dat,E.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))
+plot.list <- append(plot.list,list(out$plot))
+plot.list <- append(plot.list,list(out$result))
 
 ##########################
 
 # KM plot
-plot.list <- append(plot.list,list(KMplot(group.cohort.version = paste("Comparison 1: ET (cohort: ",cohort,")",sep=""),
-       OMstring = OM,
-       OM = E_group[[OM]],
-       OMbin = E_group[[OMbin]],
-       sdata = E_group)))
+plot.list <- append(plot.list,list(KMplot(
+  group.cohort.version = paste("ET (cohort: ",cohort,")",sep=""),
+  OMstring = OM,
+  OM = E.dat[[OM]],
+  OMbin = E.dat[[OMbin]],
+  sdata = E.dat)))
 
 # add the median stuff
-dat <- if(cohort=="SCANB") svdata.rs1 else svdata
-median <- median(dat[which(dat[[OMbin]]==0),][[OM]])
-plot.list <- append(plot.list,list(paste("Median ",OM, " for censored patients = ",median,sep="")))
+median.E <- median(E.dat[which(E.dat[[OMbin]]==0),][[OM]])
+median.E.plot <- ggplot() + annotate("text", x = 2, y = 2, label = paste(
+  "Median ",OM, " for ET censored patients = ",median.E,sep="")) +
+  theme_void()
+plot.list <- append(plot.list,list(median.E.plot))
 
 ##########################
 
-# Multivariate Cox proportional hazards model
-plot.list <- append(plot.list,list(mvcox(E_group,E_group.surv,title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))))
+# mv cox
+out <- mvcox(E.dat, surv=E.surv,
+             title=paste("Hazard ratios (ERpHER2n, treatment=ET, ",OM,", cohort=",cohort,")"))
+plot.list <- append(plot.list,list(out$plot))
+plot.list <- append(plot.list,list(out$result))
 
 #######################################################################
 #######################################################################
 
 # save plots
-pdf(file = paste(output.path,cohort,"_SA_new.pdf", sep=""), 
+pdf(file = paste(output.path,cohort,"_SA_outcome1.pdf", sep=""), 
     onefile = TRUE, width = 21, height = 14.8) 
 
 for (i in 1:length(plot.list)) {
@@ -199,3 +215,5 @@ for (i in 1:length(plot.list)) {
 }
 
 dev.off()
+
+
