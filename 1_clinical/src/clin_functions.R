@@ -141,7 +141,7 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
         xlab = paste(OMstring," (years)", sep = ""),
         ylab = paste(OMstring," event probability", sep = ""), # ggf just label as "event probability"
         ylim = c(0,1),
-        palette = c("#2176d5", "#d334eb", "#34c6eb"), 
+        palette = c("#2176d5", "#34c6eb", "#d334eb"), 
         legend = c(0.9,0.96),
         ggtheme = theme(legend.title = element_text(size=25), #20
                         legend.key.size = unit(0.5,"cm"), 
@@ -154,8 +154,8 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
         title= paste(OMstring, ": ",group.cohort.version, sep = ""),
         legend.title = "Subtypes",
         legend.labs = c(paste("LUMA"," (",table(sdata[!is.na(OM),]$PAM50)[1],")",sep = ""),
-                        paste("HER2E"," (",table(sdata[!is.na(OM),]$PAM50)[2],")",sep = ""),
-                        paste("LUMB"," (",table(sdata[!is.na(OM),]$PAM50)[3],")",sep = "")),
+                        paste("LUMB"," (",table(sdata[!is.na(OM),]$PAM50)[2],")",sep = ""),
+                        paste("HER2E"," (",table(sdata[!is.na(OM),]$PAM50)[3],")",sep = "")),
         break.x.by = 1, # break X axis in time intervals of x (what is nicest here? maybe 365)
         break.y.by = 0.1)
     
