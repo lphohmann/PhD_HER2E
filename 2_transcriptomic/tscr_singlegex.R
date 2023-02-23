@@ -35,9 +35,14 @@ library(rstatix)
 # Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
 #######################################################################
+#loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData")
 
 # for SCANB
 if (cohort=="SCANB") {
+  
+  # FILTER DATA BASED ON MY SUMMARY OBJECT
+  
+  #loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData")
   
   # load annotation data and select subgroup data
   anno <- as.data.frame(
@@ -324,8 +329,6 @@ if (cohort=="SCANB") {
                       title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
     
     #######################################################################
-    
-    
     
 }
 # save plots

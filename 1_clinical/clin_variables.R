@@ -7,7 +7,9 @@
 # for METABRIC:
 # - table + IC10
 
-# TODO: - add SD to age and size!
+# note: I store the sd for continuous vars in the % column
+
+# TODO: - rerun with new RS1 sample set (trement filtered) and add SD to age and size!
 
 # empty environment
 rm(list=ls())
@@ -104,7 +106,7 @@ LumA.ids <- anno %>% filter(PAM50=="LumA") %>% pull(sampleID)
 LumB.ids <- anno %>% filter(PAM50=="LumB") %>% pull(sampleID)
 anno <- anno %>% column_to_rownames(var = "sampleID")
 
-#storing format: excel document with sheets for each variable
+# storing format: excel document with sheets for each variable
 # keep column names consitent so later I just need to copy & paste tables together
 col.names <- c("Variable","HER2E(ref)","HER2E.%","LUMA","LUMA.%","LUMA.pval","LUMB","LUMB.%","LUMB.pval")
 
@@ -115,7 +117,6 @@ col.names <- c("Variable","HER2E(ref)","HER2E.%","LUMA","LUMA.%","LUMA.pval","LU
 #######################################################################
 # PAM50 count
 #######################################################################
-
 # matrix
 pam50.count <- as.data.frame(matrix(ncol=length(col.names)))
 names(pam50.count) <- col.names
@@ -138,6 +139,7 @@ pam50.count
 #######################################################################
 # Age comparison
 #######################################################################
+# note: I store the sd for continuous vars in the % column
 
 age.data <- anno %>% filter(!is.na(Age))
 table(anno$PAM50,is.na(anno$Age))

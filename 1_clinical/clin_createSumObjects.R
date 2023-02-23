@@ -30,7 +30,12 @@ SCANB.ERpHER2n.data <- loadRData(
   filter(fuV8==TRUE) %>% 
   filter(ER=="Positive") %>% 
   filter(HER2=="Negative") %>% 
-  filter(NCN.PAM50 %in% c("LumA","LumB","Her2"))
+  filter(NCN.PAM50 %in% c("LumA","LumB","Her2")) %>% 
+  mutate(TreatmentGroup_Bosch = case_when(
+    Chemo_Bosch & ET_Bosch ~ "CE", 
+    !Chemo_Bosch & ET_Bosch ~ "E")) %>% 
+  mutate(Bosch_RS1 = ifelse(!is.na(TreatmentGroup_Bosch), 1, NA))
+
 # add the metagene scores
 SCANB.mg.scores <- loadRData(
   "./data/SCANB/2_transcriptomic/processed/mg_anno.RData")[[1]] %>% 
@@ -57,6 +62,7 @@ SCANB.ERpHER2p.data <- loadRData(
     HER2 == "Positive" & NCN.PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
   filter(Group %in% 
            c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
+
 # add metagene scores
 SCANB.mg.scores <- loadRData(
   "./data/SCANB/2_transcriptomic/processed/mg_anno_HER2p.RData")[[1]] %>% 
@@ -80,6 +86,7 @@ METABRIC.ERpHER2n.data <- loadRData(
   "data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>% 
   filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
   filter(grepl('ERpHER2n', ClinGroup))
+
 METABRIC.mg.scores <- loadRData(
   "./data/METABRIC/2_transcriptomic/processed/mg_anno.RData")[[1]] %>% 
   dplyr::select(-c(PAM50)) %>% 
@@ -109,6 +116,7 @@ METABRIC.ERpHER2p.data <- loadRData(
     HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
   filter(Group %in% 
            c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E"))
+
 METABRIC.mg.scores <- loadRData(
   "./data/METABRIC/2_transcriptomic/processed/mg_anno_HER2p.RData")[[1]] %>% 
   dplyr::select(-c(Group)) %>% 
@@ -121,16 +129,16 @@ save(METABRIC.ERpHER2p.mg.data,file="./data/METABRIC/1_clinical/processed/Merged
 
 
 #
-load("./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData")
-load("./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2p.RData")
-load("./data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData")
-load("./data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2p.RData")
-
-colnames(SCANB.ERpHER2n.mg.data)
-colnames(SCANB.ERpHER2p.mg.data)
-colnames(METABRIC.ERpHER2n.mg.data)
-colnames(METABRIC.ERpHER2p.mg.data)
-table(SCANB.ERpHER2n.mg.data$NCN.PAM50)
-table(SCANB.ERpHER2p.mg.data$Group)
-table(METABRIC.ERpHER2n.mg.data$PAM50)
-table(METABRIC.ERpHER2p.mg.data$Group)
+# load("./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData")
+# load("./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2p.RData")
+# load("./data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData")
+# load("./data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2p.RData")
+# 
+# colnames(SCANB.ERpHER2n.mg.data)
+# colnames(SCANB.ERpHER2p.mg.data)
+# colnames(METABRIC.ERpHER2n.mg.data)
+# colnames(METABRIC.ERpHER2p.mg.data)
+# table(SCANB.ERpHER2n.mg.data$NCN.PAM50)
+# table(SCANB.ERpHER2p.mg.data$Group)
+# table(METABRIC.ERpHER2n.mg.data$PAM50)
+# table(METABRIC.ERpHER2p.mg.data$Group)

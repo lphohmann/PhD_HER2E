@@ -62,17 +62,22 @@ test.2x2ct <- function(data,var.df,var) {
 
 # function for cont var testing (size and age)
 test.cont <- function(data,var.df,var) {
+  
   # for Her2 vs LumA
-  # store result
-  var.df$`HER2E(ref)` <-  mean(
-    data[which(data$PAM50=="Her2" & !is.na(data[[var]])),][[var]])
-  var.df$LUMA <-          mean(data[which(data$PAM50=="LumA" & !is.na(data[[var]])),][[var]])
   var.df$LUMA.pval <-     TwoGroups.ttest(data[Her2.ids,var],data[LumA.ids,var])$p.value
   
   # for Her2 vs LumB
-  # store result
-  var.df$LUMB <-          mean(data[which(data$PAM50=="LumB" & !is.na(data[[var]])),][[var]])
   var.df$LUMB.pval <-     TwoGroups.ttest(data[Her2.ids,var],data[LumB.ids,var])$p.value
+  
+  # descriptive stats
+  # mean
+  var.df$`HER2E(ref)` <-  mean(data[which(data$PAM50=="Her2" & !is.na(data[[var]])),][[var]])
+  var.df$LUMA <- mean(data[which(data$PAM50=="LumA" & !is.na(data[[var]])),][[var]])
+  var.df$LUMB <- mean(data[which(data$PAM50=="LumB" & !is.na(data[[var]])),][[var]])
+  # sd
+  var.df$`HER2E.%` <-  sd(data[which(data$PAM50=="Her2" & !is.na(data[[var]])),][[var]])
+  var.df$`LUMA.%` <- sd(data[which(data$PAM50=="LumA" & !is.na(data[[var]])),][[var]])
+  var.df$`LUMB.%` <- sd(data[which(data$PAM50=="LumB" & !is.na(data[[var]])),][[var]])
   
   return(var.df)
 }
@@ -215,12 +220,12 @@ unicox <- function(data,surv,title) {
     
     # Result
     res <- summary(main.pam50)
-    result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
+    #result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
 
     # forest 
     plot <- ggforest(main.pam50,fontsize = 2,data=data,main=title)
     
-    return(out <- list("plot" = plot, "result" = result))
+    return(out <- list("plot" = plot, "result" = res))
 }
 
 # function that created multivariate Cox proportional hazards model forest plot
@@ -232,12 +237,12 @@ mvcox <- function(data,surv,title) {
     
     # Result
     res <- summary(main.all)
-    result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
+    #result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
     
     # Plot forest 
     plot <- ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)
     
-    return(out <- list("plot" = plot, "result" = result))
+    return(out <- list("plot" = plot, "result" = res))
 }
 
 # function that creates KM plot for HER2p for specified OM
