@@ -154,39 +154,23 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
         pull(!!rlang::ensym(test.var))
     
     # test and output formatting
-    var_pair <- c(paste(g1,".",g2,sep=""),paste(g1,".",g3,sep=""))
-    pval <- c(var_ttest(dat1,dat2)$p.value, var_ttest(dat1,dat3)$p.value)
-    signif <- c(symnum(pval[1], corr = FALSE, na = FALSE, 
-                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1), 
-                       symbols = c("****", "***", "**", "*", "ns")),
-                symnum(pval[2], corr = FALSE, na = FALSE, 
-                       cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1), 
-                       symbols = c("****", "***", "**", "*", "ns")))
+    result <- c(paste(g1,".",g2,sep=""),
+                capture.output(var_ttest(dat1,dat2)),
+                paste(g1,".",g3,sep=""),
+                capture.output(var_ttest(dat1,dat3)))
     
-    return(data.frame(var_pair,pval,signif))
+    return(result)
 }
 
 # boxplot for 3 groups
-three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.pos, g3.sign, g3.col = "#34c6eb", g2.pos, g2.sign, g2.col = "#2176d5", ylim, xlab="PAM50 subtype", ylab, title, break.step=NULL) {
-    
-    # make color palette vector
-    colors <- c(g1.col, g2.col, g3.col)
-    names(colors) <- c(g1, g2, g3)
-    
-    # add optinal variable for breaks
-    if(is.null(break.step)) { 
-      break.step <- 1
-    }
+three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.col = "#34c6eb", g2.col = "#2176d5", xlab="PAM50 subtype", ylab, title, colors) {
     
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab(xlab) +
         ylab(ylab) +
-        coord_cartesian(ylim=ylim) +
         ggtitle(title) +
-        geom_signif(comparisons=list(c(g1, g2)), annotations = g2.sign, tip_length = 0.02, vjust=0.01, y_position = g2.pos, size = 2, textsize = 15) +
-        geom_signif(comparisons=list(c(g1, g3)), annotations = g3.sign, tip_length = 0.02, vjust=0.01, y_position = g3.pos, size = 2, textsize = 15) + 
         theme(axis.text.x = element_text(size = 30),
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
@@ -194,8 +178,8 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
               plot.title = element_text(size=25),
               legend.position = "none") +
         scale_fill_manual(values=colors) +
-        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) + # check that these are in the correct order
-        scale_y_continuous(breaks = seq(floor(ylim[1]), ceiling(ylim[2]), break.step))
+        scale_y_continuous(breaks = scales::breaks_pretty(10)) +
+        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
     
     return(plot)
 }
