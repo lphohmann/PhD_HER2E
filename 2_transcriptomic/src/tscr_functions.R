@@ -163,7 +163,7 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
 }
 
 # boxplot for 3 groups
-three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.col = "#34c6eb", g2.col = "#2176d5", xlab="PAM50 subtype", ylab, title, colors) {
+three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.col = "#34c6eb", g2.col = "#2176d5", xlab="PAM50 subtype", ylab, title, colors, ylim) {
     
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
@@ -179,8 +179,8 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
               legend.position = "none") +
         scale_fill_manual(values=colors) +
         scale_y_continuous(breaks = scales::breaks_pretty(10)) +
-        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) # check that these are in the correct order
-    
+        scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1))) + # check that these are in the correct order
+      coord_cartesian(ylim = ylim)
     return(plot)
 }
 

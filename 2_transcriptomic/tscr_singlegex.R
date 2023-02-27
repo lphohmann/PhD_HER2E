@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -107,6 +107,7 @@ plot.list <- append(plot.list, list(
                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                              c("Her2","LumA","LumB")),
                   ylab = "Expression (log2)", 
+                  ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3.5,3)},
                   title = substitute(paste(italic("ERBB2")," expression in PAM50 subtypes (ERpHER2n)")))))
   
 #ESR1------------------------------------------------------------------
@@ -133,6 +134,7 @@ plot.list <- append(plot.list, list(
                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                   c("Her2","LumA","LumB")),
                   ylab = "Expression (log2)", 
+                  ylim = if (cohort=="SCANB") {c(-4.5,3)} else {c(-2,2)},
                   title = substitute(paste(italic("ESR1")," expression in PAM50 subtypes (ERpHER2n)")))))
     
 #FGFR4-----------------------------------------------------------------
@@ -162,6 +164,7 @@ plot.list <- append(plot.list, list(
                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                   c("Her2","LumA","LumB")),
                   ylab = "Expression (log2)", 
+                  ylim = if (cohort=="SCANB") {c(-1,6.5)} else {c(-1.5,5)},
                   title = substitute(paste(italic("FGFR4")," expression in PAM50 subtypes (ERpHER2n)")))))
     
 #######################################################################
@@ -173,5 +176,6 @@ for (i in 1:length(plot.list)) {
     print(plot.list[[i]])
 }
 dev.off()
+
 # save text output
 writeLines(txt.out, txt.file)
