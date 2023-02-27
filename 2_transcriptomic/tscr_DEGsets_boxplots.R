@@ -8,7 +8,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -107,6 +107,13 @@ for (i in 1:length(pam50.DEGs)) {
                       test.var = geneID, 
                       g1 = "Her2", g2 = "LumA", g3 = "LumB")
     
+    title <- paste(
+      geneID," expression (LumA_pval=",
+      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
+      "; LumB_pval= ",
+      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
+      "; ERpHER2n)",sep = "")
+    
     # plot
     plot.list <- append(plot.list, list(
       three_boxplot(gex,
@@ -116,12 +123,7 @@ for (i in 1:length(pam50.DEGs)) {
                     colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                     c("Her2","LumA","LumB")),
                     ylab = "Expression (log2)", 
-                    title = paste(
-                      geneID," expression (LumA_pval=",
-                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
-                      "; LumB_pval= ",
-                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
-                      "; ERpHER2n)",sep = ""))))
+                    title = title)))
 }
 
 # save plots
@@ -150,45 +152,51 @@ top.DEGs <- DE.res %>%
     filter(abs(Her2.LumB.diff) >= 1.5) %>% 
     dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") %>% pull(Gene)
 
-# plot expression
-plot.list <- list()
-
-for (i in 1:length(top.DEGs)) {
-  geneID <- top.DEGs[i]
-  gex <- get_gex(geneID,gex.data,anno)
+if (length(top.DEGs) != 0) {
   
-  # base statistics
-  #get_stats(gex,"PAM50",geneID)
+  # plot expression
+  plot.list <- list()
+  
+  for (i in 1:length(top.DEGs)) {
+    geneID <- top.DEGs[i]
+    gex <- get_gex(geneID,gex.data,anno)
     
-  # test
-  res <- pair_ttest(gex, 
-                    group.var = "PAM50",
-                    test.var = geneID, 
-                    g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    # base statistics
+    #get_stats(gex,"PAM50",geneID)
+      
+    # test
+    res <- pair_ttest(gex, 
+                      group.var = "PAM50",
+                      test.var = geneID, 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    
+    title <- paste(
+      geneID," expression (LumA_pval=",
+      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
+      "; LumB_pval= ",
+      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
+      "; ERpHER2n)",sep = "")
+    
+    # plot
+    plot.list <- append(plot.list, list(
+        three_boxplot(gex,
+                      group.var = "PAM50",
+                      test.var = geneID,
+                      g1="Her2",g2="LumA",g3="LumB",
+                      colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                      c("Her2","LumA","LumB")),
+                      ylab = "Expression (log2)", 
+                      title = title)))
+  }
   
-  # plot
-  plot.list <- append(plot.list, list(
-      three_boxplot(gex,
-                    group.var = "PAM50",
-                    test.var = geneID,
-                    g1="Her2",g2="LumA",g3="LumB",
-                    colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
-                                    c("Her2","LumA","LumB")),
-                    ylab = "Expression (log2)", 
-                    title = paste(
-                      geneID," expression (LumA_pval=",
-                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
-                      "; LumB_pval= ",
-                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
-                      "; ERpHER2n)",sep = ""))))
+  # save plots
+  pdf(file = paste(output.path,cohort,"_HER2n_topDEGs_expression.pdf", sep=""), 
+      onefile = TRUE, width = 15, height = 15) 
+  
+  for (i in 1:length(plot.list)) {
+      print(plot.list[[i]])
+  }
+  
+  dev.off()
+
 }
-
-# save plots
-pdf(file = paste(output.path,cohort,"_HER2n_topDEGs_expression.pdf", sep=""), 
-    onefile = TRUE, width = 15, height = 15) 
-
-for (i in 1:length(plot.list)) {
-    print(plot.list[[i]])
-}
-
-dev.off()
