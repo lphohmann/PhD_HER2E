@@ -1,4 +1,4 @@
-# Script: Pathway enrichment analyses for different gene sets
+# Script: Plotting the expression of different gene sets (PAM50 and top DEGs)
 #TODO: 
 
 # empty environment
@@ -39,11 +39,7 @@ library(biomaRt)
 if (cohort=="SCANB") {
   
   # load annotation data and select subgroup data
-  anno <- as.data.frame(
-    read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
-    filter(Follow.up.cohort==TRUE) %>% 
-    filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(ER=="Positive" & HER2=="Negative") %>% 
+  anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
     dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
   
   # load gex data
@@ -64,9 +60,7 @@ if (cohort=="SCANB") {
   load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
   
   # extract relevant variables
-  anno <- anno %>% 
-    filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(grepl('ERpHER2n', ClinGroup)) %>% 
+  anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
     dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
   
   # load and select subgroup data
@@ -97,61 +91,39 @@ pam50.DEGs <- DEGs %>%
     filter(Gene %in% pam50.genes) %>% 
     pull(Gene)
 
-#-----------------------plot expression-------------------------------#
-
 # plot expression
 plot.list <- list()
 
-if (cohort == "SCANB") {
-    for (i in 1:length(pam50.DEGs)) {
-        geneID <- mart.res %>% 
-            filter(hgnc_symbol == pam50.DEGs[i]) %>% 
-            pull(ensembl_gene_id)
-        gex <- get_gex(geneID,gex.data,anno)
-        # base statistics
-        get_stats(gex,"PAM50",geneID)
-        # test
-        res <- pair_ttest(gex, 
-                          group.var = "PAM50",
-                          test.var = geneID, 
-                          g1 = "Her2", g2 = "LumA", g3 = "LumB")
-        # plot
-        plot.list <- append(plot.list, list(
-            three_boxplot(gex,
-                          group.var = "PAM50",
-                          test.var = geneID,
-                          g1="Her2",g2="LumA",g3="LumB",
-                          g3.pos = 5.5, g3.sign = res[2,3],
-                          g2.pos = 6.5, g2.sign = res[1,3],
-                          ylim = c(-7,7),
-                          ylab = "Expression (log2)", 
-                          title = paste(pam50.DEGs[i]," (",geneID,") expression in PAM50 subtypes (ERpHER2n;",cohort,")",sep = ""))))
-    }
-} else if (cohort == "METABRIC") {
+for (i in 1:length(pam50.DEGs)) {
     geneID <- pam50.DEGs[i]
-    for (i in 1:length(pam50.DEGs)) {
-        gex <- get_gex(geneID,gex.data,anno)
-        # base statistics
-        #get_stats(gex,"PAM50",pam50.DEGs[i])
-        # test
-        res <- pair_ttest(gex, 
-                          group.var = "PAM50",
-                          test.var = geneID, 
-                          g1 = "Her2", g2 = "LumA", g3 = "LumB")
-        # plot
-        plot.list <- append(plot.list, list(
-            three_boxplot(gex,
-                          group.var = "PAM50",
-                          test.var = geneID,
-                          g1="Her2",g2="LumA",g3="LumB",
-                          g3.pos = 6, g3.sign = res[2,3],
-                          g2.pos = 7, g2.sign = res[1,3],
-                          ylim = c(-8,8),
-                          ylab = "Expression (log2)", 
-                          title = substitute(paste(italic(geneID)," expression in PAM50 subtypes (ERpHER2n)")))))
-}
+    gex <- get_gex(geneID,gex.data,anno)
     
+    # base statistics
+    #get_stats(gex,"PAM50",geneID)
+    
+    # test
+    res <- pair_ttest(gex, 
+                      group.var = "PAM50",
+                      test.var = geneID, 
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+    
+    # plot
+    plot.list <- append(plot.list, list(
+      three_boxplot(gex,
+                    group.var = "PAM50",
+                    test.var = geneID,
+                    g1="Her2",g2="LumA",g3="LumB",
+                    colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                    c("Her2","LumA","LumB")),
+                    ylab = "Expression (log2)", 
+                    title = paste(
+                      geneID," expression (LumA_pval=",
+                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
+                      "; LumB_pval= ",
+                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
+                      "; ERpHER2n)",sep = ""))))
 }
+
 # save plots
 pdf(file = paste(output.path,cohort,"_HER2n_PAM50DEGs_expression.pdf", sep=""), 
     onefile = TRUE, width = 15, height = 15) 
@@ -170,7 +142,7 @@ dev.off()
 # DE.res <- loadRData(paste(data.path,"DE_results.RData",sep=""))
 # DE.res["FGF19",]
 
-# top DEGs (high difference in )
+# top DEGs (high difference)
 top.DEGs <- DE.res %>% 
     filter(Her2.LumA.padj <= 0.05) %>% 
     filter(Her2.LumB.padj <= 0.05) %>% 
@@ -178,42 +150,37 @@ top.DEGs <- DE.res %>%
     filter(abs(Her2.LumB.diff) >= 1.5) %>% 
     dplyr::select(Her2.LumA.de, Her2.LumA.padj, Her2.LumB.de, Her2.LumB.padj) %>% rownames_to_column("Gene") %>% pull(Gene)
 
-for (i in 1:length(top.DEGs)) {
-    geneID <- mart.res %>% 
-        filter(ensembl_gene_id == top.DEGs[i]) %>% 
-        pull(hgnc_symbol)
-    print(geneID)
-}
-
-#-----------------------plot expression-------------------------------#
-
 # plot expression
 plot.list <- list()
 
 for (i in 1:length(top.DEGs)) {
-    hgncID <- mart.res %>% 
-        filter(ensembl_gene_id == top.DEGs[i]) %>% 
-        pull(hgnc_symbol)
-    geneID <- top.DEGs[i]
-    gex <- get_gex(geneID,gex.data,anno)
-    # base statistics
-    get_stats(gex,"PAM50",geneID)
-    # test
-    res <- pair_ttest(gex, 
-                      group.var = "PAM50",
-                      test.var = geneID, 
-                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
-    # plot
-    plot.list <- append(plot.list, list(
-        three_boxplot(gex,
-                      group.var = "PAM50",
-                      test.var = geneID,
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 5.5, g3.sign = res[2,3],
-                      g2.pos = 6.5, g2.sign = res[1,3],
-                      ylim = c(-7,7),
-                      ylab = "Expression (log2)", 
-                      title = paste(hgncID," (",geneID,") expression in PAM50 subtypes (ERpHER2n;",cohort,")",sep = ""))))
+  geneID <- top.DEGs[i]
+  gex <- get_gex(geneID,gex.data,anno)
+  
+  # base statistics
+  #get_stats(gex,"PAM50",geneID)
+    
+  # test
+  res <- pair_ttest(gex, 
+                    group.var = "PAM50",
+                    test.var = geneID, 
+                    g1 = "Her2", g2 = "LumA", g3 = "LumB")
+  
+  # plot
+  plot.list <- append(plot.list, list(
+      three_boxplot(gex,
+                    group.var = "PAM50",
+                    test.var = geneID,
+                    g1="Her2",g2="LumA",g3="LumB",
+                    colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                    c("Her2","LumA","LumB")),
+                    ylab = "Expression (log2)", 
+                    title = paste(
+                      geneID," expression (LumA_pval=",
+                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
+                      "; LumB_pval= ",
+                      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
+                      "; ERpHER2n)",sep = ""))))
 }
 
 # save plots
