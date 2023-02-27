@@ -20,6 +20,12 @@ dir.create(output.path)
 data.path <- paste("data/",cohort,"/2_transcriptomic/processed/",sep="")
 dir.create(data.path)
 
+# output filenames
+plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
+plot.file <- paste(output.path,cohort,"_HER2n_metagenes_plots.pdf", sep="")
+txt.out <- c() # object to store text output
+txt.file <- paste(output.path,cohort,"_HER2n_metagenes_text.txt", sep="")
+
 #packages
 source("scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
@@ -52,13 +58,8 @@ metagene.def <- as.data.frame(read_excel(
 if (cohort=="SCANB") {
     
     # load annotation data and select subgroup data
-    anno <- loadRData("./data/SCANB/1_clinical/raw/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data.RData") %>% 
-      filter(Follow.up.cohort==TRUE) %>% 
-      filter(fuV8==TRUE) %>% 
-      filter(ER=="Positive") %>% 
-      filter(HER2=="Negative") %>% 
-      filter(NCN.PAM50 %in% c("LumA","LumB","Her2")) %>% 
-      dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+    anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
+    dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
     
     # load gex data
     gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "EntrezGene") %>%
@@ -79,9 +80,7 @@ if (cohort=="SCANB") {
   load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
   
   # extract relevant variables
-  anno <- anno %>% 
-    filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(grepl('ERpHER2n', ClinGroup)) %>% 
+  anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
     dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
   
   # load and select subgroup data
@@ -168,32 +167,37 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 # 5. statistics for metagene scores between groups
 #######################################################################
 
-# get pvalues
-mg.pvals <- data.frame()
+# get pvalues and save test output to txt file
+mg.pvals <- data.frame() # store pvals
 for(i in 1:ncol(metagene.scores)) {
-    mg <- colnames(metagene.scores)[i]
-    #print(mg)
-    res <- pair_ttest(metagene.scores,
-               anno = anno,
-               group.var = "PAM50",
-               test.var = mg, 
-               g1 = "Her2", g2 = "LumA", g3 = "LumB")
-    #print(res)
-    mg.pvals <- rbind(mg.pvals, c(mg,res$pval[1],res$signif[1],res$pval[2],res$signif[2]))
+  # save output to txt file
+  mg <- colnames(metagene.scores)[i]
+  txt.label <- paste(mg, " metagene t-test results",sep="")
+  res <- pair_ttest(metagene.scores,
+                    anno = anno,
+                    group.var = "PAM50",
+                    test.var = mg, 
+                    g1 = "Her2", g2 = "LumA", g3 = "LumB")
+  txt.out <- append(txt.out,c(txt.label,res))
+  
+  # store pvals
+  mg.pvals <- rbind(mg.pvals, 
+                    c(mg,
+                      as.numeric(
+                        gsub('^.{2}', '', sub(
+                          '.+p-value (.+)', '\\1', res[6]))),
+                      as.numeric(
+                        gsub('^.{2}', '', sub(
+                          '.+p-value (.+)', '\\1', res[19])))))
 }
-
 
 # name column and set rownames
 mg.pvals <- mg.pvals %>% 
   data.table::setnames(., old = colnames(mg.pvals),
                        new = c("metagene",
-                       paste(res$var_pair[1],".pval",sep=""),
-                       paste(res$var_pair[1],".symb",sep=""),
-                       paste(res$var_pair[2],".pval",sep=""),
-                       paste(res$var_pair[2],".symb",sep=""))) %>% 
+                       paste(res[1],".pval",sep=""),
+                       paste(res[14],".pval",sep=""))) %>% 
   column_to_rownames(var="metagene")
-
-#mg.pvals <- mg.pvals %>% data.table::setnames(., old = colnames(mg.pvals),new = c("metagene", "Her2.LumA.pval", "Her2.LumA.signif", "Her2.LumB.pval", "Her2.LumB.signif")) %>% column_to_rownames(var="metagene")
 
 # make combined data and anno object for plotting
 mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","PAM50")],by="sampleID")
@@ -206,200 +210,104 @@ save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
 #######################################################################
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001   ns not significant
 
-# list to save plots
-plot.list <- list()
-
 # SCANB
-if (cohort=="SCANB") {
-        
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+              group.var = "PAM50",
+              test.var = "Basal",
+              g1="Her2",g2="LumA",g3="LumB",
+              colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                              c("Her2","LumA","LumB")),
+              ylim = if (cohort=="SCANB") {c(-1.5,3.5)} else {c(-1.5,2.5)},
+              ylab = "Metagene score", 
+              title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
+
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
                   group.var = "PAM50",
-                  test.var = "Basal",
+                  test.var = "Early_response",
                   g1="Her2",g2="LumA",g3="LumB",
-                  g3.pos = 1, g3.sign = mg.pvals["Basal","Her2.LumB.symb"],
-                  g2.pos = 2.9, g2.sign = mg.pvals["Basal","Her2.LumA.symb"],
-                  ylim = c(-1.5,4),
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2.5,4.2)} else {c(-2.5,3)},
                   ylab = "Metagene score", 
-                  title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Early_response",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Early_response","Her2.LumB.symb"],
-                      g2.pos = 3.6, g2.sign = mg.pvals["Early_response","Her2.LumA.symb"],
-                      ylim = c(-2,4.6),
-                      ylab = "Metagene score", 
-                      title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "IR",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 4, g3.sign = mg.pvals["IR","Her2.LumB.symb"],
-                      g2.pos = 4.6, g2.sign = mg.pvals["IR","Her2.LumA.symb"],
-                      ylim = c(-2,5.6),
-                      ylab = "Metagene score", 
-                      title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Lipid",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Lipid","Her2.LumB.symb"],
-                      g2.pos = 3.1, g2.sign = mg.pvals["Lipid","Her2.LumA.symb"],
-                      ylim = c(-1.5,4),
-                      ylab = "Metagene score", 
-                      title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Mitotic_checkpoint",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3.7, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.symb"],
-                      g2.pos = 4.2, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.symb"],
-                      ylim = c(-2,5),
-                      ylab = "Metagene score", 
-                      title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Mitotic_progression",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3.6, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.symb"],
-                      g2.pos = 4.1, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.symb"],
-                      ylim = c(-2,5),
-                      ylab = "Metagene score", 
-                      title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "SR",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 1.8, g3.sign = mg.pvals["SR","Her2.LumB.symb"],
-                      g2.pos = 2.3, g2.sign = mg.pvals["SR","Her2.LumA.symb"],
-                      ylim = c(-1.5,4),
-                      ylab = "Metagene score", 
-                      title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Stroma",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.symb"],
-                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.symb"],
-                      ylim = c(-3.5,3.5),
-                      ylab = "Metagene score", 
-                      title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
+                  title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
 
-#-----------------------------------------------------------------------#
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "IR",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2,5)} else {c(-2,3.5)},
+                  ylab = "Metagene score", 
+                  title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
+  
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "Lipid",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2,3.5)} else {c(-1.5,3)},
+                  ylab = "Metagene score", 
+                  title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
 
-# METABRIC
-} else if (cohort=="METABRIC") {
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "Mitotic_checkpoint",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2,4.5)} else {c(-2,2.5)},
+                  ylab = "Metagene score", 
+                  title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
     
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Basal",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 0.8, g3.sign = mg.pvals["Basal","Her2.LumB.symb"],
-                      g2.pos = 2.1, g2.sign = mg.pvals["Basal","Her2.LumA.symb"],
-                      ylim = c(-1.5,3),
-                      ylab = "Metagene score", 
-                      title = "Basal metagene scores in PAM50 subtypes (ERpHER2n)")))
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "Mitotic_progression",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2,4.5)} else {c(-2,3)},
+                  ylab = "Metagene score", 
+                  title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
     
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Early_response",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Early_response","Her2.LumB.symb"],
-                      g2.pos = 2.7, g2.sign = mg.pvals["Early_response","Her2.LumA.symb"],
-                      ylim = c(-2,4),
-                      ylab = "Metagene score", 
-                      title = "Early_response metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "IR",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 3, g3.sign = mg.pvals["IR","Her2.LumB.symb"],
-                      g2.pos = 3.6, g2.sign = mg.pvals["IR","Her2.LumA.symb"],
-                      ylim = c(-2,4.6),
-                      ylab = "Metagene score", 
-                      title = "IR metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Lipid",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Lipid","Her2.LumB.symb"],
-                      g2.pos = 3.3, g2.sign = mg.pvals["Lipid","Her2.LumA.symb"],
-                      ylim = c(-1.5,4),
-                      ylab = "Metagene score", 
-                      title = "Lipid metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Mitotic_checkpoint",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.2, g3.sign = mg.pvals["Mitotic_checkpoint","Her2.LumB.symb"],
-                      g2.pos = 2.7, g2.sign = mg.pvals["Mitotic_checkpoint","Her2.LumA.symb"],
-                      ylim = c(-2,4),
-                      ylab = "Metagene score", 
-                      title = "Mitotic_checkpoint metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Mitotic_progression",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.5, g3.sign = mg.pvals["Mitotic_progression","Her2.LumB.symb"],
-                      g2.pos = 3, g2.sign = mg.pvals["Mitotic_progression","Her2.LumA.symb"],
-                      ylim = c(-2,4),
-                      ylab = "Metagene score", 
-                      title = "Mitotic_progression metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "SR",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2.1, g3.sign = mg.pvals["SR","Her2.LumB.symb"],
-                      g2.pos = 2.6, g2.sign = mg.pvals["SR","Her2.LumA.symb"],
-                      ylim = c(-1.5,3.5),
-                      ylab = "Metagene score", 
-                      title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
-    
-    plot.list <- append(plot.list, list(
-        three_boxplot(mg.anno,
-                      group.var = "PAM50",
-                      test.var = "Stroma",
-                      g1="Her2",g2="LumA",g3="LumB",
-                      g3.pos = 2, g3.sign = mg.pvals["Stroma","Her2.LumB.symb"],
-                      g2.pos = 2.5, g2.sign = mg.pvals["Stroma","Her2.LumA.symb"],
-                      ylim = c(-3.5,3.5),
-                      ylab = "Metagene score", 
-                      title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "SR",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-2.5,2.5)} else {c(-1.5,2)},
+                  ylab = "Metagene score", 
+                  title = "SR metagene scores in PAM50 subtypes (ERpHER2n)")))
+  
+plot.list <- append(plot.list, list(
+    three_boxplot(mg.anno,
+                  group.var = "PAM50",
+                  test.var = "Stroma",
+                  g1="Her2",g2="LumA",g3="LumB",
+                  colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                  c("Her2","LumA","LumB")),
+                  ylim = if (cohort=="SCANB") {c(-3.5,3)} else {c(-3,3)},
+                  ylab = "Metagene score", 
+                  title = "Stroma metagene scores in PAM50 subtypes (ERpHER2n)")))
 
-}
-#plot
-pdf(file = paste(output.path,cohort,"_HER2n_metagenes.pdf", sep=""), 
+############################################################################
+
+# save plots
+pdf(file = plot.file, 
     onefile = TRUE, width = 15, height = 15) 
-
 for (i in 1:length(plot.list)) {
-    print(plot.list[[i]])
+  print(plot.list[[i]])
 }
-
 dev.off()
+
+# save text output
+writeLines(txt.out, txt.file)
