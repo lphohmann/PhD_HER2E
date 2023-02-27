@@ -41,12 +41,8 @@ library(biomaRt)
 if (cohort=="SCANB") {
     
     # load annotation data and select subgroup data
-    anno <- as.data.frame(
-        read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
-        filter(Follow.up.cohort==TRUE) %>% 
-        filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(ER=="Positive" & HER2=="Negative") %>% 
-        dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+    anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
+      dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
     
     # load gex data
     gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "Gene.Name") %>% 
@@ -66,10 +62,8 @@ if (cohort=="SCANB") {
     load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
     
     # extract relevant variables
-    anno <- anno %>% 
-        filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-        filter(grepl('ERpHER2n', ClinGroup)) %>% 
-        dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+    anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
+      dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
     
     # load and select subgroup data
     gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
