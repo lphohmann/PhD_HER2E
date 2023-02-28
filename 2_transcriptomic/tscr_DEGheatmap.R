@@ -20,12 +20,18 @@ dir.create(output.path)
 data.path <- paste("data/",cohort,"/2_transcriptomic/processed/",sep="")
 dir.create(data.path)
 
+# plot
+plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
+plot.file <- paste(output.path,cohort,"_HER2n_heatmaps.pdf",sep = "")
+
 #packages
 source("scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(matrixStats)
 library(pheatmap)
+#BiocManager::install("ComplexHeatmap")
+library(ComplexHeatmap)
 #library(Hmisc)
 library(VennDiagram)
 library(readxl)
@@ -43,11 +49,7 @@ library(amap)
 if (cohort=="SCANB") {
   
   # load annotation data and select subgroup data
-  anno <- as.data.frame(
-    read_excel("data/SCANB/1_clinical/raw/NPJ_release.xlsx")) %>%
-    filter(Follow.up.cohort==TRUE) %>% 
-    filter(NCN.PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(ER=="Positive" & HER2=="Negative") %>% 
+  anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
     dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
   
   # load gex data
@@ -65,12 +67,7 @@ if (cohort=="SCANB") {
 } else if (cohort=="METABRIC") {
   
   # load annotation data
-  load("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
-  
-  # extract relevant variables
-  anno <- anno %>% 
-    filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-    filter(grepl('ERpHER2n', ClinGroup)) %>% 
+  anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
     dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
   
   # load and select subgroup data
@@ -183,7 +180,7 @@ final.hm.anno <- data.frame(
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot1 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -197,9 +194,9 @@ pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              final.hm.anno[,
                            c("Stroma","SR","Mitotic_checkpoint",
                              "Lipid","IR","Basal","NHG","PAM50")], 
-         annotation_colors=my_colour,breaks=breaksList,
-         filename= paste(output.path,cohort,"_coretop_heatmap.pdf",sep = ""))
+         annotation_colors=my_colour,breaks=breaksList) #,filename= paste(output.path,cohort,"_coretop_heatmap.pdf",sep = "")
 
+plot.list <- append(plot.list, list(plot1))
 
 #######################################################################
 # Heatmap 2: HER2E vs. LumA
@@ -265,7 +262,7 @@ final.hm.anno <- data.frame(
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot2 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -279,8 +276,9 @@ pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              final.hm.anno[,
                            c("Stroma","SR","Mitotic_checkpoint",
                              "Lipid","IR","Basal","NHG","PAM50")], 
-         annotation_colors=my_colour,breaks=breaksList,
-         filename= paste(output.path,cohort,"_LUMA_heatmap.pdf",sep = ""))
+         annotation_colors=my_colour,breaks=breaksList) #,filename= paste(output.path,cohort,"_LUMA_heatmap.pdf",sep = ""))
+
+plot.list <- append(plot.list, list(plot2))
 
 #######################################################################
 # Heatmap 3: HER2E vs. LumB
@@ -346,7 +344,7 @@ final.hm.anno <- data.frame(
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot3 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -360,6 +358,20 @@ pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              final.hm.anno[,
                            c("Stroma","SR","Mitotic_checkpoint",
                              "Lipid","IR","Basal","NHG","PAM50")], 
-         annotation_colors=my_colour,breaks=breaksList,
-         filename= paste(output.path,cohort,"_LUMB_heatmap.pdf",sep = ""))
+         annotation_colors=my_colour,breaks=breaksList) # ,filename= paste(output.path,cohort,"_LUMB_heatmap.pdf",sep = ""))
 
+plot.list <- append(plot.list, list(plot3))
+
+#######################################################################
+#######################################################################
+
+# save plots
+pdf(file = plot.file, onefile = TRUE) 
+
+for (i in 1:length(plot.list)) {
+  grid::grid.newpage()
+  grid::grid.draw(plot.list[[i]]$gtable)
+  #print(plot.list[[i]])
+}
+
+dev.off()
