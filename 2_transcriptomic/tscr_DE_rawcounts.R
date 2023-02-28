@@ -1,4 +1,11 @@
 # Script: Differential gene expression based on raw counts in SCANB 
+
+# alternative: use edgeR normalization and then Mann whitney U test (https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02648-4)
+
+
+
+
+
 # use DESeq.
 #BiocManager::install("DESeq2")
 library(DESeq2)
