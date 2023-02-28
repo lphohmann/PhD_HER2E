@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -68,7 +68,7 @@ if (cohort=="SCANB") {
   
   # load annotation data
   anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
-    dplyr::rename(sampleID=METABRIC_ID) # rename to match SCANB variables
+    dplyr::rename(sampleID=METABRIC_ID,NHG=Grade) # rename to match SCANB variables
   
   # load and select subgroup data
   gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
@@ -146,6 +146,8 @@ top.gex <- gex.data %>%
 # load metagene scores for hm annotation
 load(paste("./data/",cohort,"/2_transcriptomic/processed/mg_anno.RData",sep = ""))
 
+mg.anno.list[[1]]
+anno[c("sampleID","NHG")]
 # create hm annotaiton object
 hm.anno <- merge(
     mg.anno.list[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
