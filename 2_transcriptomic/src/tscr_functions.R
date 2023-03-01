@@ -134,7 +134,7 @@ var_ttest <- function(dat1,dat2) {
 }
 
 # function for pairwise ttests (g1vsg2,g1vsg3)
-pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
+pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3,string.output=TRUE) {
     
     # if anno data was provided it means that the data does not contain the sample pam50 annotations and is assumed to have the structure(rownames=sampleID; columns=data). The anno object does have to have the structure of sampleID as column, PAM50 (grouping var) as column
     if(!is.null(anno)) { 
@@ -154,23 +154,28 @@ pair_ttest <- function(data,anno=NULL,group.var,test.var,g1,g2,g3) {
         pull(!!rlang::ensym(test.var))
     
     # test and output formatting
-    result <- c(paste(g1,".",g2,sep=""),
-                capture.output(var_ttest(dat1,dat2)),
-                paste(g1,".",g3,sep=""),
-                capture.output(var_ttest(dat1,dat3)))
+    if(string.output==TRUE) {
+      result <- c(paste(g1,".",g2,sep=""),
+                  capture.output(var_ttest(dat1,dat2)),
+                  paste(g1,".",g3,sep=""),
+                  capture.output(var_ttest(dat1,dat3)))
+    } else {
+      result <- list(
+        g1.g2.res=list(var_ttest(dat1,dat2)),
+        g1.g3.res=list(var_ttest(dat1,dat3)))
+    }
     
     return(result)
 }
 
 # boxplot for 3 groups
-three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.col = "#34c6eb", g2.col = "#2176d5", xlab="PAM50 subtype", ylab, title, colors, ylim=NULL) {
+three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334eb", g3.col = "#34c6eb", g2.col = "#2176d5", xlab="PAM50 subtype", ylab, title, colors, ylim=NULL, subtitle=NULL) {
   
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
         xlab(xlab) +
         ylab(ylab) +
-        ggtitle(title) +
         theme(axis.text.x = element_text(size = 30),
               axis.title.x = element_text(size = 35),
               axis.text.y = element_text(size = 30),
@@ -183,6 +188,12 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
     if (!is.null(ylim)) {
       plot <- plot + coord_cartesian(ylim = ylim)
     } 
+    
+    if (!is.null(subtitle)) {
+      plot <- plot + ggtitle(title,subtitle=subtitle)
+    } else {
+      plot <- plot + ggtitle(title)
+    }
     
     return(plot)
 }

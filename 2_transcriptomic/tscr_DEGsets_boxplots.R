@@ -8,7 +8,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -105,14 +105,16 @@ for (i in 1:length(pam50.DEGs)) {
     res <- pair_ttest(gex, 
                       group.var = "PAM50",
                       test.var = geneID, 
-                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB",
+                      string.output = FALSE)
     
     title <- paste(
-      geneID," expression (LumA_pval=",
-      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
-      "; LumB_pval= ",
-      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
-      "; ERpHER2n)",sep = "")
+      geneID," expression (ERpHER2n)",sep = "")
+    
+    subtitle <- paste(
+      "LumA_pval=",res$g1.g2.res[[1]]$p.value,
+      "; LumB_pval= ",res$g1.g3.res[[1]]$p.value,
+      sep = "")
     
     # plot
     plot.list <- append(plot.list, list(
@@ -123,7 +125,8 @@ for (i in 1:length(pam50.DEGs)) {
                     colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                     c("Her2","LumA","LumB")),
                     ylab = "Expression (log2)", 
-                    title = title)))
+                    title = title,
+                    subtitle=subtitle)))
 }
 
 # save plots
@@ -168,14 +171,16 @@ if (length(top.DEGs) != 0) {
     res <- pair_ttest(gex, 
                       group.var = "PAM50",
                       test.var = geneID, 
-                      g1 = "Her2", g2 = "LumA", g3 = "LumB")
+                      g1 = "Her2", g2 = "LumA", g3 = "LumB",
+                      string.output = FALSE)
     
     title <- paste(
-      geneID," expression (LumA_pval=",
-      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[6]))),
-      "; LumB_pval= ",
-      as.numeric(gsub('^.{2}', '', sub('.+p-value (.+)', '\\1', res[19]))),
-      "; ERpHER2n)",sep = "")
+      geneID," expression (ERpHER2n)",sep = "")
+    
+    subtitle <- paste(
+      "LumA_pval=",res$g1.g2.res[[1]]$p.value,
+      "; LumB_pval= ",res$g1.g3.res[[1]]$p.value,
+      sep = "")
     
     # plot
     plot.list <- append(plot.list, list(
@@ -186,7 +191,8 @@ if (length(top.DEGs) != 0) {
                       colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                       c("Her2","LumA","LumB")),
                       ylab = "Expression (log2)", 
-                      title = title)))
+                      title = title,
+                      subtitle = subtitle)))
   }
   
   # save plots
