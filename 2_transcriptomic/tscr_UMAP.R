@@ -21,17 +21,13 @@ dir.create(data.path)
 
 # plot
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_heatmaps.pdf",sep = "")
+plot.file <- paste(output.path,cohort,"_HER2n_umap.pdf",sep = "")
 
 #packages
 source("scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(matrixStats)
-library(pheatmap)
-#BiocManager::install("ComplexHeatmap")
-library(ComplexHeatmap)
-#library(Hmisc)
 library(VennDiagram)
 library(readxl)
 library(ggfortify)
@@ -124,12 +120,119 @@ top.gex <- gex.data %>%
 top.gex <- as.data.frame(t(top.gex)) %>% rownames_to_column(var="sampleID")
 top.umap.gex <- merge(top.gex,anno[c("PAM50","sampleID")],by="sampleID") %>% column_to_rownames(var="sampleID") 
 
+top.umap.gex$PAM50 <- factor(top.umap.gex$PAM50,levels = c("LumA","LumB","Her2"))
+
 # run umap
-umap <- umap(top.umap.gex[1:ncol(top.umap.gex)-1])
+umap <- umap(top.umap.gex[1:ncol(top.umap.gex)-1],n_neighbors=50)
 df <- data.frame(x = umap$layout[,1],
                  y = umap$layout[,2],
                  PAM50 = top.umap.gex["PAM50"])
 
 # plot
-ggplot(df, aes(x, y, colour = PAM50)) +
-  geom_point()
+plot <- ggplot(df %>% arrange(PAM50), aes(x, y, colour = PAM50)) + #,order=
+  geom_point(alpha=0.7, size=2.5) +
+  theme(axis.text.x = element_text(size = 30),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size = 30),
+        axis.title.y = element_text(size = 35),
+        plot.title = element_text(size=25)) +
+  scale_color_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                    c("Her2","LumA","LumB"))) +
+  ggtitle(paste("UMAP based on top core DEGs (n genes=",ncol(top.umap.gex)-1,"; ",cohort,")",sep=""))
+
+# plot
+plot.list <- append(plot.list, list(plot))
+
+#######################################################################
+# UMAP with all core DEGs
+#######################################################################
+
+# define DEG set
+DEGs.scanb <- DE.res.scanb %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% pull(Gene)
+
+DEGs.metabric <- DE.res.metabric %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% pull(Gene) 
+
+# core gex
+DEGs.core <- intersect(DEGs.scanb,DEGs.metabric)
+
+# get gex of selected genes
+deg.gex <- gex.data %>% 
+  rownames_to_column("Gene") %>% 
+  filter(Gene %in% DEGs.core) %>% 
+  column_to_rownames(var="Gene") 
+
+#---------------------------------------------------------------------#
+
+# merge to one df to have pam50 annotation for each sample in the right order
+deg.gex <- as.data.frame(t(deg.gex)) %>% rownames_to_column(var="sampleID")
+umap.gex <- merge(deg.gex,anno[c("PAM50","sampleID")],by="sampleID") %>% column_to_rownames(var="sampleID") 
+
+umap.gex$PAM50 <- factor(umap.gex$PAM50,levels = c("LumA","LumB","Her2"))
+
+# run umap
+umap <- umap(umap.gex[1:ncol(umap.gex)-1],n_neighbors=50)
+df <- data.frame(x = umap$layout[,1],
+                 y = umap$layout[,2],
+                 PAM50 = umap.gex["PAM50"])
+
+# plot
+plot <- ggplot(df %>% arrange(PAM50), aes(x, y, colour = PAM50)) + #,order=
+  geom_point(alpha=0.7, size=2.5) +
+  theme(axis.text.x = element_text(size = 30),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size = 30),
+        axis.title.y = element_text(size = 35),
+        plot.title = element_text(size=25)) +
+  scale_color_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                     c("Her2","LumA","LumB"))) +
+  ggtitle(paste("UMAP based on core DEGs (n genes=",ncol(umap.gex)-1,"; ",cohort,")",sep=""))
+
+# plot
+plot.list <- append(plot.list, list(plot))
+
+#######################################################################
+# UMAP with all genes
+#######################################################################
+
+# merge to one df to have pam50 annotation for each sample in the right order
+all.gex <- as.data.frame(t(gex.data)) %>% rownames_to_column(var="sampleID")
+umap.gex <- merge(all.gex,anno[c("PAM50","sampleID")],by="sampleID") %>% column_to_rownames(var="sampleID") 
+
+umap.gex$PAM50 <- factor(umap.gex$PAM50,levels = c("LumA","LumB","Her2"))
+
+# run umap
+umap <- umap(umap.gex[1:ncol(umap.gex)-1],n_neighbors=50)
+df <- data.frame(x = umap$layout[,1],
+                 y = umap$layout[,2],
+                 PAM50 = umap.gex["PAM50"])
+
+# plot
+plot <- ggplot(df %>% arrange(PAM50), aes(x, y, colour = PAM50)) + #,order=
+  geom_point(alpha=0.7, size=2.5) +
+  theme(axis.text.x = element_text(size = 30),
+        axis.title.x = element_text(size = 35),
+        axis.text.y = element_text(size = 30),
+        axis.title.y = element_text(size = 35),
+        plot.title = element_text(size=25)) +
+  scale_color_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                     c("Her2","LumA","LumB"))) +
+  ggtitle(paste("UMAP based on all genes (n genes=",ncol(umap.gex)-1,"; ",cohort,")",sep=""))
+
+# plot
+plot.list <- append(plot.list, list(plot))
+
+#######################################################################
+
+# save plots
+pdf(file = plot.file, 
+    onefile = TRUE, width = 14.8, height = 10.5) 
+for (i in 1:length(plot.list)) {
+  print(plot.list[[i]])
+}
+dev.off()
