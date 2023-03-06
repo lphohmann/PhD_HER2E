@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -69,7 +69,8 @@ if (cohort=="SCANB") {
   # load and select subgroup data
   gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
     dplyr::select(any_of(anno$sampleID)) %>% 
-    mutate_all(function(x) as.numeric(x))
+    mutate_all(function(x) as.numeric(x)) %>% 
+    select_if(~ !any(is.na(.))) 
   
   # exclude samples from anno without associated gex data
   anno <- anno %>% 
