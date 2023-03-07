@@ -43,14 +43,50 @@ corr.data <- loadRData("./data/SCANB/1_clinical/raw/SampleSet_WhoAmI_PAM50_n6233
 
 # filter against my summary object scanb
 anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
-  dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50)
+  dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
+  filter(PAM50=="Her2")
 
 corr.data <- corr.data %>% filter(sampleID %in% anno$sampleID)
 
+setdiff(anno$sampleID,corr.data$sampleID) # 5 samples missing
+#View(head(corr.data))
 
+#######################################################################
+# Plot
+#######################################################################
 
+# which pam50 subtypes to check correlations for
+pam50.subtypes <- c("meanBasal","meanLumA","meanLumB")
 
+for (i in 1:3) {
+  
+  # select data 
+  plot.data <- corr.data[c("majoritySecondBestClass","meanHer2",pam50.subtypes[i])]
 
-View(head(corr.data))
+  # plot
+  plot.list <- append(plot.list,list(
+    ggplot(plot.data,aes(y=meanHer2, x=!!sym(pam50.subtypes[i]))) + #,color=majoritySecondBestClass
+      geom_point(aes(size=2.5)) +
+      geom_abline() +
+      ylab("Her2 correlation") +
+      xlab(paste(gsub('^.{4}', '', pam50.subtypes[i])," correlation",sep="")) +
+      ggtitle(paste(
+        "PAM50 centroid correlations (PAM50 class: HER2E (n=",nrow(plot.data),")",sep="")) +
+      theme(plot.title = element_text(size = 25),
+            axis.text.x = element_text(size = 20),
+            axis.title.x = element_text(size = 25),
+            axis.text.y = element_text(size = 20),
+            axis.title.y = element_text(size = 25),
+            legend.position = "none")))
+}
 
+# save plots
+pdf(file = plot.file, 
+    onefile = TRUE, width = 10, height = 10) 
+
+for (i in 1:length(plot.list)) {
+  print(plot.list[[i]])
+}
+
+dev.off()
 
