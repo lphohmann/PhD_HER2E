@@ -47,7 +47,7 @@ if (cohort=="SCANB") {
   # load annotation data and select subgroup data
   anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
     dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
-    mutate(Point.size = ifelse(PAM50=="Her2",9,6)) # add point size for plotting
+    mutate(Point.size = ifelse(PAM50=="Her2",5,2)) # add point size for plotting
   
   # load gex data
   gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "Gene.Name") %>% 
@@ -66,7 +66,7 @@ if (cohort=="SCANB") {
   # load annotation data
   anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
     dplyr::rename(sampleID=METABRIC_ID,NHG=Grade) %>% # rename to match SCANB variables
-    mutate(Point.size = ifelse(PAM50=="Her2",9,6)) # add point size for plotting
+    mutate(Point.size = ifelse(PAM50=="Her2",5,2)) # add point size for plotting
   
   # load and select subgroup data
   gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
