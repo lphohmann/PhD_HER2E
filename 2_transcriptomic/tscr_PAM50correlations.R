@@ -39,7 +39,7 @@ library(janitor)
 #######################################################################
 
 # load data
-corr.data <- loadRData("./data/SCANB/1_clinical/raw/SampleSet_WhoAmI_PAM50_n6233_Rel4_with_PAM50correlations_NoUnclassified.RData") %>% rename(sampleID=rba)
+corr.data <- loadRData("./data/SCANB/1_clinical/raw/SampleSet_WhoAmI_PAM50_n6233_Rel4_with_PAM50correlations_NoUnclassified.RData") %>% dplyr::rename(sampleID=rba)
 
 # filter against my summary object scanb
 anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
@@ -68,6 +68,8 @@ for (i in 1:3) {
     ggplot(plot.data,aes(y=meanHer2, x=!!sym(pam50.subtypes[i]))) + #,color=majoritySecondBestClass
       geom_point(aes(size=2.5)) +
       geom_abline() +
+      ylim(c(0,1)) +
+      xlim(c(-1,1)) +
       ylab("Her2 correlation") +
       xlab(paste(gsub('^.{4}', '', pam50.subtypes[i])," correlation",sep="")) +
       ggtitle(paste(
