@@ -39,17 +39,17 @@ library(janitor)
 #######################################################################
 
 # load data
-corr.data <- loadRData("./data/SCANB/1_clinical/raw/SampleSet_WhoAmI_PAM50_n6233_Rel4_with_PAM50correlations_NoUnclassified.RData") %>% dplyr::rename(sampleID=rba)
+corr.data <- loadRData("./data/SCANB/1_clinical/raw/pam50ann_correlations_summarizedByMean_REL4.RData") %>% 
+  dplyr::rename(sampleID=Assay)
 
 # filter against my summary object scanb
 anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
   dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
   filter(PAM50=="Her2")
 
-corr.data <- corr.data %>% filter(sampleID %in% anno$sampleID)
-
-setdiff(anno$sampleID,corr.data$sampleID) # 5 samples missing
-#View(head(corr.data))
+corr.data <- corr.data %>% 
+  filter(sampleID %in% anno$sampleID) %>% 
+  distinct(sampleID,.keep_all=TRUE)
 
 #######################################################################
 # Plot
@@ -61,11 +61,11 @@ pam50.subtypes <- c("meanBasal","meanLumA","meanLumB")
 for (i in 1:3) {
   
   # select data 
-  plot.data <- corr.data[c("majoritySecondBestClass","meanHer2",pam50.subtypes[i])]
+  plot.data <- corr.data[c("majoritySecondBest","meanHer2",pam50.subtypes[i])]
 
   # plot
   plot.list <- append(plot.list,list(
-    ggplot(plot.data,aes(y=meanHer2, x=!!sym(pam50.subtypes[i]))) + #,color=majoritySecondBestClass
+    ggplot(plot.data,aes(y=meanHer2, x=!!sym(pam50.subtypes[i]))) + #,color=majoritySecondBest
       geom_point(aes(size=2.5)) +
       geom_abline() +
       ylim(c(0,1)) +
