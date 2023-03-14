@@ -146,8 +146,8 @@ top.gex <- gex.data %>%
 # load metagene scores for hm annotation
 load(paste("./data/",cohort,"/2_transcriptomic/processed/mg_anno.RData",sep = ""))
 
-mg.anno.list[[1]]
-anno[c("sampleID","NHG")]
+#mg.anno.list[[1]]
+#anno[c("sampleID","NHG")]
 # create hm annotaiton object
 hm.anno <- merge(
     mg.anno.list[[1]],anno[c("sampleID","NHG")],by="sampleID") %>% 
