@@ -1,15 +1,30 @@
 # Script: Driver mutations in the HER2E subtype (WGS based)
 
-# TODO:
-# - 
+#TODO: 
 
 # empty environment
 rm(list=ls())
 
-# set working directory to where the data is
-setwd("~/Desktop/MTP_project")
+# set working directory to the project directory
+setwd("~/PhD_Workspace/Project_HER2E/")
+
+# indicate for which cohort the analysis is run 
+cohort <- "SCANB" # SCANB 
+
+# set/create output directory for plots
+output.path <- "output/plots/3_genomic//"
+dir.create(output.path)
+
+# set/create output directory for processed data
+data.path <- paste("data/",cohort,"/3_genomic/processed/",sep="")
+dir.create(data.path)
+
+# plot
+plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
+plot.file <- paste(output.path,cohort,"_HER2n_driverWF.pdf",sep = "")
 
 #packages
+source("scripts/3_genomic/src/gen_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(readxl)
@@ -18,36 +33,36 @@ library(reshape2)
 library(ggstatsplot)
 library(ggsignif)
 
-#####
-# load data
-sub.drivers <- as.data.frame((read_excel("Data/SCAN_B/WGS/CodingAndDriversForJohan_21July22.xlsx", sheet = "SubDrivers")))
-indel.drivers <- as.data.frame((read_excel("Data/SCAN_B/WGS/CodingAndDriversForJohan_21July22.xlsx", sheet = "IndelDrivers")))
-rearr.drivers <- as.data.frame((read_excel("Data/SCAN_B/WGS/CodingAndDriversForJohan_21July22.xlsx", sheet = "RearrangementDrivers")))
-cn.drivers <- as.data.frame((read_excel("Data/SCAN_B/WGS/CodingAndDriversForJohan_21July22.xlsx", sheet = "CopyNumberDrivers")))
+#######################################################################
+#######################################################################
 
-# combine the data
-# subs
-sub.drivers <- sub.drivers %>% select(Sample,VD_Gene,VC) %>% 
-    dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% mutate(variant_class = paste("sub_",variant_class, sep = ""))
-str(sub.drivers)
-unique(sub.drivers$variant_class) # "missense" "nonsense"
-# indels
-indel.drivers <- indel.drivers %>% select(Sample,VD_Gene,VC) %>% 
-    dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% mutate(variant_class = paste("indel_",variant_class, sep = ""))
-unique(indel.drivers$variant_class) # "ess_splice" "frameshift" "inframe"   
-# rearrangement
-rearr.drivers <- rearr.drivers %>% select(sample,gene2,svclass) %>% 
-    dplyr::rename(gene=gene2,variant_class=svclass) %>% mutate(variant_class = paste("rearr_",variant_class, sep = ""))
-unique(rearr.drivers$variant_class) # "translocation" "deletion" "inversion" "tandem-duplication"
-# copy number
-cn.drivers <- cn.drivers %>% filter(Type == "Amplified") %>% 
-    select(Sample...2,`Gene Symbol`,Type) %>% 
-    dplyr::rename(sample=Sample...2,gene=`Gene Symbol`,variant_class=Type) %>% mutate(variant_class = "Amplification") %>% mutate(variant_class = paste("CN_",variant_class, sep = ""))
-unique(cn.drivers$variant_class) # "Amplified"
+# load data
+sub.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "SubsDrivers"))) %>% 
+  dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
+  dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
+  mutate(variant_class = paste("sub_",variant_class, sep = ""))
+indel.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers")))%>% 
+  dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
+  dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
+  mutate(variant_class = paste("indel_",variant_class, sep = ""))
+
+indel.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels")))
+sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs")))
+
+# no rearr and cn drivers in new file
+# # rearrangement
+# rearr.drivers <- rearr.drivers %>% select(sample,gene2,svclass) %>% 
+#     dplyr::rename(gene=gene2,variant_class=svclass) %>% mutate(variant_class = paste("rearr_",variant_class, sep = ""))
+# unique(rearr.drivers$variant_class) # "translocation" "deletion" "inversion" "tandem-duplication"
+# # copy number
+# cn.drivers <- cn.drivers %>% filter(Type == "Amplified") %>% 
+#     select(Sample...2,`Gene Symbol`,Type) %>% 
+#     dplyr::rename(sample=Sample...2,gene=`Gene Symbol`,variant_class=Type) %>% mutate(variant_class = "Amplification") %>% mutate(variant_class = paste("CN_",variant_class, sep = ""))
+# unique(cn.drivers$variant_class) # "Amplified"
 
 #####
 # combine
-mut.drivers <- rbind(cn.drivers,sub.drivers,indel.drivers)
+mut.drivers <- rbind(sub.drivers,indel.drivers) #cn.drivers,
 
 length(unique(mut.drivers$gene)) #26
 

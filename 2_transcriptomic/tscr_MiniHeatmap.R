@@ -100,9 +100,9 @@ my.dist.method <- "euclidean" #"correlation" "euclidean"
 # colors
 my_colour = list(
   Cluster=c("1" = "#e41a1c","2" = "#377eb8","3" = "#4daf4a","4" = "#984ea3","5" = "#ff7f00"),
-  HER2E = c("0" = "#FFFFFF" , "1" = "#000000"),
-  LumA = c("0" = "#FFFFFF" , "1" = "#000000"),
-  LumB = c("0" = "#FFFFFF" , "1" = "#000000"))
+  HER2E = c("0" = "#f0f0f0" , "1" = "#000000"),
+  LumA = c("0" = "#f0f0f0" , "1" = "#000000"),
+  LumB = c("0" = "#f0f0f0" , "1" = "#000000"))
   #PAM50 = c("Her2" = "#d334eb" , "LumA" = "#2176d5" , "LumB" = "#34c6eb"))
 
 #######################################################################
@@ -156,30 +156,33 @@ final.hm.anno <- data.frame(
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-plot1 <- pheatmap(core.gex, cluster_rows=T, treeheight_row = 0,
-                  treeheight_col = 8,
+plot1 <- pheatmap(core.gex, cluster_cols=T, cluster_rows=F, treeheight_row = 0,
                   clustering_distance_rows = my.dist.method,
                   clustering_distance_cols = my.dist.method, 
                   clustering_method = my.link.method,
+                  cellwidth=0.3,
                   show_rownames=F, show_colnames=F, 
                   #main=paste("Core DEGs (ERpHER2n; ",cohort,")",sep = ""), 
                   cutree_cols=n.tree, legend = F,
-                  color=colorRampPalette(
-                    c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
+                  #color=colorRampPalette(
+                  # c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
                   annotation_col=final.hm.anno[rev(c("Cluster","HER2E","LumA","LumB"))], 
                   annotation_colors=my_colour,breaks=breaksList)
 
+#print(plot1)
 plot.list <- append(plot.list, list(plot1))
 
 #######################################################################
 #######################################################################
 
 # save plots
-pdf(file = plot.file, onefile = TRUE) 
+pdf(file = plot.file, onefile = TRUE)
 
 for (i in 1:length(plot.list)) {
   grid::grid.newpage()
   grid::grid.draw(plot.list[[i]]$gtable)
+  # try to draw a white rectable over the irrelevant info
+  #grid::grid.draw(rectGrob(x = 0, y = 0, width = 1, height = 0.9,gp=gpar(fill="black")))
   #print(plot.list[[i]])
 }
 
