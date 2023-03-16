@@ -31,7 +31,7 @@ library(readxl)
 library(GenVisR)
 library(reshape2)
 library(ggstatsplot)
-library(ggsignif)
+#library(data.table)
 
 #######################################################################
 #######################################################################
@@ -41,13 +41,21 @@ sub.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enrich
   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
   mutate(variant_class = paste("sub_",variant_class, sep = ""))
-indel.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers")))%>% 
+
+indel.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers"))) %>% 
   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
   mutate(variant_class = paste("indel_",variant_class, sep = ""))
 
-indel.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels")))
-sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs")))
+indel.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels"))) %>% 
+  dplyr::select(Sample,VD_Gene,VC) %>% 
+  dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  mutate(variant_class = paste("indel_",variant_class, sep = ""))
+
+sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs"))) %>% 
+  dplyr::select(Sample,VD_Gene,VC) %>% 
+  dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  mutate(variant_class = paste("sub_",variant_class, sep = ""))
 
 # no rearr and cn drivers in new file
 # # rearrangement
@@ -60,15 +68,9 @@ sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_c
 #     dplyr::rename(sample=Sample...2,gene=`Gene Symbol`,variant_class=Type) %>% mutate(variant_class = "Amplification") %>% mutate(variant_class = paste("CN_",variant_class, sep = ""))
 # unique(cn.drivers$variant_class) # "Amplified"
 
-#####
-# combine
-mut.drivers <- rbind(sub.drivers,indel.drivers) #cn.drivers,
-
-length(unique(mut.drivers$gene)) #26
-length(unique(mut.drivers$sample)) #29
-
-custom_pallete <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", 
-                    "#2a18cc", "#0b9c32")
+################################################################################
+# Plotting parameters
+################################################################################
 
 # plotting parameters
 # 1. mainRecurCutoff accepts a numeric value between 0 and 1, and will only plot genes with mutations in x proportion of samples.
@@ -77,18 +79,60 @@ custom_pallete <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c",
 # 4. the maxGenes parameter will only plot the top x genes and takes an integer value. This is usefull for example if when using the mainRecurCutoff parameter a vector of genes have values at x cutoff and all of them are not desired. 
 # 5. the rmvSilent parameter will remove all silent mutations from the data.
 
+# combine
+#mut.drivers <- rbind(sub.drivers,indel.drivers) #cn.drivers,
+#mut.all <- rbind(sub.all,indel.all)
+# length(unique(mut.drivers$gene)) #26
+# length(unique(mut.drivers$sample)) #29
+
+colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", 
+                    "#2a18cc", "#0b9c32")
+
 ################################################################################
-# her2e plot
+# Plots
 ################################################################################
 
-# Create a vector to save mutation priority order for plotting
-mutation_priority <- as.character(unique(mut.drivers$variant_class))
-#mutation_priority <- c("nonsense","start_lost","stop_lost","missense","ess_splice","5prime_UTR_ess_splice","splice_region","silent")
+for (i in 1:1) { #1:4
+  
+  # data
+  data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[3]] 
+  mutation.priority <- as.character(unique(data$variant_class))
+  custom.pallete <- colors[1:length(mutation.priority)]
+  
+  # plot # idea include all sample but only plot the 25 samples because toherwise the % mutatnt sidebar is not correct in relation to all 30 samples
+  plot <- waterfall(data, 
+                    fileType = "Custom", 
+                    variant_class_order = mutation.priority,
+                    mainGrid = TRUE,
+                    plotMutBurden = FALSE,
+                    mainPalette = custom.pallete,
+                    main_geneLabSize = 15,
+                    mainRecurCutoff = 0,
+                    maxGenes = 20,
+                    mainDropMut = TRUE, # drop unused mutation types from legend
+                    #rmvSilent = TRUE,
+                    out= "grob")
+  #plotSamples = c()
+  
+  grid.draw(plot)
+  
+  # append to list
+  plot.list <- append(plot.list,list(plot))
+  
+}
 
-# make a custom colour pallete
-custom_pallete <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", "#2a18cc", "#c7c41e","#37e019","#a903fc")
-# plot for each pam50 subtype
+#######################################################################
+#######################################################################
 
-# her2 driver
-waterfall(mut.drivers,fileType = "Custom", variant_class_order=mutation_priority, mainRecurCutoff = 0, maxGenes = 20, plotMutBurden = FALSE, mainGrid = TRUE,main_geneLabSize=15,rmvSilent = TRUE,mainPalette = custom_pallete)
+# save plots
+pdf(file = plot.file, onefile = TRUE)
+
+for (i in 1:length(plot.list)) {
+  grid::grid.newpage()
+  grid::grid.draw(plot.list[[i]])
+  
+  #print(plot.list[[i]])
+}
+
+dev.off()
 
