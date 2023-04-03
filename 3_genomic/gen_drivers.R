@@ -82,8 +82,6 @@ sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_c
 # combine
 #mut.drivers <- rbind(sub.drivers,indel.drivers) #cn.drivers,
 #mut.all <- rbind(sub.all,indel.all)
-# length(unique(mut.drivers$gene)) #26
-# length(unique(mut.drivers$sample)) #29
 
 colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", 
                     "#2a18cc", "#0b9c32")
