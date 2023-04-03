@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -108,7 +108,7 @@ plot.list <- append(plot.list, list(
                              c("Her2","LumA","LumB")),
                   ylab = "Expression (log2)", 
                   ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3.5,3)},
-                  title = substitute(paste(italic("ERBB2")," expression in PAM50 subtypes (ERpHER2n)")))))
+                  title = "ERBB2 expression in PAM50 subtypes (ERpHER2n)")))
   
 #ESR1------------------------------------------------------------------
     

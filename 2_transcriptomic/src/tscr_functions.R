@@ -173,15 +173,22 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
   
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
-        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
+        geom_boxplot(size=1.5, outlier.size = 5) +
         xlab(xlab) +
         ylab(ylab) +
-        theme(axis.text.x = element_text(size = 30),
+        theme_bw() +
+        theme(axis.text.x = element_text(size = 30,margin = margin(t=10)),
               axis.title.x = element_text(size = 35),
-              axis.text.y = element_text(size = 30),
+              axis.text.y = element_text(size = 30,margin = margin(r=10)),
               axis.title.y = element_text(size = 35),
               plot.title = element_text(size=25),
-              legend.position = "none") +
+              legend.position = "none",
+              panel.border = element_blank(), 
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              axis.line = element_line(colour = "black",linewidth=2),
+              axis.ticks = element_line(colour = "black", linewidth = 2),
+              axis.ticks.length=unit(0.5, "cm")) +
         scale_fill_manual(values=colors) +
         scale_y_continuous(breaks = scales::breaks_pretty(10)) +
         scale_x_discrete(limits = c(g2,g3,g1), labels = c(toupper(g2),toupper(g3),toupper(g1)))  # check that these are in the correct order
