@@ -47,7 +47,7 @@ if (cohort=="SCANB") {
   # load annotation data and select subgroup data
   anno <- loadRData(file="./data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>%
     dplyr::rename(sampleID = GEX.assay, PAM50 = NCN.PAM50) %>% 
-    mutate(Point.size = ifelse(PAM50=="Her2",5,2)) # add point size for plotting
+    mutate(Point.size = ifelse(PAM50=="Her2",10,5)) # add point size for plotting
   
   # load gex data
   gex.data <- scanb_gex_load(gex.path = "data/SCANB/2_transcriptomic/raw/genematrix_noNeg.Rdata", geneanno.path = "data/SCANB/1_clinical/raw/Gene.ID.ann.Rdata", ID.type = "Gene.Name") %>% 
@@ -66,7 +66,7 @@ if (cohort=="SCANB") {
   # load annotation data
   anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
     dplyr::rename(sampleID=METABRIC_ID,NHG=Grade) %>% # rename to match SCANB variables
-    mutate(Point.size = ifelse(PAM50=="Her2",5,2)) # add point size for plotting
+    mutate(Point.size = ifelse(PAM50=="Her2",10,5)) # add point size for plotting
   
   # load and select subgroup data
   gex.data <- metabric_gex_load("./data/METABRIC/2_transcriptomic/raw/data_mRNA_median_all_sample_Zscores.txt",ID.type = "Hugo_Symbol") %>% 
@@ -133,12 +133,20 @@ df <- data.frame(x = umap$layout[,1],
 
 # plot
 plot <- ggplot(df, aes(x, y, colour = PAM50)) + #,order=
-  geom_point(alpha=0.7, size=df$Point.size) + #
-  theme(axis.text.x = element_text(size = 30),
-        axis.title.x = element_text(size = 35),
-        axis.text.y = element_text(size = 30),
-        axis.title.y = element_text(size = 35),
-        plot.title = element_text(size=25)) +
+  geom_point(alpha=0.8, size=df$Point.size) + #
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 40,margin = margin(t=10)),
+        axis.title.x = element_text(size = 40),
+        axis.text.y = element_text(size = 35,margin = margin(r=10)),
+        axis.title.y = element_text(size = 40),
+        plot.title = element_text(size=40),
+        legend.position = "none",
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black",linewidth=2),
+        axis.ticks = element_line(colour = "black", linewidth = 2),
+        axis.ticks.length=unit(0.5, "cm")) +
   scale_color_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                      c("Her2","LumA","LumB"))) +
   ggtitle(paste("UMAP based on core DEGs (n genes=",ncol(umap.gex)-2,"; ",cohort,")",sep=""))
@@ -170,11 +178,19 @@ df <- data.frame(x = umap$layout[,1],
 # plot
 plot <- ggplot(df, aes(x, y, colour = PAM50)) + #,order=
   geom_point(alpha=0.7, size=df$Point.size) +
-  theme(axis.text.x = element_text(size = 30),
-        axis.title.x = element_text(size = 35),
-        axis.text.y = element_text(size = 30),
-        axis.title.y = element_text(size = 35),
-        plot.title = element_text(size=25)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 40,margin = margin(t=10)),
+        axis.title.x = element_text(size = 40),
+        axis.text.y = element_text(size = 35,margin = margin(r=10)),
+        axis.title.y = element_text(size = 40),
+        plot.title = element_text(size=40),
+        legend.position = "none",
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black",linewidth=2),
+        axis.ticks = element_line(colour = "black", linewidth = 2),
+        axis.ticks.length=unit(0.5, "cm")) +
   scale_color_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                      c("Her2","LumA","LumB"))) +
   ggtitle(paste("UMAP based on all genes (n genes=",ncol(umap.gex)-2,"; ",cohort,")",sep=""))

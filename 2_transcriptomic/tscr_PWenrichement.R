@@ -68,9 +68,9 @@ DEGs.core <- intersect(DEGs.scanb,DEGs.metabric)
 
 res <- as.data.frame(enrichr(DEGs.core, dbs)[[1]])
 
+# to do: use adjusted p value and exclude GO terms in figure
 plot.list <- append(plot.list, list(
-  plotEnrich(res, showTerms = 10, numChar = 60, y = "Count", orderBy = "P.value", title = paste("Core DEGs (n = ",length(DEGs.core),")",sep="")) +
-    theme(text = element_text(size = 20))))
+  pwplot(res[res$Adjusted.P.value <= 0.05,],title = paste("Core DEGs (n = ",length(DEGs.core),")",sep=""))))
 
 xlsx.list <- append(xlsx.list, list("CoreDEGs" = res))
 
@@ -97,8 +97,7 @@ LumA.DEGs.core <- intersect(LumA.DEGs.scanb,LumA.DEGs.metabric)
 res <- as.data.frame(enrichr(LumA.DEGs.core, dbs)[[1]])
 
 plot.list <- append(plot.list, list(
-  plotEnrich(res, showTerms = 10, numChar = 60, y = "Count", orderBy = "P.value", title = paste("LumA core DEGs (n = ",length(LumA.DEGs.core),")",sep="")) +
-    theme(text = element_text(size = 20))))
+  pwplot(res[res$Adjusted.P.value <= 0.05,], title = paste("LumA core DEGs (n = ",length(LumA.DEGs.core),")",sep=""))))
 
 xlsx.list <- append(xlsx.list, list("LumA_coreDEGs" = res))
 
@@ -125,8 +124,7 @@ LumB.DEGs.core <- intersect(LumB.DEGs.scanb,LumB.DEGs.metabric)
 res <- as.data.frame(enrichr(LumB.DEGs.core, dbs)[[1]])
 
 plot.list <- append(plot.list, list(
-  plotEnrich(res, showTerms = 10, numChar = 60, y = "Count", orderBy = "P.value", title = paste("LumB core DEGs (n = ",length(LumB.DEGs.core),")",sep="")) +
-    theme(text = element_text(size = 20))))
+  pwplot(res[res$Adjusted.P.value <= 0.05,], title = paste("LumB core DEGs (n = ",length(LumB.DEGs.core),")",sep=""))))
 
 xlsx.list <- append(xlsx.list, list("LumB_coreDEGs" = res))
 
@@ -138,7 +136,7 @@ xlsx.list <- append(xlsx.list, list("LumB_coreDEGs" = res))
 write.xlsx(xlsx.list, file = xlsx.file)
 
 # save plots
-pdf(file = plot.file, onefile = TRUE, width = 20, height = 5.5) 
+pdf(file = plot.file, onefile = TRUE, width = 20, height = 7) #
 
 for (i in 1:length(plot.list)) {
   print(plot.list[[i]])

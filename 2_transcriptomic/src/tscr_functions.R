@@ -173,15 +173,15 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
   
     # plot
     plot <- ggplot(data, aes(x=as.factor(.data[[group.var]]),y=.data[[test.var]],fill=as.factor(.data[[group.var]]))) +
-        geom_boxplot(size=1.5, outlier.size = 5) +
+        geom_boxplot(size=2.5, outlier.size = 7) +
         xlab(xlab) +
         ylab(ylab) +
         theme_bw() +
-        theme(axis.text.x = element_text(size = 30,margin = margin(t=10)),
-              axis.title.x = element_text(size = 35),
-              axis.text.y = element_text(size = 30,margin = margin(r=10)),
-              axis.title.y = element_text(size = 35),
-              plot.title = element_text(size=25),
+        theme(axis.text.x = element_text(size = 60,margin = margin(t=10)),
+              axis.title.x = element_text(size = 60),
+              axis.text.y = element_text(size = 55,margin = margin(r=10)),
+              axis.title.y = element_text(size = 60),
+              plot.title = element_text(size=50),
               legend.position = "none",
               panel.border = element_blank(), 
               panel.grid.major = element_blank(),
@@ -205,7 +205,35 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
     return(plot)
 }
 
+# plot enrichment analysis
 
+pwplot <- function(res,title) {
+  res <- res %>% mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) 
+  res <- res[order(-res$Gene_count,res$Adjusted.P.value),] %>% 
+    mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% 
+    slice(1:5)
+  
+  #plotEnrich(res, showTerms = 5, numChar = 100, y = "Count", orderBy = "Adjusted.P.value", title = title) +
+  #View(res)
+    ggplot(res, aes(y=Gene_count,
+                    x=Term,
+                    fill=Adjusted.P.value)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    theme_bw() +
+    theme(text = element_text(size = 25),
+          axis.text.x = element_text(margin = margin(t=5)),
+          axis.text.y = element_text(margin = margin(r=5)),
+          panel.border = element_blank(),          
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black",linewidth=2),
+          axis.ticks = element_line(colour = "black", linewidth = 2),
+          axis.ticks.length=unit(0.5, "cm")) +
+          scale_x_discrete(limits = c()) +
+          labs(fill = "P.adj") +
+    scale_fill_gradient(low="red",high="blue")
+}
 
 # heatmap 
 

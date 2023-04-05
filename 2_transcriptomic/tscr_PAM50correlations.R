@@ -74,12 +74,19 @@ for (i in 1:3) {
       xlab(paste(gsub('^.{4}', '', pam50.subtypes[i])," correlation",sep="")) +
       ggtitle(paste(
         "PAM50 centroid correlations (PAM50 class: HER2E (n=",nrow(plot.data),")",sep="")) +
-      theme(plot.title = element_text(size = 25),
-            axis.text.x = element_text(size = 20),
-            axis.title.x = element_text(size = 25),
-            axis.text.y = element_text(size = 20),
-            axis.title.y = element_text(size = 25),
-            legend.position = "none")))
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 45,margin = margin(t=10)),
+            axis.title.x = element_text(size = 60),
+            axis.text.y = element_text(size = 45,margin = margin(r=10)),
+            axis.title.y = element_text(size = 60),
+            plot.title = element_text(size=50),
+            legend.position = "none",
+            panel.border = element_blank(), 
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.line = element_line(colour = "black",linewidth=2),
+            axis.ticks = element_line(colour = "black", linewidth = 2),
+            axis.ticks.length=unit(0.5, "cm"))))
 }
 
 # save plots
