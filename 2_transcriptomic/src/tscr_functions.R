@@ -207,21 +207,21 @@ three_boxplot <- function(data, group.var, test.var, g1, g2, g3, g1.col = "#d334
 
 # plot enrichment analysis
 
+# labeller function for plot
+set_labeller <- function(variable,value){
+  return(deg.sets[value])
+}
+
+# plot enrichment analysis
 pwplot <- function(res,title) {
-  res <- res %>% mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) 
-  res <- res[order(-res$Gene_count,res$Adjusted.P.value),] %>% 
-    mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% 
-    slice(1:5)
-  
-  #plotEnrich(res, showTerms = 5, numChar = 100, y = "Count", orderBy = "Adjusted.P.value", title = title) +
-  #View(res)
     ggplot(res, aes(y=Gene_count,
                     x=Term,
                     fill=Adjusted.P.value)) +
     geom_bar(stat="identity") +
     coord_flip() +
     theme_bw() +
-    theme(text = element_text(size = 25),
+    ggtitle(title) +
+    theme(text = element_text(size = 30),
           axis.text.x = element_text(margin = margin(t=5)),
           axis.text.y = element_text(margin = margin(r=5)),
           panel.border = element_blank(),          
@@ -229,10 +229,13 @@ pwplot <- function(res,title) {
           panel.grid.minor = element_blank(),
           axis.line = element_line(colour = "black",linewidth=2),
           axis.ticks = element_line(colour = "black", linewidth = 2),
-          axis.ticks.length=unit(0.5, "cm")) +
-          scale_x_discrete(limits = c()) +
-          labs(fill = "P.adj") +
-    scale_fill_gradient(low="red",high="blue")
+          axis.ticks.length=unit(0.5, "cm"),
+          legend.key.size = unit(1, 'cm')) +
+          labs(fill = "Adj. p-value") +
+    scale_y_continuous(limits = c(0,65),breaks = seq(0,65,5)) +
+    scale_fill_gradientn(limits=c(0,0.05), colors=c("red","blue")) +
+    facet_grid(rows = vars(Comp),drop=TRUE,scales="free",space="free",labeller=set_labeller)
+    
 }
 
 # heatmap 

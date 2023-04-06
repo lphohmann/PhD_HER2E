@@ -46,7 +46,7 @@ dbs <- c("GO_Biological_Process_2021") #"KEGG_2021_Human", "GO_Molecular_Functio
 #######################################################################
 
 #filter based on expression diff?
-#like   filter(abs(Her2.LumA.diff) >= 1) %>% 
+#filter(abs(Her2.LumA.diff) >= 1) %>% 
 
 # define DEG set
 DEGs.scanb <- DE.res.scanb %>% 
@@ -66,13 +66,8 @@ DEGs.core <- intersect(DEGs.scanb,DEGs.metabric)
 
 #assign("res", enrichr(top.DEGs.core, dbs)) 
 
-res <- as.data.frame(enrichr(DEGs.core, dbs)[[1]])
-
-# to do: use adjusted p value and exclude GO terms in figure
-plot.list <- append(plot.list, list(
-  pwplot(res[res$Adjusted.P.value <= 0.05,],title = paste("Core DEGs (n = ",length(DEGs.core),")",sep=""))))
-
-xlsx.list <- append(xlsx.list, list("CoreDEGs" = res))
+res.core <- as.data.frame(enrichr(DEGs.core, dbs)[[1]])
+xlsx.list <- append(xlsx.list, list("CoreDEGs" = res.core))
 
 #######################################################################
 # HER2E vs. LumA
@@ -94,12 +89,8 @@ LumA.DEGs.core <- intersect(LumA.DEGs.scanb,LumA.DEGs.metabric)
 
 #---------------------------------------------------------------------#
 
-res <- as.data.frame(enrichr(LumA.DEGs.core, dbs)[[1]])
-
-plot.list <- append(plot.list, list(
-  pwplot(res[res$Adjusted.P.value <= 0.05,], title = paste("LumA core DEGs (n = ",length(LumA.DEGs.core),")",sep=""))))
-
-xlsx.list <- append(xlsx.list, list("LumA_coreDEGs" = res))
+res.luma <- as.data.frame(enrichr(LumA.DEGs.core, dbs)[[1]])
+xlsx.list <- append(xlsx.list, list("LumA_coreDEGs" = res.luma))
 
 #######################################################################
 # HER2E vs. LumB
@@ -121,12 +112,50 @@ LumB.DEGs.core <- intersect(LumB.DEGs.scanb,LumB.DEGs.metabric)
 
 #---------------------------------------------------------------------#
 
-res <- as.data.frame(enrichr(LumB.DEGs.core, dbs)[[1]])
+res.lumb <- as.data.frame(enrichr(LumB.DEGs.core, dbs)[[1]])
+xlsx.list <- append(xlsx.list, list("LumB_coreDEGs" = res.lumb))
+
+#######################################################################
+# plotting
+#######################################################################
+
+# filter and get ready for combining into single plot file
+#core
+res.core <- res.core[res.core$Adjusted.P.value <= 0.05,] %>% # filter signif
+  mutate(Comp="Core") %>%  # add column for group
+  mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% # get gene count from overlap column
+  arrange(desc(Gene_count),Adjusted.P.value) %>% # order
+  mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% # round pval
+  slice(1:3) # select top n rows
+
+#luma
+res.luma <- res.luma[res.luma$Adjusted.P.value <= 0.05,] %>% 
+  mutate(Comp="LumA") %>% 
+  mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% 
+  arrange(desc(Gene_count),Adjusted.P.value) %>% 
+  mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% 
+  slice(1:3)
+
+#lumb
+res.lumb <- res.lumb[res.lumb$Adjusted.P.value <= 0.05,] %>% 
+  mutate(Comp="LumB") %>% 
+  mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% 
+  arrange(desc(Gene_count),Adjusted.P.value) %>% 
+  mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% 
+  slice(1:3)
+
+res.all <- rbind(res.core,res.luma,res.lumb) %>% 
+  mutate(Term = gsub("\\s*\\([^\\)]+\\)","",as.character(Term)))
+res.all$Comp <- as.factor(res.all$Comp)
+#View(res.all)
+
+# labeller function for plot
+deg.sets <- list("Core" = paste("Core DEGs (n=",length(DEGs.core),")",sep=""),
+                 "LumA" = paste("LumA DEGs (n=",length(LumA.DEGs.core),")",sep=""),
+                 "LumB" = paste("LumB DEGs (n=",length(LumB.DEGs.core),")",sep=""))
 
 plot.list <- append(plot.list, list(
-  pwplot(res[res$Adjusted.P.value <= 0.05,], title = paste("LumB core DEGs (n = ",length(LumB.DEGs.core),")",sep=""))))
-
-xlsx.list <- append(xlsx.list, list("LumB_coreDEGs" = res))
+  pwplot(res.all,title="Enriched pathways in DEG sets")))
 
 #######################################################################
 # save plots and excel file
@@ -136,7 +165,7 @@ xlsx.list <- append(xlsx.list, list("LumB_coreDEGs" = res))
 write.xlsx(xlsx.list, file = xlsx.file)
 
 # save plots
-pdf(file = plot.file, onefile = TRUE, width = 20, height = 7) #
+pdf(file = plot.file, onefile = TRUE, width = 20, height = 14) #
 
 for (i in 1:length(plot.list)) {
   print(plot.list[[i]])
