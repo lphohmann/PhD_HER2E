@@ -129,7 +129,9 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
     data.surv <- Surv(OM, OMbin) 
     
     # fit
-    fit <- survminer::surv_fit(data.surv~PAM50, data=sdata, conf.type="log-log") # weird bug: survival::survfit() cant be passed data in function call ?! so i use survminer::surv_fit()
+    fit <- survminer::surv_fit(data.surv~PAM50, data=sdata, conf.type="log-log") 
+    print(head(fit))
+    # weird bug: survival::survfit() cant be passed data in function call ?! so i use survminer::surv_fit()
     #survdiff(data.surv ~ PAM50, data = sdata) 
     
     plot <- ggsurvplot(
@@ -155,7 +157,13 @@ KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
                         axis.title.x = element_text(size = 30), #25
                         axis.text.y = element_text(size = 25), #20
                         axis.title.y = element_text(size = 30),
-                        plot.title = element_text(size=30)),
+                        plot.title = element_text(size=30),
+                        panel.background = element_blank(),
+                        panel.grid.major = element_blank(), 
+                        panel.grid.minor = element_blank(),
+                        axis.line = element_line(colour = "black",linewidth=2),
+                        axis.ticks = element_line(colour = "black", linewidth = 2),
+                        axis.ticks.length=unit(0.25, "cm")),
         title= paste(OMstring, ": ",group.cohort.version, sep = ""),
         legend.title = "Subtypes",
         legend.labs = c(paste("LUMA"," (",table(sdata[!is.na(OM),]$PAM50)[1],")",sep = ""),
@@ -201,7 +209,13 @@ TwoGroup.KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata,comp.va
                     axis.title.x = element_text(size = 30), #25
                     axis.text.y = element_text(size = 25), #20
                     axis.title.y = element_text(size = 30),
-                    plot.title = element_text(size=30)),
+                    plot.title = element_text(size=30),
+                    panel.background = element_blank(),
+                    panel.grid.major = element_blank(), 
+                    panel.grid.minor = element_blank(),
+                    axis.line = element_line(colour = "black",linewidth=2),
+                    axis.ticks = element_line(colour = "black", linewidth = 2),
+                    axis.ticks.length=unit(0.25, "cm")),
     title= paste(OMstring, ": ",group.cohort.version, sep = ""),
     legend.title = "Subtypes",
     legend.labs = legend.labs,
@@ -240,7 +254,11 @@ mvcox <- function(data,surv,title) {
     #result <- ggplotify::as.ggplot(arrangeGrob(textGrob(res$call),tableGrob(res$coefficients),tableGrob(res$conf.int)))
     
     # Plot forest 
-    plot <- ggforest(main.all,fontsize = 2,cpositions = c(0.01,0.13,0.35),data=data,main=title)
+    plot <- ggforest(main.all,
+                     fontsize = 2,
+                     cpositions = c(0.01,0.13,0.35),
+                     data=data,
+                     main=title) 
     
     return(out <- list("plot" = plot, "result" = res))
 }
@@ -278,7 +296,13 @@ HER2p_KMplot <- function(OM,OMbin,OMstring,group.cohort.version,sdata) {
                         axis.title.x = element_text(size = 30), #25
                         axis.text.y = element_text(size = 25), #20
                         axis.title.y = element_text(size = 30),
-                        plot.title = element_text(size=30)),
+                        plot.title = element_text(size=30),
+                        panel.background = element_blank(),
+                        panel.grid.major = element_blank(), 
+                        panel.grid.minor = element_blank(),
+                        axis.line = element_line(colour = "black",linewidth=2),
+                        axis.ticks = element_line(colour = "black", linewidth = 2),
+                        axis.ticks.length=unit(0.25, "cm")),
         title= paste(OMstring, ": ",group.cohort.version, sep = ""),
         legend.title = "Subtypes",
         legend.labs = c(paste("HER2E"," (",table(sdata[!is.na(OM),]$PAM50)[1],")",sep = ""),

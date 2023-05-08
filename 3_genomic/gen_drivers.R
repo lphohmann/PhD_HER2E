@@ -90,10 +90,10 @@ colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c",
 # Plots
 ################################################################################
 
-for (i in 1:1) { #1:4
+for (i in 1:4) { #1:4
   
   # data
-  data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[3]] 
+  data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[i]] 
   mutation.priority <- as.character(unique(data$variant_class))
   custom.pallete <- colors[1:length(mutation.priority)]
   
@@ -118,6 +118,34 @@ for (i in 1:1) { #1:4
   plot.list <- append(plot.list,list(plot))
   
 }
+
+################################################################################
+
+# # data
+# data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[3]] 
+# mutation.priority <- as.character(unique(data$variant_class))
+# custom.pallete <- colors[1:length(mutation.priority)]
+#   
+# # plot # idea include all sample but only plot the 25 samples because toherwise the % mutatnt sidebar is not correct in relation to all 30 samples
+# plot <- waterfall(data, 
+#                   fileType = "Custom", 
+#                   variant_class_order = mutation.priority,
+#                   mainGrid = TRUE,
+#                   plotMutBurden = FALSE,
+#                   mainPalette = custom.pallete,
+#                   main_geneLabSize = 15,
+#                   mainRecurCutoff = 0,
+#                   maxGenes = 20,
+#                   mainDropMut = TRUE, # drop unused mutation types from legend
+#                   #rmvSilent = TRUE,
+#                   out= "grob")
+# #plotSamples = c()
+#   
+# grid.draw(plot)
+#   
+# # append to list
+# plot.list <- append(plot.list,list(plot))
+  
 
 #######################################################################
 #######################################################################
