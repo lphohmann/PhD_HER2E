@@ -12,7 +12,7 @@ setwd("~/PhD_Workspace/Project_HER2E/")
 cohort <- "SCANB" # SCANB 
 
 # set/create output directory for plots
-output.path <- "output/plots/3_genomic//"
+output.path <- "output/plots/4_CN/"
 dir.create(output.path)
 
 # set/create output directory for processed data
@@ -24,7 +24,7 @@ plot.list <- list() # object to store plots; note: if the output is not in strin
 plot.file <- paste(output.path,cohort,"_HER2n_WGS.pdf",sep = "")
 
 #packages
-source("scripts/3_genomic/src/gen_functions.R")
+source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(readxl)
@@ -37,3 +37,9 @@ library(ggstatsplot)
 #######################################################################
 
 # load data
+dat1 <- read_table("./data/SCANB/3_genomic/raw/ascat_easysegments/S000763_easySegments.txt")
+dat2 <- read_table("./data/SCANB/3_genomic/raw/ascat_TC_ploidy/S000763_aberrantcellfraction_ploidy.txt")
+View(dat1)
+View(dat2)
+
+# compile all files into one R object
