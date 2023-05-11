@@ -93,8 +93,10 @@ make_finmatrix <- function(probe.df, segment.files, ploidydf, matrix.type) {
 
 ## function that that creates a matrix (probeID | Chr | Position | CNstate_sample) for a single sample
 make_sampmatrix <- function(probe.df, sample.data, sample.ID, matrix.type, sample.ploidy) {
+  
   chr.set <- unique(sample.data$chr)
   res.list <- list()
+  
   for(j in c(1:length(chr.set))) { 
     # chromosome
     chr <- chr.set[1] #j
@@ -123,95 +125,6 @@ make_sampmatrix <- function(probe.df, sample.data, sample.ID, matrix.type, sampl
 # function that creates a CN matrix (probeID | Chr | Position | CNstate_sample) for a single chromosome with a method defining what type of matrix is created (total, major, minor)
 make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy) {
   
-  chr.matrix <- probe.df
-  chr.matrix$CN_state <- NA 
-  
-  if (matrix.type == "major") {
-    for (k in c(1:nrow(chr.segments))) {
-      seg.data <- chr.segments[k,] #k
-      seg.end <- seg.data[["endpos"]]
-      seg.start <- seg.data[["startpos"]]
-      seg.CN_state <- seg.data[["nMajor"]] #seg.data[["nTot"]] - seg.data[["nMinor"]]
-      # assign the CN_state to the probes that correspond to that segment
-      chr.matrix[which(chr.matrix$Position >= seg.start & 
-                         chr.matrix$Position <= seg.end),]$CN_state <- seg.CN_state
-    } 
-  }
-  
-  else if (matrix.type == "minor") {
-    for (k in c(1:nrow(chr.segments))) {
-      seg.data <- chr.segments[k,] #k
-      seg.end <- seg.data[["endpos"]]
-      seg.start <- seg.data[["startpos"]]
-      seg.CN_state <- seg.data[["nMinor"]] 
-      # assign the CN_state to the probes that correspond to that segment
-      chr.matrix[which(chr.matrix$Position >= seg.start & 
-                         chr.matrix$Position <= seg.end),]$CN_state <- seg.CN_state
-    }
-  } else if (matrix.type == "total") {
-      for (k in c(1:nrow(chr.segments))) {
-        seg.data <- chr.segments[k,] #k
-        seg.end <- seg.data[["endpos"]]
-        seg.start <- seg.data[["startpos"]]
-        seg.CN_state <- seg.data[["nTot"]] 
-        # assign the CN_state to the probes that correspond to that segment
-        chr.matrix[which(chr.matrix$Position >= seg.start & 
-                           chr.matrix$Position <= seg.end),]$CN_state <- seg.CN_state
-    }
-  } else if (matrix.type == "gainloss") {
-      for (k in c(1:nrow(chr.segments))) {
-        seg.data <- chr.segments[k,] #k
-        seg.end <- seg.data[["endpos"]]
-        seg.start <- seg.data[["startpos"]]
-        if (seg.data[["nTot"]]  >= (sample.ploidy + 0.6)) {
-          seg.CN_state <- 1
-        } else if (seg.data[["nTot"]] <= (sample.ploidy - 0.6)) {
-          seg.CN_state <- -1
-        } else {
-          seg_CNstate <- 0
-        }
-        # assign the CN_state to the probes that correspond to that segment
-        chr.matrix[which(chr.matrix$Position >= seg.start & 
-                           chr.matrix$Position <= seg.end),]$CN_state <- seg.CN_state
-    }
-    
-  } else if (matrix.type == "amplification") {
-    for (k in c(1:nrow(chr.segments))) {
-      seg.data <- chr.segments[1,] #k
-      seg.end <- seg.data[["endpos"]]
-      seg.start <- seg.data[["startpos"]]
-      if (seg.data[["nTot"]]  >= (sample.ploidy*4)) { # focal amp
-        seg.CN_state <- 2
-      } else if (seg.data[["nTot"]] >= (sample.ploidy*2)) { # amp
-        seg.CN_state <- 1
-      } else {
-        seg.CNstate <- 0 # no amp
-      }
-      # assign the CN_state to the probes that correspond to that segment
-      chr.matrix[which(chr.matrix$Position >= seg.start & 
-                         chr.matrix$Position <= seg.end),]$CN_state <- seg.CN_state
-    }
-      
-  } else if (matrix.type == "LOH") {
-      for (k in c(1:nrow(chr.segments))) {
-        seg.data <- chr.segments[1,] #k
-        seg.end <- seg.data[["endpos"]]
-        seg.start <- seg.data[["startpos"]]
-        if (seg.data[["nMinor"]]  == 0) { # LOH
-          seg.CN_state <- 1
-        } else {
-          seg.CNstate <- 0 # no LOH
-        }
-      }
-    return(chr.matrix)
-  } 
-}
-
-#######################################################################
-
-# function that creates a CN matrix (probeID | Chr | Position | CNstate_sample) for a single chromosome with a method defining what type of matrix is created (total, major, minor)
-make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy) {
-  
   # add a column to probe file that is to be filled with the CN state for each probe
   chr.matrix <- probe.df
   chr.matrix$CN_state <- NA 
@@ -219,6 +132,7 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
   # for each chromosome segment
   for(k in c(1:nrow(chr.segments))) {
     
+    print("this is one segment")
     # get sample info
     seg.data <- chr.segments[k,] 
     seg.end <- seg.data[["endpos"]]
@@ -275,6 +189,16 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
         chr.matrix[which(chr.matrix$Position >= seg.start & 
                            chr.matrix$Position <= seg.end),]$CN_state <- state.loh
       }
-    return(chr.matrix)
   } 
+  return(chr.matrix)
 }
+
+################ test
+
+
+res <- make_chrmatrix(chr.probes, chr.segments, matrix.type="major", sample.ploidy)
+head(res)
+View(res)
+sample.data
+unique(chr.probes$Chr)
+unique(res$CN_state)
