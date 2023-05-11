@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 
 '''
-Title:     Copy number alterations in the HER2E subtype (WGS based)
-Date:      01.08.2022
+Title:     Creating copy number alterations summary files
+Date:      10.05.2023
 Author:    Lennart Hohmann
-
-Usage:     CN_wgs.py ASCAT_file1 ASCAT_file2 ... output_file
 
 TODO:
 
