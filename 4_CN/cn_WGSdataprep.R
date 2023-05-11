@@ -1,6 +1,8 @@
 # Script: Preparing analyses based on WGS data
 
 #TODO: 
+# plot to test if the probe states and segment states match
+# do the positions of the probes make sense (is it per chr or genome)
 
 # empty environment
 rm(list=ls())
@@ -61,28 +63,27 @@ str(probe.df)
 #######################################################################
 
 # function that that creates a matrix (probeID | Chr | Position | CNstate_sample) for a all samples
-make_finmatrix <- function(probe.df, segment.files, ploidydf, matrix.type) {
+make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
   
   fin.list <- list()
+  
   # for each file (sample)
   for(i in c(1:length(segment.files))) {
     
     # sample data
-    sample.ID <- names(segment.files[1]) #i
+    sample.ID <- names(segment.files[i]) 
     sample.data <- segment.files[[sample.ID]] 
     sample.ploidy <- ploidy.df[which(ploidy.df$Sample==sample.ID),]$ploidy
     
     # create a matrix (probeID | Chr | Position | CNstate_sample) for a single sample
-    
-    
-    sample.matrix <- #make_sampmatrix(probe.df, sample.data, sample.ID, matrix_type, sample.ploidy)
-    
+    sample.matrix <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type, sample.ploidy)
     
     # list with sample matrices
     fin.list <- append(fin.list, list(sample.matrix))
   }
             
   # merge fin.list into final matrix
+  
   # reduce(lambda x, y: pd.merge(x, y, on = ['ProbeID','Chr','Position']), fin_list)
   #fin.matrix <- 
   
@@ -99,25 +100,26 @@ make_sampmatrix <- function(probe.df, sample.data, sample.ID, matrix.type, sampl
   
   for(j in c(1:length(chr.set))) { 
     # chromosome
-    chr <- chr.set[1] #j
+    chr <- chr.set[j] #j
   # relevant probes
     chr.probes <- probe.df[probe.df$Chr == chr,]
     # relevant segments
     chr.segments <- sample.data[sample.data$chr == chr,]
     # get chr matrix
-    chr.matrix <- #make_chrmatrix(chr_probes, chr_segments,matrix_type,tumploidy)
+    chr.matrix <- make_chrmatrix(
+      chr.probes, chr.segments, matrix.type, sample.ploidy)
+    
     # save in list
-    res.list <- append(res.list,list(chromatrix))
-    }
+    res.list <- append(res.list,list(chr.matrix))
+  }
+
+  #make one dataframe out of the list
+  sample.matrix <- do.call(rbind, res.list)
+
+  # rename cn_state to the sample id
+  sample.matrix <- sample.matrix %>% dplyr::rename(!!sample.ID := CN_state)
                       
-  # try to make one dataframe out of the list
-  sample.matrix = pd.concat(res_list)
-  # correct data type
-  #sampmatrix[['Position', 'CN_state']] = sampmatrix[['Position', 'CN_state']].apply(pd.to_numeric)
-  # HERE REANME CN_STATE ACCORDING TO ASCAT FILE NAME
-  sample.matrix <- #rename(columns={'CN_state': sampleID}, inplace=True)
-                      
-  return(sampmatrix) 
+  return(sample.matrix) 
 }
 
 #######################################################################
@@ -126,13 +128,12 @@ make_sampmatrix <- function(probe.df, sample.data, sample.ID, matrix.type, sampl
 make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy) {
   
   # add a column to probe file that is to be filled with the CN state for each probe
-  chr.matrix <- probe.df
+  chr.matrix <- chr.probes
   chr.matrix$CN_state <- NA 
   
   # for each chromosome segment
   for(k in c(1:nrow(chr.segments))) {
     
-    print("this is one segment")
     # get sample info
     seg.data <- chr.segments[k,] 
     seg.end <- seg.data[["endpos"]]
@@ -188,7 +189,7 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
         # assign the CN_state to the probes that correspond to that segment
         chr.matrix[which(chr.matrix$Position >= seg.start & 
                            chr.matrix$Position <= seg.end),]$CN_state <- state.loh
-      }
+      } else { print("Check matrix type input") }
   } 
   return(chr.matrix)
 }
@@ -197,8 +198,11 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
 
 
 res <- make_chrmatrix(chr.probes, chr.segments, matrix.type="major", sample.ploidy)
-head(res)
-View(res)
-sample.data
-unique(chr.probes$Chr)
-unique(res$CN_state)
+str(res)
+
+res2 <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type="major", sample.ploidy)
+
+str(res2) # cnstate is missing whyyyy?
+unique(res2$Chr)
+str(res2)
+View(sample.data)
