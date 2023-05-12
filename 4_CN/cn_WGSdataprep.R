@@ -18,7 +18,7 @@ output.path <- "output/plots/4_CN/"
 dir.create(output.path)
 
 # set/create output directory for processed data
-data.path <- paste("data/",cohort,"/3_genomic/processed/",sep="")
+data.path <- "data/SCANB/4_CN/processed/"
 dir.create(data.path)
 
 # plot
@@ -31,6 +31,7 @@ library(ggplot2)
 library(tidyverse)
 library(reshape2)
 #library(data.table)
+library(purrr)
 
 #######################################################################
 #######################################################################
@@ -62,13 +63,13 @@ str(probe.df)
 # functions (move to CN functions later)
 #######################################################################
 
-# function that that creates a matrix (probeID | Chr | Position | CNstate_sample) for a all samples
+# function that that creates a matrix (probeID | Chr | Position | CNstate_sample) for all samples
 make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
   
   fin.list <- list()
   
   # for each file (sample)
-  for(i in c(1:length(segment.files))) {
+  for(i in c(1:length(segment.files))) { 
     
     # sample data
     sample.ID <- names(segment.files[i]) 
@@ -83,9 +84,7 @@ make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
   }
             
   # merge fin.list into final matrix
-  
-  # reduce(lambda x, y: pd.merge(x, y, on = ['ProbeID','Chr','Position']), fin_list)
-  #fin.matrix <- 
+  fin.matrix <- fin.list %>% reduce(left_join,by=c("ProbeID","Chr","Position"))
   
   return(fin.matrix)
 }
@@ -197,12 +196,23 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
 ################ test
 
 
-res <- make_chrmatrix(chr.probes, chr.segments, matrix.type="major", sample.ploidy)
-str(res)
+#res <- make_chrmatrix(chr.probes, chr.segments, matrix.type="major", sample.ploidy)
 
-res2 <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type="major", sample.ploidy)
 
-str(res2) # cnstate is missing whyyyy?
-unique(res2$Chr)
-str(res2)
-View(sample.data)
+#res2 <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type="major", sample.ploidy)
+
+# test for one file
+#out <- make_finmatrix(probe.df, segment.files, ploidy.df, matrix.type="amplification")
+
+################ 
+vars <- c("major", "minor", "total", "amplification", "gainloss", "LOH")
+for (i in c(1:length(vars))) {
+  matrix.type <- vars[i]
+  # get matrix
+  res <- make_finmatrix(probe.df = probe.df, 
+                        segment.files = segment.files, 
+                        ploidy.df = ploidy.df, 
+                        matrix.type = matrix.type)
+  # save
+  save(res,file=paste(data.path,"CN_",matrix.type,".RData",sep=""))
+}
