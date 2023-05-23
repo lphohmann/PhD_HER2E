@@ -1,8 +1,8 @@
 # Script: Preparing analyses based on WGS data
+# includes generating cn summary matrices 
 
 #TODO: 
 # plot to test if the probe states and segment states match
-# do the positions of the probes make sense (is it per chr or genome)
 
 # empty environment
 rm(list=ls())
@@ -17,8 +17,8 @@ cohort <- "SCANB" # SCANB
 output.path <- "output/plots/4_CN/"
 dir.create(output.path)
 
-# set/create output directory for processed data
-data.path <- "data/SCANB/4_CN/processed/"
+# set/create output directory for data
+data.path <- "data/SCANB/4_CN/raw/"
 dir.create(data.path)
 
 # plot
@@ -56,7 +56,10 @@ ploidy.df <- list.files(
 str(ploidy.df)
 
 # probe anno
-probe.df <- read.delim("./data/SCANB/3_genomic/raw/CNV_SV_ref_GRCh38_hla_decoy_ebv_brass6+/ascat/SnpGcCorrections.tsv",sep="\t")[1:3] %>% mutate(Chr = gsub("chr","",Chr)) %>% dplyr::rename("ProbeID"=X)
+probe.df <- read.delim(
+  "./data/SCANB/3_genomic/raw/CNV_SV_ref_GRCh38_hla_decoy_ebv_brass6+/ascat/SnpGcCorrections.tsv",sep="\t")[1:3] %>% 
+  mutate(Chr = gsub("chr","",Chr)) %>% 
+  dplyr::rename("ProbeID"=X)
 str(probe.df)
 
 #######################################################################
@@ -82,7 +85,7 @@ make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
     # list with sample matrices
     fin.list <- append(fin.list, list(sample.matrix))
   }
-            
+
   # merge fin.list into final matrix
   fin.matrix <- fin.list %>% reduce(left_join,by=c("ProbeID","Chr","Position"))
   
@@ -195,12 +198,8 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
 
 ################ test
 
-
 #res <- make_chrmatrix(chr.probes, chr.segments, matrix.type="major", sample.ploidy)
-
-
 #res2 <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type="major", sample.ploidy)
-
 # test for one file
 #out <- make_finmatrix(probe.df, segment.files, ploidy.df, matrix.type="amplification")
 
@@ -213,6 +212,7 @@ for (i in c(1:length(vars))) {
                         segment.files = segment.files, 
                         ploidy.df = ploidy.df, 
                         matrix.type = matrix.type)
+  res$Chr <- as.numeric(res$Chr)
   # save
   save(res,file=paste(data.path,"CN_",matrix.type,".RData",sep=""))
 }

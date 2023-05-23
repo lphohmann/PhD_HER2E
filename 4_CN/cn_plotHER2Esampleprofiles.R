@@ -30,7 +30,7 @@ library(readxl)
 # loading data
 ################################################################################
 
-total.cn.scanb <- as.data.frame((read.table(file = 'data/SCANB/4_CN/raw/total_matrix.tsv', sep = '\t', header = TRUE))) 
+total.cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_total") 
 
 ################################################################################
 # plot the total CN for each sample

@@ -4,50 +4,28 @@
 # function to process data 
 ################################################################################
 
-# function
-processing <- function(cn.data,chr.lengths) {
-    
-    # rename X chromosome to 23
-    if (!is.numeric(cn.data$Chr)) {
-        cn.data$Chr[cn.data$Chr == "X"] <- "23" 
-        cn.data$Chr <- as.numeric(cn.data$Chr)
-    }
-    
-    # add chr lengths to df
-    cn.data <- cn.data %>% group_by(Chr) %>% 
-        mutate(chr_genomelengths = 
-                   case_when(Chr==1 ~ chr.lengths$genome[1],
-                             Chr==2 ~ chr.lengths$genome[2],
-                             Chr==3 ~ chr.lengths$genome[3],
-                             Chr==4 ~ chr.lengths$genome[4],
-                             Chr==5 ~ chr.lengths$genome[5],
-                             Chr==6 ~ chr.lengths$genome[6],
-                             Chr==7 ~ chr.lengths$genome[7],
-                             Chr==8 ~ chr.lengths$genome[8],
-                             Chr==9 ~ chr.lengths$genome[9],
-                             Chr==10 ~ chr.lengths$genome[10],
-                             Chr==11 ~ chr.lengths$genome[11],
-                             Chr==12 ~ chr.lengths$genome[12],
-                             Chr==13 ~ chr.lengths$genome[13],
-                             Chr==14 ~ chr.lengths$genome[14],
-                             Chr==15 ~ chr.lengths$genome[15],
-                             Chr==16 ~ chr.lengths$genome[16],
-                             Chr==17 ~ chr.lengths$genome[17],
-                             Chr==18 ~ chr.lengths$genome[18],
-                             Chr==19 ~ chr.lengths$genome[19],
-                             Chr==20 ~ chr.lengths$genome[20],
-                             Chr==21 ~ chr.lengths$genome[21],
-                             Chr==22 ~ chr.lengths$genome[22],
-                             Chr==23 ~ chr.lengths$genome[23])) %>% 
-        relocate(chr_genomelengths, .after=Position) %>% ungroup()
-    
-    # add up position + chr length to get genome position 
-    cn.data$genome_pos <- cn.data$Position + cn.data$chr_genomelengths 
-    cn.data <- cn.data %>% relocate(genome_pos, .after=chr_genomelengths)
-    cn.data$chr_genomelengths <- NULL
-    cn.data$genome <- NULL
-    
-    return(cn.data)
+# loads RData data file and allows to assign it directly to variable
+loadRData <- function(file.path){
+  load(file.path)
+  get(ls()[ls() != "file.path"])
+}
+
+################################################################################
+# function to add genome position of probes
+################################################################################
+
+add_genomepos <- function(cn.data, chr.lengths) {
+  res <- cn.data %>% 
+    # add new chr genome position column
+    mutate(genome = 0) %>% 
+    # update the genome col to fill in the actual chr positions
+    rows_update(chr.lengths[c("Chr","genome")]) %>% 
+    # add a column with the genome position of each probe
+    mutate(Genome_pos = Position + genome) %>% 
+    relocate(c(genome,Genome_pos), .after=Position) %>% 
+    dplyr::select(-c(genome))
+  
+  return(res)
 }
 
 ################################################################################
