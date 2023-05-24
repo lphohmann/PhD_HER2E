@@ -1,5 +1,7 @@
 # Script: Process SCANB CN data to prepare for plotting
-# Purpose: This script processes the SCANB HER2E CN file to match the format of the BASIS files for the other subtypes.
+# Purpose: 
+# 1. This script processes the SCANB HER2E CN file to calculate frequencies of gain/loss alterations per probe
+#2. map the probes to genes for the driver mutation plots 
 
 # and adding the genome position of probes (in addition to the exisitng chr positions)
 
@@ -80,5 +82,6 @@ gainloss.cn.scanb[,7:ncol(gainloss.cn.scanb)] <- NULL
 # save
 save(gainloss.cn.scanb, 
      file = "data/SCANB/4_CN/processed/CN_gainloss_frequencies.RData")
+
 
 

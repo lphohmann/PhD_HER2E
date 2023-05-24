@@ -32,6 +32,7 @@ library(GenVisR)
 library(reshape2)
 library(ggstatsplot)
 #library(data.table)
+library(grid)
 
 #######################################################################
 #######################################################################
@@ -90,26 +91,35 @@ colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c",
 # Plots
 ################################################################################
 
-for (i in 1:4) { #1:4
+datasets <- list(sub.drivers = sub.drivers,
+                 indel.drivers = indel.drivers,
+                 sub.all = sub.all,
+                 indel.all = indel.all)
+
+for (i in names(datasets)) { #1:4
   
   # data
-  data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[i]] 
+  data <- datasets[[i]] 
   mutation.priority <- as.character(unique(data$variant_class))
   custom.pallete <- colors[1:length(mutation.priority)]
+  
+  # title
+  layer <- list(ggtitle(i))
   
   # plot # idea include all sample but only plot the 25 samples because toherwise the % mutatnt sidebar is not correct in relation to all 30 samples
   plot <- waterfall(data, 
                     fileType = "Custom", 
                     variant_class_order = mutation.priority,
                     mainGrid = TRUE,
-                    plotMutBurden = FALSE,
+                    plotMutBurden = TRUE,
                     mainPalette = custom.pallete,
                     main_geneLabSize = 15,
                     mainRecurCutoff = 0,
                     maxGenes = 20,
                     mainDropMut = TRUE, # drop unused mutation types from legend
                     #rmvSilent = TRUE,
-                    out= "grob")
+                    out= "grob",
+                    mutBurdenLayer = layer)
   #plotSamples = c()
   
   grid.draw(plot)
@@ -151,7 +161,7 @@ for (i in 1:4) { #1:4
 #######################################################################
 
 # save plots
-pdf(file = plot.file, onefile = TRUE)
+pdf(file = plot.file, onefile = TRUE, height = 10, width = 15)
 
 for (i in 1:length(plot.list)) {
   grid::grid.newpage()
