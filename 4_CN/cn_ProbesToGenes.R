@@ -28,10 +28,9 @@ dir.create(output.path)
 source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
-library(readxl)
 library(GenomicRanges)
-#BiocManager::install("TxDb.Hsapiens.UCSC.hg38.knownGene")
 library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(org.Hs.eg.db)
 
 ################################################################################
 # loading data
@@ -41,88 +40,39 @@ gainloss.cn.scanb <- loadRData('data/SCANB/4_CN/raw/CN_gainloss.RData')
 
 ################################################################################
 # get gene positions
-# Question: to map genes do i need chr locations or genome locations
 ################################################################################
 
 # chr seq need to be in format chr1 etc.
 gainloss.cn.scanb$Chr <- sub("^", "chr", gainloss.cn.scanb$Chr)
 
-# create granges object of probe positions
-probes <- GRanges(gainloss.cn.scanb$Chr,IRanges(gainloss.cn.scanb$Position))
-#target_range <- GRanges(target$chromosome, IRanges(start=target$start, end=target$end))
+# create granges objects
+probes <- GRanges(seqnames = gainloss.cn.scanb$Chr,
+                           ranges = IRanges(gainloss.cn.scanb$Position),
+                           probeID = gainloss.cn.scanb$ProbeID)
+mcols(probes)$probeID
+genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID
+mcols(genes)$gene_id
 
-# genes of build hg38
-genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene)
+# convert to hgnc symbols
+ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
+stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
+mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
+mcols(genes)
 
-# intersect your regions of interest with the annotation
+################################################################################
+
+# which gene coordinates overlap which copy number variant coordinates
+overlap.res <- findOverlaps(probes, genes)
+# queryHits(): indexes of the probe coordinates that overlap the corresponding 
+# subjectHits(): indexes of the genes
+# line up the query column identifier (probeID) that overlaps each gene
+#f1 <- factor(subjectHits(overlap.res), levels=seq_len(subjectLength(overlap.res)))
+# use of factor() with exactly as many levels as there are subjects ensures that the splitAsList() command returns a 1:1 mapping between the subjects (genes) and the probes in the corresponding CharacterList
+#overlap.list <- splitAsList(mcols(probes)[["probeID"]][queryHits(overlap.res)], f1) # split the column of probe IDs into lists corresponding to the regions of overlap
+
 # 
-overlaps <- findOverlaps(query = probes, 
-                         subject = genes,
-                         type="within", 
-                         select="all")
+mcols(probes) <- splitAsList(genes$SYMBOL[subjectHits(overlap.res)], 
+                             queryHits(overlap.res))
 
-res.df <- data.frame(query_hits = queryHits(overlaps),
-                     subject_hits = subjectHits(overlaps)) 
-
-# multiple probes map to one gene
-
-head(res.df)
-View(res.df)
-
-f1 <- factor(subjectHits(overlaps), levels=seq_len(subjectLength(overlaps)))
-splitAsList(mcols(x)[[column]][queryHits(overlaps)], f1)
-
-#findOverlaps() returns a 'Hits' object that has two parallel vectors. 
-# The vectors can be extracted with queryHits() and subjectHits(). 
-# queryHits() are the indexes of the queries (the probe coordinates) that overlap the corresponding subjectHits(), i.e., the indexes of the subjects, the genes.
-
-
-# alternative try
-#Find which genes overlap which copy number regions
-#splitByOverlap is that we can find which gene coordinates overlap which copy number variant coordinates, and then split the column of gene identifiers into lists corresponding to the regions of overlap
-#query' is the gene coordinates, 'subject' the copy number coordinates. 'column' needs to match 'column' in the geneRanges() function.
-geneRanges <- function(db, column="ENTREZID") {
-    g <- genes(db, columns=column)
-    col <- mcols(g)[[column]]
-    genes <- granges(g)[rep(seq_along(g), elementNROWS(col))]
-    mcols(genes)[[column]] <- as.character(unlist(col))
-    genes
-}
-
-splitColumnByOverlap <- function(query, subject, column="ENTREZID", ...) {
-    olaps <- findOverlaps(query, subject, ...)
-    f1 <- factor(subjectHits(olaps),
-                 levels=seq_len(subjectLength(olaps)))
-    splitAsList(mcols(query)[[column]][queryHits(olaps)], f1)
-  }
-
-symInCnv = splitColumnByOverlap(probes, genes, "gene_id",type="within", 
-                                select="all")
-symInCnv # CharacterList (list of character vectors) where each element contains the genes overlapping the corresponding CNV region.
-genes[genes$gene_id %in% symInCnv[[1]]]
-
-# or swapped
-symInCnv = splitColumnByOverlap(genes,probes, "gene_id",type="within", 
-                                select="all")
-genes[genes$gene_id %in% symInCnv[[1]]]
-
-
-
-
-
-
-
-
-#############################
-
-
-#This returns an object telling which region overlaps with which annotation. The last step is to extract the gene names, collate them, and prepare your final output.
-
-overlaps <- findOverlaps(query = probes, 
-                         subject = genes,
-                         type="within", 
-                         select="all")
-
-genes <- extractList(genes$gene_id, as(overlaps, "List"))
-genes <- unstrsplit(unique(genes), ";") # Needed in case more than one gene overlaps.
-res <- paste(as.character(probes), genes)
+df <- as.data.frame(probes)
+View(df)

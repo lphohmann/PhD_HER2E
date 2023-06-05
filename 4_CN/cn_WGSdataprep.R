@@ -114,14 +114,14 @@ make_sampmatrix <- function(probe.df, sample.data, sample.ID, matrix.type, sampl
     # save in list
     res.list <- append(res.list,list(chr.matrix))
   }
-
+  
   #make one dataframe out of the list
   sample.matrix <- do.call(rbind, res.list)
-
+  
   # rename cn_state to the sample id
   sample.matrix <- sample.matrix %>% dplyr::rename(!!sample.ID := CN_state)
-                      
-  return(sample.matrix) 
+  
+  return(sample.matrix)
 }
 
 #######################################################################
