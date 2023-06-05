@@ -48,24 +48,42 @@ gainloss.cn.scanb$Chr <- sub("^", "chr", gainloss.cn.scanb$Chr)
 # create granges objects
 probes <- GRanges(seqnames = gainloss.cn.scanb$Chr,
                            ranges = IRanges(gainloss.cn.scanb$Position),
-                           probeID = gainloss.cn.scanb$ProbeID)
+                           ProbeID = gainloss.cn.scanb$ProbeID)
 genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID
 
 # convert to hgnc symbols
 ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
 stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
 mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
-mcols(genes)
+gene.anno <- as.data.frame(genes)
+probe.anno <- as.data.frame(probes)
 
-################################################################################
+###############################################################################
 
-# which gene coordinates overlap which copy number variant coordinates
-overlap.res <- findOverlaps(probes, genes)
-# queryHits(): indexes of the probe coordinates that overlap the corresponding 
-# subjectHits(): indexes of the genes
-# line up the query column identifier (probeID) that overlaps each gene
+# which 
+overlap.res <- findOverlaps(genes,probes)
+# queryHits(): indexes of the gene coordinates that overlap the corresponding 
+# subjectHits(): indexes of the probes
+# line up the query column identifier (gene) that overlaps each probe
 f1 <- factor(subjectHits(overlap.res), levels=seq_len(subjectLength(overlap.res)))
-# use of factor() with exactly as many levels as there are subjects ensures that the splitAsList() command returns a 1:1 mapping between the subjects (genes) and the probes in the corresponding CharacterList
-overlap.list <- splitAsList(mcols(probes)[["probeID"]][queryHits(overlap.res)], f1) # split the column of probe IDs into lists corresponding to the regions of overlap
-mcols(genes) <- overlap.list
-head(genes)
+# use of factor() with exactly as many levels as there are subjects ensures that the splitAsList() command returns a 1:1 mapping between the subjects (probes) and the genes in the corresponding CharacterList
+overlap.list <- splitAsList(mcols(genes)[["SYMBOL"]][queryHits(overlap.res)], f1) # split the column of gene symbols into lists corresponding to the regions of overlap
+mcols(probes) <- overlap.list
+
+key.df <- merge(as.data.frame(probes),probe.anno,
+                by=c("seqnames","start","end","width","strand")) %>% 
+  dplyr::rename(Gene_symbol=X,Position=start,Chr=seqnames) %>% 
+  dplyr::select(Chr,ProbeID,Gene_symbol)
+head(key.df) # why multiple genes per probe??
+
+#test
+t <- merge(as.data.frame(probes),probe.anno,
+         by=c("seqnames","start","end","width","strand"))
+t[1,]$X
+probes.df <- as.data.frame(probes)
+probes.df[which(probes.df$seqnames=="chr1" & probes.df$start == 100000723),]
+genes.df <- as.data.frame(genes)
+head(genes.df)
+genes.df[which(genes.df$seqnames=="chr1" & genes.df$start >= 100000723 & genes.df$end <= 100000723),]
+genes.df[which(genes.df$SYMBOL =="SLC35A3" | genes.df$SYMBOL == "MFSD14A"),]
+# MFSD14A has the wrong starting coordinates?????
