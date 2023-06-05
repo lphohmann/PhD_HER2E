@@ -49,9 +49,7 @@ gainloss.cn.scanb$Chr <- sub("^", "chr", gainloss.cn.scanb$Chr)
 probes <- GRanges(seqnames = gainloss.cn.scanb$Chr,
                            ranges = IRanges(gainloss.cn.scanb$Position),
                            probeID = gainloss.cn.scanb$ProbeID)
-mcols(probes)$probeID
 genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID
-mcols(genes)$gene_id
 
 # convert to hgnc symbols
 ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
@@ -66,13 +64,8 @@ overlap.res <- findOverlaps(probes, genes)
 # queryHits(): indexes of the probe coordinates that overlap the corresponding 
 # subjectHits(): indexes of the genes
 # line up the query column identifier (probeID) that overlaps each gene
-#f1 <- factor(subjectHits(overlap.res), levels=seq_len(subjectLength(overlap.res)))
+f1 <- factor(subjectHits(overlap.res), levels=seq_len(subjectLength(overlap.res)))
 # use of factor() with exactly as many levels as there are subjects ensures that the splitAsList() command returns a 1:1 mapping between the subjects (genes) and the probes in the corresponding CharacterList
-#overlap.list <- splitAsList(mcols(probes)[["probeID"]][queryHits(overlap.res)], f1) # split the column of probe IDs into lists corresponding to the regions of overlap
-
-# 
-mcols(probes) <- splitAsList(genes$SYMBOL[subjectHits(overlap.res)], 
-                             queryHits(overlap.res))
-
-df <- as.data.frame(probes)
-View(df)
+overlap.list <- splitAsList(mcols(probes)[["probeID"]][queryHits(overlap.res)], f1) # split the column of probe IDs into lists corresponding to the regions of overlap
+mcols(genes) <- overlap.list
+head(genes)
