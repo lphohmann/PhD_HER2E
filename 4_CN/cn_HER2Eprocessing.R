@@ -56,6 +56,9 @@ chr.lengths$Chr <- as.numeric(gsub('^.{3}','',chr.lengths$Chr))
 
 gainloss.cn.scanb <- add_genomepos(gainloss.cn.scanb,chr.lengths)
 
+save(gainloss.cn.scanb, 
+     file = "data/SCANB/4_CN/processed/CN_gainloss_genposition.RData")
+
 ################################################################################
 # calc. the gain/loss freq. for HER2E 
 ################################################################################

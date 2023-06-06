@@ -36,7 +36,7 @@ library(org.Hs.eg.db)
 # loading data
 ################################################################################
 
-gainloss.cn.scanb <- loadRData('data/SCANB/4_CN/raw/CN_gainloss.RData')
+gainloss.cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genposition.RData")
 
 ################################################################################
 # get gene positions
@@ -76,7 +76,12 @@ key.df <- merge(as.data.frame(probes),probe.anno,
   dplyr::select(Chr,ProbeID,Gene_symbol)
 head(key.df) # why multiple genes per probe??
 
-#test
+# add to gainloss matrix
+gainloss.cn.scanb <- merge(gainloss.cn.scanb,key.df,by=c("Chr","ProbeID")) %>% 
+  relocate(Gene_symbol,.after = ProbeID)
+
+
+################ test: why multiple genes for some probe - wrong gene loc annotation?
 t <- merge(as.data.frame(probes),probe.anno,
          by=c("seqnames","start","end","width","strand"))
 t[1,]$X
@@ -87,3 +92,6 @@ head(genes.df)
 genes.df[which(genes.df$seqnames=="chr1" & genes.df$start >= 100000723 & genes.df$end <= 100000723),]
 genes.df[which(genes.df$SYMBOL =="SLC35A3" | genes.df$SYMBOL == "MFSD14A"),]
 # MFSD14A has the wrong starting coordinates?????
+
+
+
