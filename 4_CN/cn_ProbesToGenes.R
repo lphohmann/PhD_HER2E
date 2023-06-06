@@ -1,9 +1,8 @@
-# Script: Process SCANB CN data to prepare for plotting mutation waterfall
+# Script: create key file for mapping probes to genes
 # Purpose: 
-# 1. map the probes to genes for the driver mutation plots 
+# 1. map the probes to genes
 
-# and adding the genome position of probes (in addition to the exisitng chr positions)
-
+# used before cn_HER2Eprocessing.R
 # TODO:
 # - 
 
@@ -36,19 +35,21 @@ library(org.Hs.eg.db)
 # loading data
 ################################################################################
 
-gainloss.cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genposition.RData")
+probe.positions <- loadRData('data/SCANB/4_CN/raw/CN_gainloss.RData')[c("ProbeID","Chr","Position")]
+
+#head(probe.positions)
 
 ################################################################################
-# get gene positions
+# Make key file for which probes map to which genes
 ################################################################################
 
 # chr seq need to be in format chr1 etc.
-gainloss.cn.scanb$Chr <- sub("^", "chr", gainloss.cn.scanb$Chr)
+probe.positions$Chr <- sub("^", "chr", probe.positions$Chr)
 
 # create granges objects
-probes <- GRanges(seqnames = gainloss.cn.scanb$Chr,
-                           ranges = IRanges(gainloss.cn.scanb$Position),
-                           ProbeID = gainloss.cn.scanb$ProbeID)
+probes <- GRanges(seqnames = probe.positions$Chr,
+                           ranges = IRanges(probe.positions$Position),
+                           ProbeID = probe.positions$ProbeID)
 genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID
 
 # convert to hgnc symbols
@@ -74,24 +75,27 @@ key.df <- merge(as.data.frame(probes),probe.anno,
                 by=c("seqnames","start","end","width","strand")) %>% 
   dplyr::rename(Gene_symbol=X,Position=start,Chr=seqnames) %>% 
   dplyr::select(Chr,ProbeID,Gene_symbol)
-head(key.df) # why multiple genes per probe??
+#head(key.df) # why multiple genes per probe??
 
-# add to gainloss matrix
-gainloss.cn.scanb <- merge(gainloss.cn.scanb,key.df,by=c("Chr","ProbeID")) %>% 
+# add to matrix
+probe.positions <- merge(probe.positions,key.df,by=c("Chr","ProbeID")) %>% 
   relocate(Gene_symbol,.after = ProbeID)
 
+#head(probe.positions)
 
 ################ test: why multiple genes for some probe - wrong gene loc annotation?
-t <- merge(as.data.frame(probes),probe.anno,
-         by=c("seqnames","start","end","width","strand"))
-t[1,]$X
-probes.df <- as.data.frame(probes)
-probes.df[which(probes.df$seqnames=="chr1" & probes.df$start == 100000723),]
-genes.df <- as.data.frame(genes)
-head(genes.df)
-genes.df[which(genes.df$seqnames=="chr1" & genes.df$start >= 100000723 & genes.df$end <= 100000723),]
-genes.df[which(genes.df$SYMBOL =="SLC35A3" | genes.df$SYMBOL == "MFSD14A"),]
-# MFSD14A has the wrong starting coordinates?????
+# t <- merge(as.data.frame(probes),probe.anno,
+#          by=c("seqnames","start","end","width","strand"))
+# t[1,]$X
+# probes.df <- as.data.frame(probes)
+# probes.df[which(probes.df$seqnames=="chr1" & probes.df$start == 100000723),]
+# genes.df <- as.data.frame(genes)
+# genes.df[which(genes.df$SYMBOL =="SLC35A3" | genes.df$SYMBOL == "MFSD14A"),]
+# # MFSD14A has the wrong starting coordinates?????
 
+###############################################################################
+
+save(probe.positions, 
+     file = paste(data.path,"CN_mapped_probes.RData",sep=""))
 
 
