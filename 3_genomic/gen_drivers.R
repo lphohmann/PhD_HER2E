@@ -25,6 +25,7 @@ plot.file <- paste(output.path,cohort,"_HER2n_driverWF.pdf",sep = "")
 
 #packages
 source("scripts/3_genomic/src/gen_functions.R")
+source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(readxl)
@@ -37,34 +38,61 @@ library(grid)
 #######################################################################
 #######################################################################
 
+# define list of driver genes/ cancer genes
+amp.drivers <- c("ERBB2", "CCND1", "ZNF703", "PAK1", "RPS6KB1", "MYC", "ZNF217", "MCL1", "MDM2", "PIK3CA", "CCNE1") # from TCGA
+driver.genes <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 12.ExtendedCancerGeneList727_En58position_final_15052015.xlsx", sheet = "Sheet1")) %>% pull(Gene)
+driver.genes <- unique(c(driver.genes,amp.drivers))
+
+#Amplification of target cytobands (17q12, 11q13.3,	8p11.23,	11q14.1,	17q23.1,	8q24.21,	20q13.2, 1q21.3, 12q15, 3q26.32,	19q12) was assessed using representative genes obtained from TCGA (ref). (genes: ERBB2, CCND1, ZNF703, PAK1, RPS6KB1, MYC, ZNF217, MCL1, MDM2, PIK3CA, CCNE1)
+
+# ID key file
+id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/SCANB_ERpos_Project1.xlsx", sheet = "Summary")) %>% dplyr::select(c("Tumour","Tumour_SimpleID")) %>% dplyr::rename("Sample"=Tumour)
+
+#id.key
+
 # load data
-sub.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "SubsDrivers"))) %>% 
-  dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
-  dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
-  mutate(variant_class = paste("sub_",variant_class, sep = ""))
+# sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "SubsDrivers")) %>% 
+#   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
+#   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
+#   mutate(variant_class = paste("sub_",variant_class, sep = "")) %>% 
+#   distinct()
+# 
+# indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers")) %>% 
+#   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
+#   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
+#   mutate(variant_class = paste("indel_",variant_class, sep = "")) %>% 
+#   distinct()
+#driver.genes <- unique(c(indel.drivers$gene,sub.drivers$gene)) # old way
 
-indel.drivers <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers"))) %>% 
-  dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
-  dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
-  mutate(variant_class = paste("indel_",variant_class, sep = ""))
+indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels")) %>% 
+  mutate(VC = paste("indel_",VC, sep = "")) %>% 
+  left_join(id.key,by="Sample") %>% 
+  dplyr::select(-c(Sample)) %>% 
+  dplyr::rename(gene=VD_Gene,variant_class=VC,sample=Tumour_SimpleID) %>% 
+  dplyr::select(c(sample,gene,variant_class)) %>% 
+  distinct()
 
-indel.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels"))) %>% 
-  dplyr::select(Sample,VD_Gene,VC) %>% 
-  dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% 
-  mutate(variant_class = paste("indel_",variant_class, sep = ""))
+#View(indel.drivers)
 
-sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs"))) %>% 
-  dplyr::select(Sample,VD_Gene,VC) %>% 
-  dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% 
-  mutate(variant_class = paste("sub_",variant_class, sep = ""))
+sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs")) %>% 
+  mutate(VC = paste("sub_",VC, sep = "")) %>% 
+  left_join(id.key,by="Sample") %>% 
+  dplyr::select(-c(Sample)) %>% 
+  dplyr::rename(gene=VD_Gene,variant_class=VC,sample=Tumour_SimpleID) %>% 
+  dplyr::select(c(sample,gene,variant_class)) %>% 
+  distinct()
 
-# cn drivers
-driver.genes <- unique(c(indel.drivers$gene,sub.drivers$gene))
+#View(sub.drivers)
+
+# amplification data
 amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
 cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>% 
   filter(!is.na(Gene_symbol)) %>% 
   filter(as.character(Gene_symbol) %in% driver.genes) %>% 
   filter(if_any(starts_with("S"), ~ . > 0))
+
+# erbb2 check
+#amp.dat %>% filter(as.character(Gene_symbol) =="ERBB2") # no amps
 
 # final matrix to be filled
 cn.drivers.long <- data.frame()
@@ -100,8 +128,9 @@ for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
 # set col names
 names(cn.drivers.long) <- c("sample", "gene", "variant_class")
 
-#mutate(variant_class = paste("CN_",variant_class, sep = ""))
-
+# make combined driver dataset for plotting
+drivers.df <- do.call("rbind", list(cn.drivers.long, sub.drivers, indel.drivers))
+#View(drivers.df)
 ################################################################################
 # Plotting parameters
 ################################################################################
@@ -124,10 +153,11 @@ colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c",
 # Plots
 ################################################################################
 
-datasets <- list(sub.drivers = sub.drivers,
+# datasets to be plotted
+datasets <- list(drivers = drivers.df,
+                 sub.drivers = sub.drivers,
                  indel.drivers = indel.drivers,
-                 sub.all = sub.all,
-                 indel.all = indel.all)
+                 cn.drivers = cn.drivers.long)
 
 for (i in names(datasets)) { #1:4
   
@@ -148,7 +178,7 @@ for (i in names(datasets)) { #1:4
                     mainPalette = custom.pallete,
                     main_geneLabSize = 15,
                     mainRecurCutoff = 0,
-                    maxGenes = 20,
+                    maxGenes = 30,
                     mainDropMut = TRUE, # drop unused mutation types from legend
                     #rmvSilent = TRUE,
                     out= "grob",
@@ -161,34 +191,6 @@ for (i in names(datasets)) { #1:4
   plot.list <- append(plot.list,list(plot))
   
 }
-
-################################################################################
-
-# # data
-# data <- list(sub.drivers,indel.drivers,sub.all,indel.all)[[3]] 
-# mutation.priority <- as.character(unique(data$variant_class))
-# custom.pallete <- colors[1:length(mutation.priority)]
-#   
-# # plot # idea include all sample but only plot the 25 samples because toherwise the % mutatnt sidebar is not correct in relation to all 30 samples
-# plot <- waterfall(data, 
-#                   fileType = "Custom", 
-#                   variant_class_order = mutation.priority,
-#                   mainGrid = TRUE,
-#                   plotMutBurden = FALSE,
-#                   mainPalette = custom.pallete,
-#                   main_geneLabSize = 15,
-#                   mainRecurCutoff = 0,
-#                   maxGenes = 20,
-#                   mainDropMut = TRUE, # drop unused mutation types from legend
-#                   #rmvSilent = TRUE,
-#                   out= "grob")
-# #plotSamples = c()
-#   
-# grid.draw(plot)
-#   
-# # append to list
-# plot.list <- append(plot.list,list(plot))
-  
 
 #######################################################################
 #######################################################################
