@@ -26,20 +26,16 @@ dir.create(output.path)
 source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
-library(readxl)
 
 ################################################################################
 # loading data
 ################################################################################
 
-#HERE
-
+gainloss.cn.scanb.freqs <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData")
 
 ################################################################################
 # calc. the gain/loss freq. for HER2E 
 ################################################################################
-
-gainloss.cn.scanb.freqs <- gainloss.cn.scanb
 
 # calc loss/gain freqs per group
 gainloss.cn.scanb.freqs$freqloss.HER2E <- apply(

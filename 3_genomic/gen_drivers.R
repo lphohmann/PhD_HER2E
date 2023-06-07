@@ -1,4 +1,4 @@
-# Script: Driver mutations in the HER2E subtype (WGS based)
+# Script: Driver mutations in the HER2E subtype (WGS based) - waterfall plot
 
 #TODO: 
 
@@ -58,16 +58,49 @@ sub.all <- as.data.frame((read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_c
   dplyr::rename(sample=Sample,gene=VD_Gene,variant_class=VC) %>% 
   mutate(variant_class = paste("sub_",variant_class, sep = ""))
 
-# no rearr and cn drivers in new file
-# # rearrangement
-# rearr.drivers <- rearr.drivers %>% select(sample,gene2,svclass) %>% 
-#     dplyr::rename(gene=gene2,variant_class=svclass) %>% mutate(variant_class = paste("rearr_",variant_class, sep = ""))
-# unique(rearr.drivers$variant_class) # "translocation" "deletion" "inversion" "tandem-duplication"
-# # copy number
-# cn.drivers <- cn.drivers %>% filter(Type == "Amplified") %>% 
-#     select(Sample...2,`Gene Symbol`,Type) %>% 
-#     dplyr::rename(sample=Sample...2,gene=`Gene Symbol`,variant_class=Type) %>% mutate(variant_class = "Amplification") %>% mutate(variant_class = paste("CN_",variant_class, sep = ""))
-# unique(cn.drivers$variant_class) # "Amplified"
+# cn drivers
+driver.genes <- unique(c(indel.drivers$gene,sub.drivers$gene))
+amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
+cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>% 
+  filter(!is.na(Gene_symbol)) %>% 
+  filter(as.character(Gene_symbol) %in% driver.genes) %>% 
+  filter(if_any(starts_with("S"), ~ . > 0))
+
+# final matrix to be filled
+cn.drivers.long <- data.frame()
+
+# get it down to gene level
+for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
+  # get sample data
+  sample.data <- cn.drivers[c(sample,"ProbeID","Gene_symbol")] #%>% filter(.[[sample]] > 0)
+  
+  # jump to next iteration if the sample has no driver amps
+  if (sort(unique(sample.data[[sample]]))[1]==0 & 
+      length(unique(sample.data[[sample]]))==1) { 
+    #print(paste("No amps in this sample: ",sample,sep=""))
+    next
+  }
+  #print(paste("AMP IN THIS SAMPLE: ",sample,sep=""))
+  for (gene in unique(sample.data$Gene_symbol)) {
+     # probes for a gene
+     gene.probes <- sample.data %>% 
+       filter(Gene_symbol == !!gene) %>% 
+       pull("ProbeID")
+     probe.count <- sample.data %>% 
+       filter(ProbeID %in% gene.probes) %>% 
+       filter(.[[sample]] > 0) %>% 
+       pull("ProbeID") %>% length(.)
+     if (probe.count >= length(gene.probes)/2) {
+       cn.drivers.long <- rbind(cn.drivers.long,c(sample,gene,"amplified"))
+       
+     }
+   }
+}
+
+# set col names
+names(cn.drivers.long) <- c("sample", "gene", "variant_class")
+
+#mutate(variant_class = paste("CN_",variant_class, sep = ""))
 
 ################################################################################
 # Plotting parameters

@@ -70,5 +70,5 @@ for(i in c(1:length(cnfile.list))) {
   
   # save
   save(cnfile, 
-       file = paste(data.path,"CN_",names(cnfile.list)[1],"_genpos_genmap.RData",sep=""))
+       file = paste(data.path,"CN_",names(cnfile.list)[i],"_genpos_genmap.RData",sep=""))
 } 
