@@ -89,11 +89,26 @@ probe.positions <- merge(probe.positions,key.df,by=c("Chr","ProbeID")) %>%
 # t[1,]$X
 # probes.df <- as.data.frame(probes)
 # probes.df[which(probes.df$seqnames=="chr1" & probes.df$start == 100000723),]
-# genes.df <- as.data.frame(genes)
-# genes.df[which(genes.df$SYMBOL =="SLC35A3" | genes.df$SYMBOL == "MFSD14A"),]
-# # MFSD14A has the wrong starting coordinates?????
+# gene.anno %>% filter(SYMBOL %in% c("SLC35A3","MFSD14A"))
 
 ###############################################################################
+
+# replace character(0) with NA for later filtering of probes without annotation
+probe.positions$Gene_symbol <- lapply(probe.positions$Gene_symbol, 
+                                      function(x) {
+                                        if (identical(x, character(0))) {
+                                          return(NA)
+                                          } else {return(x)}
+                                        })
+
+# filter NA rows
+probe.positions <- probe.positions[which(!is.na(probe.positions$Gene_symbol)),]
+
+# which probes have multiple mapped genes
+#multi.genes <- probe.positions[which(lengths(probe.positions$Gene_symbol)>1),]
+#nrow(multi.genes) #107629
+
+####################
 
 save(probe.positions, 
      file = paste(data.path,"CN_mapped_probes.RData",sep=""))
