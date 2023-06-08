@@ -27,17 +27,3 @@ add_genomepos <- function(cn.data, chr.lengths) {
   
   return(res)
 }
-
-################################################################################
-# function to process data post liftover
-################################################################################
-
-# function
-postliftprocess <- function(hg38.pos.df, fData, CN_Gain, CN_Loss) {
-    fData <- as.data.frame(merge(hg38.pos.df, fData, by = "reporterId")) %>% dplyr::rename(position = start) %>% dplyr::select(-c("chromosome","centerPosition"))
-    gaindf <- as.data.frame(CN_Gain) %>% rownames_to_column(var="reporterId") %>% dplyr::rename(Gain=2)
-    lossdf <- as.data.frame(CN_Loss) %>% rownames_to_column(var="reporterId") %>% dplyr::rename(Loss=2)
-    metadf <- as.data.frame(fData)
-    combdf <- as.data.frame(merge(merge(gaindf,lossdf,by="reporterId"),metadf, by="reporterId"))
-    return(combdf)
-}

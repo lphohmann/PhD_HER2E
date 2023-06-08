@@ -43,6 +43,15 @@ amp.drivers <- c("ERBB2", "CCND1", "ZNF703", "PAK1", "RPS6KB1", "MYC", "ZNF217",
 driver.genes <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 12.ExtendedCancerGeneList727_En58position_final_15052015.xlsx", sheet = "Sheet1")) %>% pull(Gene)
 driver.genes <- unique(c(driver.genes,amp.drivers))
 
+# or use only basis paper
+as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "Subs.indels")) %>% pull(Gene)
+
+amp.drivers.alt <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "CopyNumber")) %>% 
+  mutate(Gene = if_else(Gene=="Chr8:(ZNF703/FGFR1)", "ZNF703", Gene)) %>% 
+  pull(Gene) %>% unique
+
+#setdiff(amp.drivers,amp.drivers.alt)
+
 #Amplification of target cytobands (17q12, 11q13.3,	8p11.23,	11q14.1,	17q23.1,	8q24.21,	20q13.2, 1q21.3, 12q15, 3q26.32,	19q12) was assessed using representative genes obtained from TCGA (ref). (genes: ERBB2, CCND1, ZNF703, PAK1, RPS6KB1, MYC, ZNF217, MCL1, MDM2, PIK3CA, CCNE1)
 
 # ID key file
