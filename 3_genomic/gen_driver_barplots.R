@@ -12,7 +12,7 @@ setwd("~/PhD_Workspace/Project_HER2E/")
 cohort <- "COMBINED" 
 
 # set/create output directory for plots
-output.path <- "output/plots/3_genomic//"
+output.path <- "output/plots/3_genomic/"
 dir.create(output.path)
 
 # set/create output directory for processed data
@@ -75,36 +75,58 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 all.dmut <- rbind(basis.dmut,scanb.dmut)
 
 #######################################################################
-# Plots: overall mutations regardless of multiple per sample
+# plot genes of interest
 #######################################################################
-
 # PAM50, mutation type, count - but this would count multiple mutations per sample
 count.type <- function(data,gene) {
   data[data$Gene==gene,] %>% 
     count(PAM50, Mutation_Type)
 }
 
-# 
-ggplot(count.type(all.dmut, gene="ERBB2"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  geom_bar(position="stack", stat="identity")
+# 1 mut per sample
+count.sample <- function(data,gene) {
+  data <- data %>% 
+    distinct(Sample,Gene, .keep_all = TRUE)
+  data[data$Gene==gene,] %>% 
+    count(PAM50)
+}
 
-ggplot(count.type(all.dmut, gene="TP53"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  geom_bar(position="stack", stat="identity")
+gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
 
-ggplot(count.type(all.dmut, gene="PIK3CA"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  geom_bar(position="stack", stat="identity")
+for (g in gene.vec) {
+  
+  # Plots overall mutations regardless of multiple per sample
+  p1 <- ggplot(count.type(all.dmut, gene=g), aes(fill=Mutation_Type,x=PAM50,y=n))+
+    geom_bar(position="stack", stat="identity")
+  
+  # Plots freq samples mutated in PAM50 groups
+  p2 <- ggplot(count.sample(all.dmut, gene=g), aes(x=PAM50,y=n))+
+    geom_bar(position="stack", stat="identity")
+  
+  plot.list <- append(plot.list,list(p1)) 
+  plot.list <- append(plot.list,list(p2)) 
+  
+}
 
-ggplot(count.type(all.dmut, gene="FGFR1"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  geom_bar(position="stack", stat="identity") # it shoul dbe in HER2e as well=?? looking at waterfall plots; check in waterfalldata
+# how to save multiple plots per page, also check firs tthat the loop above gives the right plots
 
-ggplot(count.type(all.dmut, gene="ESR1"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  geom_bar(position="stack", stat="identity")
+# save plots
+pdf(file = plot.file, onefile = TRUE) #, height = 10, width = 15)
 
-#ggplot(count.type(all.dmut, gene="FGFR4"), aes(fill=Mutation_Type,x=PAM50,y=n))+
-  #geom_bar(position="stack", stat="identity")
+# flatten plot list
+plot.list <- do.call(c, plot.list)
 
-#######################################################################
-# Plots: Freq samples mutated in PAM50 groups
-#######################################################################
+for (i in 1:length(plot.list)) {
+  #print(plot.list[[i]])
+  do.call("grid.arrange", print(plot.list[[i]]))
+}
 
+dev.off()
 
+library(gridExtra)
+
+pdf("plots.pdf", onefile = TRUE)
+for (i in seq(length(p))) {
+  do.call("grid.arrange", p[[i]])  
+}
+dev.off()
