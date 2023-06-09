@@ -142,7 +142,7 @@ head(cn.basis.subtypes)
 ################################################################################
 # add genome position of probes and corresponding genes
 ################################################################################
-# key file for gene to probe mapping - make one for BASIS? 
+# key file for gene to probe mapping - make one for BASIS or just use table14? 
 #map.key <- loadRData("data//4_CN/processed/CN_mapped_probes.RData")
 
 cnfile <- cn.basis.subtypes

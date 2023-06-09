@@ -102,7 +102,7 @@ probe.positions$Gene_symbol <- lapply(probe.positions$Gene_symbol,
                                         })
 
 # filter NA rows
-probe.positions <- probe.positions[which(!is.na(probe.positions$Gene_symbol)),]
+#probe.positions <- probe.positions[which(!is.na(probe.positions$Gene_symbol)),]
 
 # which probes have multiple mapped genes
 #multi.genes <- probe.positions[which(lengths(probe.positions$Gene_symbol)>1),]

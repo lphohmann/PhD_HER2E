@@ -39,40 +39,29 @@ library(grid)
 #######################################################################
 
 # define list of driver genes/ cancer genes
-amp.drivers <- c("ERBB2", "CCND1", "ZNF703", "PAK1", "RPS6KB1", "MYC", "ZNF217", "MCL1", "MDM2", "PIK3CA", "CCNE1") # from TCGA
-driver.genes <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 12.ExtendedCancerGeneList727_En58position_final_15052015.xlsx", sheet = "Sheet1")) %>% pull(Gene)
-driver.genes <- unique(c(driver.genes,amp.drivers))
+#amp.drivers <- c("ERBB2", "CCND1", "ZNF703", "PAK1", "RPS6KB1", "MYC", "ZNF217", "MCL1", "MDM2", "PIK3CA", "CCNE1") # from TCGA
+# use only basis paper
+sub.indel.drivers <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "Subs.indels")) %>% 
+  pull(Gene) %>% 
+  unique
 
-# or use only basis paper
-as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "Subs.indels")) %>% pull(Gene)
-
-amp.drivers.alt <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "CopyNumber")) %>% 
+amp.drivers <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "CopyNumber")) %>% 
   mutate(Gene = if_else(Gene=="Chr8:(ZNF703/FGFR1)", "ZNF703", Gene)) %>% 
-  pull(Gene) %>% unique
+  pull(Gene) %>% 
+  unique
 
-#setdiff(amp.drivers,amp.drivers.alt)
+driver.genes <- unique(c(sub.indel.drivers,amp.drivers))
 
-#Amplification of target cytobands (17q12, 11q13.3,	8p11.23,	11q14.1,	17q23.1,	8q24.21,	20q13.2, 1q21.3, 12q15, 3q26.32,	19q12) was assessed using representative genes obtained from TCGA (ref). (genes: ERBB2, CCND1, ZNF703, PAK1, RPS6KB1, MYC, ZNF217, MCL1, MDM2, PIK3CA, CCNE1)
+#######################################################################
 
 # ID key file
-id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/SCANB_ERpos_Project1.xlsx", sheet = "Summary")) %>% dplyr::select(c("Tumour","Tumour_SimpleID")) %>% dplyr::rename("Sample"=Tumour)
+id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/SCANB_ERpos_Project1.xlsx", sheet = "Summary")) %>% 
+  dplyr::select(c("Tumour","Tumour_SimpleID")) %>% 
+  dplyr::rename("Sample"=Tumour)
 
-#id.key
+#######################################################################
 
-# load data
-# sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "SubsDrivers")) %>% 
-#   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
-#   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
-#   mutate(variant_class = paste("sub_",variant_class, sep = "")) %>% 
-#   distinct()
-# 
-# indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "IndelDrivers")) %>% 
-#   dplyr::select(TumorID_simple,VD_Gene,VC) %>% 
-#   dplyr::rename(sample=TumorID_simple,gene=VD_Gene,variant_class=VC) %>% 
-#   mutate(variant_class = paste("indel_",variant_class, sep = "")) %>% 
-#   distinct()
-#driver.genes <- unique(c(indel.drivers$gene,sub.drivers$gene)) # old way
-
+# load driver data
 indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels")) %>% 
   mutate(VC = paste("indel_",VC, sep = "")) %>% 
   left_join(id.key,by="Sample") %>% 
@@ -80,8 +69,6 @@ indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enric
   dplyr::rename(gene=VD_Gene,variant_class=VC,sample=Tumour_SimpleID) %>% 
   dplyr::select(c(sample,gene,variant_class)) %>% 
   distinct()
-
-#View(indel.drivers)
 
 sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs")) %>% 
   mutate(VC = paste("sub_",VC, sep = "")) %>% 
@@ -91,7 +78,6 @@ sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriche
   dplyr::select(c(sample,gene,variant_class)) %>% 
   distinct()
 
-#View(sub.drivers)
 
 # amplification data
 amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
@@ -100,10 +86,7 @@ cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>%
   filter(as.character(Gene_symbol) %in% driver.genes) %>% 
   filter(if_any(starts_with("S"), ~ . > 0))
 
-# erbb2 check
-#amp.dat %>% filter(as.character(Gene_symbol) =="ERBB2") # no amps
-
-# final matrix to be filled
+# final matrix 
 cn.drivers.long <- data.frame()
 
 # get it down to gene level
@@ -127,7 +110,7 @@ for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
        filter(ProbeID %in% gene.probes) %>% 
        filter(.[[sample]] > 0) %>% 
        pull("ProbeID") %>% length(.)
-     if (probe.count >= length(gene.probes)/2) {
+     if (probe.count >= length(gene.probes)/2) { # majority status called
        cn.drivers.long <- rbind(cn.drivers.long,c(sample,gene,"amplified"))
        
      }
@@ -137,11 +120,13 @@ for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
 # set col names
 names(cn.drivers.long) <- c("sample", "gene", "variant_class")
 
-# make combined driver dataset for plotting
+# make and save combined driver dataset for plotting
 drivers.df <- do.call("rbind", list(cn.drivers.long, sub.drivers, indel.drivers))
-#View(drivers.df)
+save(drivers.df, 
+     file = paste(data.path,"driver_mutations_all.RData",sep=""))
+
 ################################################################################
-# Plotting parameters
+# Waterfall plotting parameters
 ################################################################################
 
 # plotting parameters
@@ -159,7 +144,7 @@ colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c",
                     "#2a18cc", "#0b9c32")
 
 ################################################################################
-# Plots
+# Waterfall plots
 ################################################################################
 
 # datasets to be plotted
@@ -168,7 +153,7 @@ datasets <- list(drivers = drivers.df,
                  indel.drivers = indel.drivers,
                  cn.drivers = cn.drivers.long)
 
-for (i in names(datasets)) { #1:4
+for (i in names(datasets)) { 
   
   # data
   data <- datasets[[i]] 
