@@ -34,6 +34,7 @@ library(reshape2)
 library(ggstatsplot)
 #library(data.table)
 library(grid)
+library(gridExtra)
 
 #######################################################################
 #######################################################################
@@ -73,14 +74,16 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 
 # combined
 all.dmut <- rbind(basis.dmut,scanb.dmut)
+#View(all.dmut)
 
 #######################################################################
-# plot genes of interest
+# plot genes of interest: mutation frequencies
 #######################################################################
 # PAM50, mutation type, count - but this would count multiple mutations per sample
 count.type <- function(data,gene) {
   data[data$Gene==gene,] %>% 
-    count(PAM50, Mutation_Type)
+    count(PAM50, Mutation_Type) %>% 
+    mutate(Freq=case_when(PAM50=="Her2e" ~ n/)) # check
 }
 
 # 1 mut per sample
@@ -92,6 +95,9 @@ count.sample <- function(data,gene) {
 }
 
 gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
+g <- gene.vec[3]
+count.type(all.dmut, gene=g)
+count.sample(all.dmut, gene=g)
 
 for (g in gene.vec) {
   
@@ -108,25 +114,29 @@ for (g in gene.vec) {
   
 }
 
-# how to save multiple plots per page, also check firs tthat the loop above gives the right plots
-
 # save plots
 pdf(file = plot.file, onefile = TRUE) #, height = 10, width = 15)
 
-# flatten plot list
-plot.list <- do.call(c, plot.list)
 
-for (i in 1:length(plot.list)) {
-  #print(plot.list[[i]])
-  do.call("grid.arrange", print(plot.list[[i]]))
+# number of plots
+n <- length(plot.list)
+# plots per page
+pp <- 6 
+  
+for(i in seq(ceiling(n/pp))) { # pp plots per page
+  
+  # for the last page
+  if(n > pp) { 
+    k <- pp
+    } else {k <- n} # print only the remaining plots
+  n <- n - pp
+  
+  # subset the plot list
+  plots.page.list <- plot.list[1:k]
+  # remove these plots from the original list
+  plot.list[!(plot.list %in% plots.page.list)]
+  # 
+  print(do.call(gridExtra::grid.arrange, plots.page.list))
 }
 
-dev.off()
-
-library(gridExtra)
-
-pdf("plots.pdf", onefile = TRUE)
-for (i in seq(length(p))) {
-  do.call("grid.arrange", p[[i]])  
-}
 dev.off()
