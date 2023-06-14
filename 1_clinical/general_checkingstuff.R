@@ -205,3 +205,91 @@ her2e.wgs.samples.df <- merge(anno, data, by = "sampleID") %>%
 save(her2e.wgs.samples.df, file = "./data/SCANB/3_genomic/raw/her2samples_wgs_status.RData")
 load(file = "./data/SCANB/3_genomic/raw/her2samples_wgs_status.RData")
 View(her2e.wgs.samples.df)
+
+
+
+
+### 
+#wgs data subset check
+################# are all samples really her2e
+# only include samples with a pass in the final QC
+
+# all her2e samples
+ERpHER2n.dat <- loadRData("data/SCANB/1_clinical/processed/Summarized_SCAN_B_rel4_NPJbreastCancer_with_ExternalReview_Bosch_data_ERpHER2n.RData") %>% 
+  dplyr::select(c(Sample,ER,HER2,NCN.PAM50))
+her2e.samples <- ERpHER2n.dat %>%
+  filter(NCN.PAM50=="Her2") %>% 
+  pull(Sample)
+View(ERpHER2n.dat)
+# qc annotation
+wgs.df <- read_excel("data/SCANB/3_genomic/raw/SCANB_ERpos_Summary_11Nov22.xlsx", sheet = "Batch1+2+3") %>% 
+  dplyr::select(Tumour,Batch,`Final QC`) %>% 
+  filter(`Final QC`!="MISSING")#"pass")
+View(wgs.df)
+
+# get normal IDs before merge
+id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
+  dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
+  mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
+
+# 1. convert epb IDs to normal sample IDs
+#userdata$ID <- userids$ID[match(userdata$ID, userids$USER)]
+wgs.df$Sample <- id.key$SENT.TUMOR[match(wgs.df$Tumour, id.key$SENT.TUMOR.aliquot)]
+# 2. convert the other IDs to normal sample IDs
+wgs.df$Sample2 <- id.key$SENT.TUMOR[match(wgs.df$Tumour, id.key$TUMOR.alias)]
+wgs.df$Sample <- ifelse(is.na(wgs.df$Sample), wgs.df$Sample2, wgs.df$Sample)
+wgs.df$Sample2 <- NULL
+#View(wgs.df)
+
+wgs.anno <- merge(wgs.df,ERpHER2n.dat,by="Sample")
+wgs.anno.her2e <- wgs.anno %>% filter(NCN.PAM50=="Her2")
+View(wgs.anno %>% filter(NCN.PAM50=="Her2") %>% filter(toupper(`Final QC`)=="PASS"))
+
+# cn data
+cn.her2e <- names(segment.files)
+setdiff(cn.her2e,wgs.anno.her2e$Sample)
+setdiff(cn.her2e, her2e.samples)
+
+# scanb anno
+d <- loadRData("data/SCANB/1_clinical/processed/SCANB_clinData.RData")
+View(d[d$Sample=="S003095",])
+
+# file i sent to johan 16.11.
+q <- loadRData("/Users/le7524ho/Desktop/her2samples_wgs_status.RData")
+setdiff(q$rel4.Sample,her2e.samples)
+setdiff(q$rel4.Sample,her2e.samples.df$Sample)
+
+setdiff(q$rel4.Sample,wgs.anno.her2e$Sample)
+
+
+sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs"))
+allut <- loadRData("data/SCANB/3_genomic/processed/driver_mutations_all.RData")
+View(allut)
+setdiff(unique(scanb.dmut$sample),her2e.samples)
+setdiff(unique(scanb.dmut$sample),her2e.samples.df)
+
+setdiff(unique(scanb.dmut$sample),cn.her2e)
+setdiff(cn.her2e,unique(scanb.dmut$sample))
+View()
+# included her2e samples
+cn.her2e
+# file of all ERpos samples, with indication of ones that were included but are not required
+all.samples.anno <- wgs.anno %>% 
+  mutate(Missing = if_else(NCN.PAM50 =="Her2" & 
+                             toupper(`Final QC`) == "PASS" & 
+                             !(Sample %in% cn.her2e),1,0)) %>% 
+  mutate(Incl_but_not_required = if_else(NCN.PAM50 !="Her2" & 
+                                           Sample %in% cn.her2e,1,0))
+
+# file of all samples that should be included, incl. column indicating the ones that are missing
+her2e.samples.df <- wgs.anno %>% 
+  filter(NCN.PAM50=="Her2") %>% 
+  filter(toupper(`Final QC`)=="PASS") %>% 
+  mutate(Missing = if_else(!(Sample %in% cn.her2e),1,0))
+
+View(all.samples.anno)
+View(her2e.samples.df)
+save(all.samples.anno,file="data/SCANB/3_genomic/processed/not_required_samples.RData")
+save(her2e.samples.df,file="data/SCANB/3_genomic/processed/her2e_samples.RData")
+
+#######################

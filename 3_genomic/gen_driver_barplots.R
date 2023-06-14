@@ -1,6 +1,6 @@
 # Script: Driver mutations barplots for SCANB and BASIS
 
-#TODO: 
+#TODO:  add correct sample number in function for pam50 groups
 
 # empty environment
 rm(list=ls())
@@ -76,14 +76,22 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 all.dmut <- rbind(basis.dmut,scanb.dmut)
 #View(all.dmut)
 
+table(all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50)["Her2e"]
+
 #######################################################################
 # plot genes of interest: mutation frequencies
 #######################################################################
+
+pam50.n <- table(
+  all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) # TODO add correct sample number
+
 # PAM50, mutation type, count - but this would count multiple mutations per sample
 count.type <- function(data,gene) {
   data[data$Gene==gene,] %>% 
-    count(PAM50, Mutation_Type) %>% 
-    mutate(Freq=case_when(PAM50=="Her2e" ~ n/)) # check
+    count(PAM50, Mutation_Type) %>% # this would be the freq of mutation type per sample then
+    mutate(Freq=case_when(PAM50=="Her2e" ~ n/pam50.n["Her2e"],
+                          PAM50=="LumA" ~ n/pam50.n["LumA"],
+                          PAM50=="LumB" ~ n/pam50.n["LumB"])) 
 }
 
 # 1 mut per sample
@@ -91,7 +99,10 @@ count.sample <- function(data,gene) {
   data <- data %>% 
     distinct(Sample,Gene, .keep_all = TRUE)
   data[data$Gene==gene,] %>% 
-    count(PAM50)
+    count(PAM50) %>% 
+    mutate(Freq=case_when(PAM50=="Her2e" ~ n/pam50.n["Her2e"],
+                          PAM50=="LumA" ~ n/pam50.n["LumA"],
+                          PAM50=="LumB" ~ n/pam50.n["LumB"]))
 }
 
 gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
@@ -102,41 +113,31 @@ count.sample(all.dmut, gene=g)
 for (g in gene.vec) {
   
   # Plots overall mutations regardless of multiple per sample
-  p1 <- ggplot(count.type(all.dmut, gene=g), aes(fill=Mutation_Type,x=PAM50,y=n))+
-    geom_bar(position="stack", stat="identity")
+  p1 <- ggplot(count.type(all.dmut, gene=g), aes(fill=Mutation_Type,x=PAM50,y=Freq))+
+    geom_bar(position="stack", stat="identity") +
+    ggtitle(g) +
+    theme_bw() +
+    theme(aspect.ratio=1/1)
   
   # Plots freq samples mutated in PAM50 groups
-  p2 <- ggplot(count.sample(all.dmut, gene=g), aes(x=PAM50,y=n))+
-    geom_bar(position="stack", stat="identity")
+  p2 <- ggplot(count.sample(all.dmut, gene=g), aes(x=PAM50,y=Freq))+
+    geom_bar(position="stack", stat="identity") +
+    ggtitle(g) +
+    theme_bw() +
+    theme(aspect.ratio=1/1)
   
   plot.list <- append(plot.list,list(p1)) 
   plot.list <- append(plot.list,list(p2)) 
   
 }
 
-# save plots
-pdf(file = plot.file, onefile = TRUE) #, height = 10, width = 15)
+
+# # save plots
+pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
 
 
-# number of plots
-n <- length(plot.list)
-# plots per page
-pp <- 6 
-  
-for(i in seq(ceiling(n/pp))) { # pp plots per page
-  
-  # for the last page
-  if(n > pp) { 
-    k <- pp
-    } else {k <- n} # print only the remaining plots
-  n <- n - pp
-  
-  # subset the plot list
-  plots.page.list <- plot.list[1:k]
-  # remove these plots from the original list
-  plot.list[!(plot.list %in% plots.page.list)]
-  # 
-  print(do.call(gridExtra::grid.arrange, plots.page.list))
+for(i in 1:length(plot.list)) { 
+  print(plot.list[[i]])
 }
 
 dev.off()
