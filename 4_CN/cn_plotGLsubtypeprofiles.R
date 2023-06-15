@@ -31,26 +31,20 @@ library(plyr)
 ###############################################################################
 
 # SCANB (HER2E)
-load(file = "data/SCANB/4_CN/processed/processed_gainloss_matrix")
-cn.scanb <- gainloss.cn.scanb
+cn.scanb <- loadRData(file = "data/SCANB/4_CN/processed/CN_gainloss_frequencies.RData")
 
 # BASIS (HER2p, LUMA, LUMB)
-load(file = "data/BASIS/4_CN/processed/subtypes_GLmatrix_HG38")
-cn.basis <- cn.basis.subtypes
-rm(gainloss.cn.scanb,cn.basis.subtypes)
+cn.basis <- loadRData(file = "data/BASIS/4_CN/processed/CN_gainloss_frequencies.RData")
+
 # convert loss to negative values like in HER2E
 cn.basis[c("freqloss.HER2p","freqloss.LUMA","freqloss.LUMB")] <- lapply(cn.basis[c("freqloss.HER2p","freqloss.LUMA","freqloss.LUMB")], FUN = function(x) {x*-1})
 
-#head(cn.scanb)
-#head(cn.basis)
-
 # merge 
 cn.data <- rbind.fill(cn.basis,cn.scanb)
-cn.data <- cn.data[order(cn.data$genome_pos),]
+cn.data <- cn.data[order(cn.data$Genome_pos),]
 
-# chr lengths
-destfile <- "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv"
-chr.lengths <- as.data.frame(read.table(file = destfile, sep = '\t', header = FALSE))[1:23,] %>% 
+# chr lengths file
+chr.lengths <- as.data.frame(read.table(file = "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv", sep = '\t', header = FALSE))[1:23,] %>% 
     dplyr::rename(Chr=V1,length=V2) %>% mutate(genome = cumsum(as.numeric(length))) # dont shift by 1 here
 chr.lengths$Chr <- as.numeric(gsub("X",23,gsub('^.{3}','',chr.lengths$Chr)))
 
@@ -67,35 +61,35 @@ pdf(file = paste(output.path,cohort,"_GLsubtypeprofiles.pdf", sep =""), height =
 plot <- ggplot() +  
     ggtitle("Genome-wide frequency of gain/loss CN alterations") +
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqgain.HER2E)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqgain.HER2E)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqgain.HER2E),]$freqgain.HER2E, 
         color = "HER2E"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqloss.HER2E)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqloss.HER2E)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqloss.HER2E),]$freqloss.HER2E, 
         color = "HER2E"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqgain.LUMA)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqgain.LUMA)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqgain.LUMA),]$freqgain.LUMA, 
         color = "LUMA"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqloss.LUMA)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqloss.LUMA)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqloss.LUMA),]$freqloss.LUMA, 
         color = "LUMA"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqgain.LUMB)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqgain.LUMB)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqgain.LUMB),]$freqgain.LUMB, 
         color = "LUMB"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqloss.LUMB)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqloss.LUMB)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqloss.LUMB),]$freqloss.LUMB, 
         color = "LUMB"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqgain.HER2p)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqgain.HER2p)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqgain.HER2p),]$freqgain.HER2p, 
         color = "HER2p"),size=4) + 
     geom_line(aes(
-        x = cn.data[which(!is.na(cn.data$freqloss.HER2p)),]$genome_pos, 
+        x = cn.data[which(!is.na(cn.data$freqloss.HER2p)),]$Genome_pos, 
         y = cn.data[!is.na(cn.data$freqloss.HER2p),]$freqloss.HER2p, 
         color = "HER2p"),size=4) + 
     scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb", "HER2p"="#d72e2b")) + 
@@ -114,7 +108,7 @@ plot <- ggplot() +
           legend.title = element_blank(),
           axis.title.y = element_text(vjust = 0.5),
           legend.position = c(0.97, 0.95)) + #legend.position = "none") +
-    annotate(x=min(cn.data$genome_pos)+30000000,
+    annotate(x=min(cn.data$Genome_pos)+30000000,
              y=c(-50,50), label=c("Loss","Gain"), 
              geom="text", angle=90, hjust=0.5, 
              size=9, colour=c("black","black")) 

@@ -2,6 +2,7 @@
 
 # TODO:
 # - convert count to % by dividing by # of samples
+# - liftover of BASIS SNP-A positions to build 38 which SCAN-B is on.
 
 # empty environment
 rm(list=ls())
@@ -26,6 +27,7 @@ library(ggplot2)
 library(tidyverse)
 library(readxl)
 library(rtracklayer)
+#BiocManager::install("liftOver")
 library(liftOver)
 library(GenomicRanges)
 library(rtracklayer)
@@ -44,10 +46,7 @@ chr.lengths <- as.data.frame(read.table(file = "data/BASIS/4_CN/raw/GRCh38_EBV.c
   mutate(genome = lag(genome,default = 0)) # lag by 1 position (cause I have to add the length of the previous chr to the probe positions (0 for chr1 probes))
 chr.lengths$Chr <- as.numeric(gsub('^.{3}','',chr.lengths$Chr))
 
-
-
-
-# right?
+# calc GL alteration freqs
 cn.luma <- loadRData("data/BASIS/4_CN/processed/LumA_CollectedFrequencyData.RData") 
 cn.luma <- do.call("cbind", list(cn.luma$fData,cn.luma$CN_Gain,cn.luma$CN_Loss)) %>% 
   dplyr::rename(CN_Gain=ncol(.)-1,
@@ -148,34 +147,12 @@ head(cn.basis.subtypes)
 cnfile <- cn.basis.subtypes
 # add genome position
 cnfile <- add_genomepos(cnfile,chr.lengths)
-nrow(cnfile)
 
-# add genes # NEED NEW BASIS MAP KEY
-# chr seq need to be in format chr1 etc.
-cnfile$Chr <- sub("^", "chr", cnfile$Chr)
-#cnfile <- merge(cnfile,map.key,by=c("Chr","ProbeID","Position")) %>% 
-  #relocate(Gene_symbol,.after = ProbeID)
+# add "chr"
+cnfile$Chr <- sub("^", "chr", cnfile$Chr) 
 
 # save
 save(cnfile, 
-     file = paste(data.path,"CN_gainloss_genpos_genmap.RData",sep=""))
-
-
-# process to get genome positions
-# 1. load the chr lengths
-destfile <- "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv"
-chr.lengths <- as.data.frame(read.table(file = destfile, sep = '\t', header = FALSE))[1:23,] %>% 
-    dplyr::rename(Chr=V1,length=V2) %>% mutate(genome = cumsum(as.numeric(length))) %>% 
-    mutate(genome = lag(genome,default = 0)) # ALWAYS HAS TO BE ADDED TO THE PREVIOUS CHR LENGTH so i move the colum 1 down
-chr.lengths$Chr <- as.numeric(gsub("X",23,gsub('^.{3}','',chr.lengths$Chr)))
-
-# 2. process
-cn.basis.subtypes <- as.data.frame(processing(cn.basis.subtypes, chr.lengths)) %>% 
-    relocate(c(Chr,Position,genome_pos), .after = ProbeID)
-
-# save
-save(cn.basis.subtypes, file = paste(data.path,"subtypes_GLmatrix_HG38",sep=""))
-
-#head(cn.basis.subtypes)
+     file = paste(data.path,"CN_gainloss_frequencies.RData",sep=""))
 
 

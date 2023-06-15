@@ -32,7 +32,8 @@ library(tidyverse)
 ################################################################################
 
 # this file has NA probes filtered out -> correct? only if i plot genes and not probes otherwise they can stay in
-gainloss.cn.scanb.freqs <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData")
+gainloss.cn.scanb.freqs <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData") %>% 
+  dplyr::select(-c(Gene_symbol))
 
 ################################################################################
 # calc. the gain/loss freq. for HER2E 
