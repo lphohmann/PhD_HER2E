@@ -70,6 +70,18 @@ cn.her2p <- do.call("cbind", list(cn.her2p$fData,cn.her2p$CN_Gain,cn.her2p$CN_Lo
 
 #View(cn.lumb)
 #View(cn.her2p)
+# lumb.samples <-cn.lumb$Samples
+# lumb.samples
+# length(lumb.samples)
+# luma.samples <-cn.luma$Samples
+# luma.samples
+# length(luma.samples)
+# 
+# save(lumb.samples, 
+#      file = "data/BASIS/3_genomic/processed/BASIS_LumB_samples.RData")
+# save(luma.samples, 
+#      file = "data/BASIS/3_genomic/processed/BASIS_LumA_samples.RData")
+
 
 # l <- list(cn.luma,cn.lumb,cn.her2p)
 # for (i in 1:3) {

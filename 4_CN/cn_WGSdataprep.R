@@ -37,36 +37,68 @@ library(readxl)
 #######################################################################
 #######################################################################
 
+# get normal IDs
+id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
+  dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
+  mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
+
 # compile all files into one R object
-# ascat data files
+# ascat data file paths
 temp <- list.files(
-  path="./data/SCANB/3_genomic/raw/ascat_easysegments/",
-  pattern="*.txt", full.names = TRUE)
-segment.files <- lapply(temp, read_table)
-names(segment.files) <- lapply(temp, function(x) {
-  gsub("_easySegments.txt","",
-       gsub("./data/SCANB/3_genomic/raw/ascat_easysegments//","",x))})
-str(segment.files)
+  path="./data/SCANB/4_CN/raw/to_lennart/",
+  pattern="*.RData", full.names = TRUE, recursive = TRUE)
+# load the files
+ascat.files <- lapply(temp, loadRData)
+# select only the segments df and remove sample column
+segment.files <- lapply(ascat.files, function(x) { 
+  x <- x[["segments"]] %>% dplyr::select(-c(sample))
+  x$nTotal <- x$nMinor + x$nMajor
+  return(x) # add nTotal column
+  })
+
+#str(segment.files) # not named yet
+
+# convert the file names to S identifiers
+# sample ids used in the ascat files
+ascat.ids <- as.data.frame(unlist(lapply(temp, function(x) {
+  gsub("_vs.*","",
+       gsub("./data/SCANB/4_CN/raw/to_lennart//ascat.","",x))}))) %>% dplyr::rename(Ascat.id=1)
+# 1. convert epb IDs to normal sample IDs
+ascat.ids$Sample <- id.key$SENT.TUMOR[match(
+  ascat.ids$Ascat.id, id.key$SENT.TUMOR.aliquot)] 
+# 2. convert the other IDs to normal sample IDs
+ascat.ids$Sample2 <- id.key$SENT.TUMOR[match(
+  ascat.ids$Ascat.id, id.key$TUMOR.alias)] # 2. convert the other IDs to normal sample IDs
+ascat.ids$Sample <- ifelse(is.na(ascat.ids$Sample), ascat.ids$Sample2, ascat.ids$Sample)
+ascat.ids$Sample2 <- NULL
+
+# name the segments dataframes
+names(segment.files) <- ascat.ids$Sample
 
 # ploidy file
-ploidy.df <- list.files(
-  path="./data/SCANB/3_genomic/raw/ascat_TC_ploidy/",
-  pattern = "*.txt",full.names = TRUE) %>% 
-  map_df(~read_table(.)) %>% 
-  as.data.frame()
-str(ploidy.df)
+ploidy.list <- lapply(ascat.files, function(x) { 
+  ploidy <- x[["ploidy"]]
+  sample <- names(ploidy)
+  ploidy <- unname(ploidy) 
+  return(list(sample,ploidy)) 
+}) 
+ploidy.df <- as.data.frame(do.call(rbind,ploidy.list)) %>% 
+  dplyr::rename(Sample=V1,ploidy=V2)
+# name to match the segment sample ids
+ploidy.df$Sample <- ascat.ids$Sample[match(
+  ploidy.df$Sample, ascat.ids$Ascat.id)] 
 
 # probe anno
 probe.df <- read.delim(
   "./data/SCANB/3_genomic/raw/CNV_SV_ref_GRCh38_hla_decoy_ebv_brass6+/ascat/SnpGcCorrections.tsv",sep="\t")[1:3] %>% 
   mutate(Chr = gsub("chr","",Chr)) %>% 
   dplyr::rename("ProbeID"=X)
-str(probe.df)
+#str(probe.df)
 
 #######################################################################
 # functions (move to CN functions later)
 #######################################################################
-
+#i=1
 # function that that creates a matrix (probeID | Chr | Position | CNstate_sample) for all samples
 make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
   
@@ -78,7 +110,7 @@ make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
     # sample data
     sample.ID <- names(segment.files[i]) 
     sample.data <- segment.files[[sample.ID]] 
-    sample.ploidy <- ploidy.df[which(ploidy.df$Sample==sample.ID),]$ploidy
+    sample.ploidy <- unlist(ploidy.df[ploidy.df$Sample==sample.ID,]$ploidy)
     
     # create a matrix (probeID | Chr | Position | CNstate_sample) for a single sample
     sample.matrix <- make_sampmatrix(probe.df, sample.data, sample.ID, matrix.type, sample.ploidy)
@@ -88,7 +120,7 @@ make_finmatrix <- function(probe.df, segment.files, ploidy.df, matrix.type) {
   }
 
   # merge fin.list into final matrix
-  fin.matrix <- fin.list %>% reduce(left_join,by=c("ProbeID","Chr","Position"))
+  fin.matrix <- fin.list %>% purrr::reduce(left_join,by=c("ProbeID","Chr","Position"))
   
   return(fin.matrix)
 }
@@ -157,12 +189,12 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
       } else if (matrix.type == "total") {
         # assign the CN_state to the probes that correspond to that segment
         chr.matrix[which(chr.matrix$Position >= seg.start & 
-                           chr.matrix$Position <= seg.end),]$CN_state <- seg.data[["nTot"]]
+                           chr.matrix$Position <= seg.end),]$CN_state <- seg.data[["nTotal"]]
     # gain or loss CN state
       } else if (matrix.type == "gainloss") {
-        if (seg.data[["nTot"]]  >= (sample.ploidy + 0.6)) {
+        if (seg.data[["nTotal"]]  >= (sample.ploidy + 0.6)) {
           state.gl <- 1
-          } else if (seg.data[["nTot"]] <= (sample.ploidy - 0.6)) {
+          } else if (seg.data[["nTotal"]] <= (sample.ploidy - 0.6)) {
             state.gl <- -1
           } else {
             state.gl <- 0
@@ -172,9 +204,9 @@ make_chrmatrix <- function(chr.probes, chr.segments, matrix.type, sample.ploidy)
                            chr.matrix$Position <= seg.end),]$CN_state <- state.gl
     # amplification CN state
       } else if (matrix.type == "amplification") {
-        if (seg.data[["nTot"]]  >= (sample.ploidy*4)) { # focal amp
+        if (seg.data[["nTotal"]]  >= (sample.ploidy*4)) { # focal amp
           state.amp <- 2
-          } else if (seg.data[["nTot"]] >= (sample.ploidy*2)) { # amp
+          } else if (seg.data[["nTotal"]] >= (sample.ploidy*2)) { # amp
             state.amp <- 1
           } else {
             state.amp <- 0 # no amp

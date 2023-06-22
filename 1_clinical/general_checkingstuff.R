@@ -293,3 +293,47 @@ save(all.samples.anno,file="data/SCANB/3_genomic/processed/not_required_samples.
 save(her2e.samples.df,file="data/SCANB/3_genomic/processed/her2e_samples.RData")
 
 #######################
+
+
+r <- loadRData("data/SCANB/2_transcriptomic/processed/mg_anno.RData")
+r <- loadRData("data/METABRIC/2_transcriptomic/processed/mg_anno.RData")
+head(r)
+
+View(r[[2]])
+r <- loadRData("data/SCANB/2_transcriptomic/processed/DE_results.RData")
+head(r)
+colnames(r)
+rownames(r)
+nrow(r)
+
+# scnab % of DEGS compared to all
+r <- loadRData("data/SCANB/2_transcriptomic/processed/DE_results.RData")
+nrow(r[r$Her2.LumA.padj <= 0.05,])
+(nrow(r[r$Her2.LumA.padj <= 0.05,]) / nrow(r))*100
+
+nrow(r[r$Her2.LumB.padj <= 0.05,])
+(nrow(r[r$Her2.LumB.padj <= 0.05,]) / nrow(r))*100
+
+# Metabric % of DEGS compared to all
+r <- loadRData("data/METABRIC/2_transcriptomic/processed/DE_results.RData")
+nrow(r)
+row.names(r)
+
+nrow(r[r$Her2.LumA.padj <= 0.05,])
+(nrow(r[r$Her2.LumA.padj <= 0.05,]) / nrow(r))*100
+
+# double check method in de script - why so few, rerun de script
+nrow(r[r$Her2.LumB.padj <= 0.05,])
+(nrow(r[r$Her2.LumB.padj <= 0.05,]) / nrow(r))*100
+
+
+
+####
+r <- loadRData("data/SCANB/4_CN/raw/to_lennart/ascat.S000763_l_d_a_vs_B000930_d_a/S000763_l_d_a_ascat_output_gamma0.9_penalty100.RData")
+head(r)
+str(r)
+r$ploidy
+View(r)
+View(r$segments)
+nrow(r$segments)
+View(r$nA)
