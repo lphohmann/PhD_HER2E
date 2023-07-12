@@ -42,7 +42,7 @@ dbs <- listEnrichrDbs() # see avaiable dbs and select
 dbs <- c("GO_Biological_Process_2021") #"KEGG_2021_Human", "GO_Molecular_Function_2021", "GO_Biological_Process_2021
 
 #######################################################################
-# All DEGs
+# Core DEGs
 #######################################################################
 
 #filter based on expression diff?

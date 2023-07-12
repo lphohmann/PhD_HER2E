@@ -1,6 +1,6 @@
 # Script: Driver mutations barplots for SCANB and BASIS
 
-#TODO:  add correct sample number in function for pam50 groups
+#TODO:  add ttest for mut freqs
 
 # empty environment
 rm(list=ls())
@@ -76,19 +76,19 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 all.dmut <- rbind(basis.dmut,scanb.dmut)
 #View(all.dmut)
 
-table(all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50)["Her2e"]
+#table(all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50)["Her2e"]
 
 #######################################################################
 # plot genes of interest: mutation frequencies
 #######################################################################
 
 pam50.n <- table(
-  all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) # TODO add correct sample number
+  all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) 
 
 # PAM50, mutation type, count - but this would count multiple mutations per sample
 count.type <- function(data,gene) {
   data[data$Gene==gene,] %>% 
-    count(PAM50, Mutation_Type) %>% # this would be the freq of mutation type per sample then
+    dplyr::count(PAM50, Mutation_Type) %>% # this would be the freq of mutation type per sample then
     mutate(Freq=case_when(PAM50=="Her2e" ~ (n/pam50.n["Her2e"])*100,
                           PAM50=="LumA" ~ (n/pam50.n["LumA"])*100,
                           PAM50=="LumB" ~ (n/pam50.n["LumB"])*100)) 
@@ -99,16 +99,17 @@ count.sample <- function(data,gene) {
   data <- data %>% 
     distinct(Sample,Gene, .keep_all = TRUE)
   data[data$Gene==gene,] %>% 
-    count(PAM50) %>% 
+    dplyr::count(PAM50) %>% 
     mutate(Freq=case_when(PAM50=="Her2e" ~ (n/pam50.n["Her2e"])*100,
                           PAM50=="LumA" ~ (n/pam50.n["LumA"])*100,
                           PAM50=="LumB" ~ (n/pam50.n["LumB"])*100))
 }
 
 gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
-g <- gene.vec[3]
-count.type(all.dmut, gene=g)
-count.sample(all.dmut, gene=g)
+#g <- gene.vec[3]
+
+#count.type(all.dmut, gene=g)
+#count.sample(all.dmut, gene=g)
 
 for (g in gene.vec) {
   
@@ -118,7 +119,7 @@ for (g in gene.vec) {
     ggtitle(g) +
     theme_bw() +
     theme(aspect.ratio=1/1,
-          legend.position = "none",
+          legend.position = c(0.9,0.9),
           panel.border = element_blank(), 
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -164,3 +165,18 @@ for(i in 1:length(plot.list)) {
 }
 
 dev.off()
+
+
+##############################
+# stat testing mut freqs
+##############################
+
+# need df in binary format with samples as columns and genes as rows
+all.dmut
+
+all.dmut.binary <- as.data.frame(matrix(ncol = length(unique(all.dmut$Sample)), 
+                                        nrow = length(gene.vec)))
+
+t.test()
+
+?matrix

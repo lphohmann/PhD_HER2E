@@ -40,7 +40,8 @@ library(grid)
 
 # define list of driver genes/ cancer genes
 #amp.drivers <- c("ERBB2", "CCND1", "ZNF703", "PAK1", "RPS6KB1", "MYC", "ZNF217", "MCL1", "MDM2", "PIK3CA", "CCNE1") # from TCGA
-# use only basis paper
+
+# use only basis paper - intersect with new data to see if all genes incl in this list
 sub.indel.drivers <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "Subs.indels")) %>% 
   pull(Gene) %>% 
   unique
@@ -55,31 +56,29 @@ driver.genes <- unique(c(sub.indel.drivers,amp.drivers))
 #######################################################################
 
 # ID key file
-id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/SCANB_ERpos_Project1.xlsx", sheet = "Summary")) %>% 
-  dplyr::select(c("Tumour","Tumour_SimpleID")) %>% 
-  dplyr::rename("Sample"=Tumour)
+id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "Samples")) %>% 
+  dplyr::select(c("Sample","Tumour")) %>% dplyr::rename(sample=Sample)
 
 #######################################################################
 
 # load driver data
-indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingIndels")) %>% 
+indel.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingPindel")) %>% 
   mutate(VC = paste("indel_",VC, sep = "")) %>% 
-  left_join(id.key,by="Sample") %>% 
-  dplyr::select(-c(Sample)) %>% 
-  dplyr::rename(gene=VD_Gene,variant_class=VC,sample=Tumour_SimpleID) %>% 
+  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
   dplyr::select(c(sample,gene,variant_class)) %>% 
+  filter(gene %in% driver.genes) %>% 
   distinct()
 
-sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_coding_and_drivers_3March23.xlsx", sheet = "AllCodingSubs")) %>% 
+sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingASMD_CLPM")) %>% 
   mutate(VC = paste("sub_",VC, sep = "")) %>% 
-  left_join(id.key,by="Sample") %>% 
-  dplyr::select(-c(Sample)) %>% 
-  dplyr::rename(gene=VD_Gene,variant_class=VC,sample=Tumour_SimpleID) %>% 
+  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
   dplyr::select(c(sample,gene,variant_class)) %>% 
+  filter(gene %in% driver.genes) %>% 
   distinct()
 
-
-# amplification data
+# processed amplification data
 amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
 cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>% 
   filter(!is.na(Gene_symbol)) %>% 
@@ -140,8 +139,17 @@ save(drivers.df,
 #mut.drivers <- rbind(sub.drivers,indel.drivers) #cn.drivers,
 #mut.all <- rbind(sub.all,indel.all)
 
-colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", 
-                    "#2a18cc", "#0b9c32")
+#colors <- c("#0e0421", "#d4136d", "#12e0dd", "#c70c0c", 
+#                    "#2a18cc", "#0b9c32")
+colors <- c("#8dd3c7",
+            "#ffffb3",
+            "#bebada",
+            "#fb8072",
+            "#80b1d3",
+            "#fdb462",
+            "#b3de69",
+            "#fccde5")
+
 
 ################################################################################
 # Waterfall plots
@@ -168,7 +176,6 @@ for (i in names(datasets)) {
                     fileType = "Custom", 
                     variant_class_order = mutation.priority,
                     mainGrid = TRUE,
-                    plotMutBurden = TRUE,
                     mainPalette = custom.pallete,
                     main_geneLabSize = 15,
                     mainRecurCutoff = 0,
@@ -176,7 +183,8 @@ for (i in names(datasets)) {
                     mainDropMut = TRUE, # drop unused mutation types from legend
                     #rmvSilent = TRUE,
                     out= "grob",
-                    mutBurdenLayer = layer)
+                    mutBurdenLayer = layer,
+                    plotMutBurden = FALSE) #
   #plotSamples = c()
   
   grid.draw(plot)
