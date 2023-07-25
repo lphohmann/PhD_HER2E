@@ -49,6 +49,9 @@ temp <- list.files(
   pattern="*.RData", full.names = TRUE, recursive = TRUE)
 # load the files
 ascat.files <- lapply(temp, loadRData)
+
+View(ascat.files[[1]])
+
 # select only the segments df and remove sample column
 segment.files <- lapply(ascat.files, function(x) { 
   x <- x[["segments"]] %>% dplyr::select(-c(sample))
@@ -57,7 +60,7 @@ segment.files <- lapply(ascat.files, function(x) {
   })
 
 #str(segment.files) # not named yet
-
+#View(segment.files[1])
 # convert the file names to S identifiers
 # sample ids used in the ascat files
 ascat.ids <- as.data.frame(unlist(lapply(temp, function(x) {

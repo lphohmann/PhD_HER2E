@@ -12,7 +12,7 @@ setwd("~/PhD_Workspace/Project_HER2E/")
 cohort <- "SCANB" # SCANB 
 
 # set/create output directory for plots
-output.path <- "output/plots/3_genomic//"
+output.path <- "output/plots/3_genomic/"
 dir.create(output.path)
 
 # set/create output directory for processed data
