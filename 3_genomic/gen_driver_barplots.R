@@ -74,9 +74,6 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 
 # combined
 all.dmut <- rbind(basis.dmut,scanb.dmut)
-#View(all.dmut)
-
-#table(all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50)["Her2e"]
 
 #######################################################################
 # plot genes of interest: mutation frequencies
@@ -84,15 +81,6 @@ all.dmut <- rbind(basis.dmut,scanb.dmut)
 
 pam50.n <- table(
   all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) 
-
-# PAM50, mutation type, count - but this would count multiple mutations per sample
-count.type <- function(data,gene) {
-  data[data$Gene==gene,] %>% 
-    dplyr::count(PAM50, Mutation_Type) %>% # this would be the freq of mutation type per sample then
-    mutate(Freq=case_when(PAM50=="Her2e" ~ (n/pam50.n["Her2e"])*100,
-                          PAM50=="LumA" ~ (n/pam50.n["LumA"])*100,
-                          PAM50=="LumB" ~ (n/pam50.n["LumB"])*100)) 
-}
 
 # 1 mut per sample
 count.sample <- function(data,gene) {
@@ -106,30 +94,8 @@ count.sample <- function(data,gene) {
 }
 
 gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
-#g <- gene.vec[3]
-
-#count.type(all.dmut, gene=g)
-#count.sample(all.dmut, gene=g)
 
 for (g in gene.vec) {
-  
-  # Plots overall mutations regardless of multiple per sample
-  p1 <- ggplot(count.type(all.dmut, gene=g), aes(fill=Mutation_Type,x=PAM50,y=Freq))+
-    geom_bar(position="stack", stat="identity") +
-    ggtitle(g) +
-    theme_bw() +
-    theme(aspect.ratio=1/1,
-          legend.position = c(0.9,0.9),
-          panel.border = element_blank(), 
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.line = element_line(colour = "black",linewidth = 2),
-          axis.ticks = element_line(colour = "black", linewidth = 1),
-          axis.ticks.length=unit(0.2, "cm")) +
-    scale_y_continuous(breaks = scales::breaks_pretty(10),
-                       limits = c(0,80)) +
-    ylab("Mutation frequency (%)") +
-    xlab("PAM50 subtype")
   
   # Plots freq samples mutated in PAM50 groups
   p2 <- ggplot(count.sample(all.dmut, gene=g), aes(fill=as.factor(PAM50),x=PAM50,y=Freq))+
@@ -151,13 +117,11 @@ for (g in gene.vec) {
     ylab("Mutation frequency (%)") +
     xlab("PAM50 subtype")
   
-  plot.list <- append(plot.list,list(p1)) 
   plot.list <- append(plot.list,list(p2)) 
   
 }
 
-
-# # save plots
+# save plots
 pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
 
 for(i in 1:length(plot.list)) { 
@@ -167,9 +131,9 @@ for(i in 1:length(plot.list)) {
 dev.off()
 
 
-##############################
-# stat testing mut freqs
-##############################
+#######################################################################
+# stat testing mut. freqs
+#######################################################################
 
 # need df in binary format with samples as columns and genes as rows
 all.dmut
@@ -177,6 +141,5 @@ all.dmut
 all.dmut.binary <- as.data.frame(matrix(ncol = length(unique(all.dmut$Sample)), 
                                         nrow = length(gene.vec)))
 
-t.test()
+#t.test()
 
-?matrix

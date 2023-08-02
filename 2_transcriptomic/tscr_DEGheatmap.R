@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -110,7 +110,7 @@ my_colour = list(
     Early_response = mg_colors,
     IR = mg_colors,
     Lipid = mg_colors,
-    Mitotic_checkpoint = mg_colors,
+    Mitotic_progression = mg_colors,
     Mitotic_progression = mg_colors,
     SR = mg_colors,
     Stroma = mg_colors)
@@ -176,13 +176,13 @@ final.hm.anno <- data.frame(
     Basal=factor(mg_converter(hm.anno$Basal)),
     IR=factor(mg_converter(hm.anno$IR)),
     Lipid=factor(mg_converter(hm.anno$Lipid)),
-    Mitotic_checkpoint=factor(mg_converter(hm.anno$Mitotic_checkpoint)),
+    Mitotic_progression=factor(mg_converter(hm.anno$Mitotic_progression)),
     SR=factor(mg_converter(hm.anno$SR)),
     Stroma=factor(mg_converter(hm.anno$Stroma)))
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-plot1 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot1 <- pheatmap::pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -194,7 +194,7 @@ plot1 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
          annotation_col=
              final.hm.anno[,
-                           c("Stroma","SR","Mitotic_checkpoint",
+                           c("Stroma","SR","Mitotic_progression",
                              "Lipid","IR","Basal","NHG","PAM50")], 
          annotation_colors=my_colour,breaks=breaksList) #,filename= paste(output.path,cohort,"_coretop_heatmap.pdf",sep = "")
 
@@ -258,13 +258,13 @@ final.hm.anno <- data.frame(
     Basal=factor(mg_converter(hm.anno$Basal)),
     IR=factor(mg_converter(hm.anno$IR)),
     Lipid=factor(mg_converter(hm.anno$Lipid)),
-    Mitotic_checkpoint=factor(mg_converter(hm.anno$Mitotic_checkpoint)),
+    Mitotic_progression=factor(mg_converter(hm.anno$Mitotic_progression)),
     SR=factor(mg_converter(hm.anno$SR)),
     Stroma=factor(mg_converter(hm.anno$Stroma)))
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-plot2 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot2 <- pheatmap::pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -276,7 +276,7 @@ plot2 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
          annotation_col=
              final.hm.anno[,
-                           c("Stroma","SR","Mitotic_checkpoint",
+                           c("Stroma","SR","Mitotic_progression",
                              "Lipid","IR","Basal","NHG","PAM50")], 
          annotation_colors=my_colour,breaks=breaksList) #,filename= paste(output.path,cohort,"_LUMA_heatmap.pdf",sep = ""))
 
@@ -340,13 +340,13 @@ final.hm.anno <- data.frame(
     Basal=factor(mg_converter(hm.anno$Basal)),
     IR=factor(mg_converter(hm.anno$IR)),
     Lipid=factor(mg_converter(hm.anno$Lipid)),
-    Mitotic_checkpoint=factor(mg_converter(hm.anno$Mitotic_checkpoint)),
+    Mitotic_progression=factor(mg_converter(hm.anno$Mitotic_progression)),
     SR=factor(mg_converter(hm.anno$SR)),
     Stroma=factor(mg_converter(hm.anno$Stroma)))
 rownames(final.hm.anno) <- rownames(hm.anno)
 
 # create the heatmap
-plot3 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
+plot3 <- pheatmap::pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
          clustering_distance_rows = my.dist.method,
          clustering_distance_cols = my.dist.method, 
          clustering_method = my.link.method,
@@ -358,7 +358,7 @@ plot3 <- pheatmap(top.gex, cluster_rows=T, treeheight_row = 0,
              c("#998ec3", "#f7f7f7", "#f1a340"))(length(breaksList)),
          annotation_col=
              final.hm.anno[,
-                           c("Stroma","SR","Mitotic_checkpoint",
+                           c("Stroma","SR","Mitotic_progression",
                              "Lipid","IR","Basal","NHG","PAM50")], 
          annotation_colors=my_colour,breaks=breaksList) # ,filename= paste(output.path,cohort,"_LUMB_heatmap.pdf",sep = ""))
 

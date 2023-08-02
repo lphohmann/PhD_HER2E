@@ -187,7 +187,7 @@ for (i in names(datasets)) {
                     plotMutBurden = FALSE) #
   #plotSamples = c()
   
-  grid.draw(plot)
+  #grid.draw(plot)
   
   # append to list
   plot.list <- append(plot.list,list(plot))
