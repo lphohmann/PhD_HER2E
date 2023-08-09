@@ -22,6 +22,8 @@ dir.create(data.path)
 # plot
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
 plot.file <- paste(output.path,cohort,"_HER2n_driverBarplots.pdf",sep = "")
+txt.out <- c() # object to store text output
+txt.file <- paste(output.path,cohort,"_HER2n_driverBarplots.txt", sep="")
 
 #packages
 source("scripts/3_genomic/src/gen_functions.R")
@@ -93,7 +95,7 @@ count.sample <- function(data,gene) {
                           PAM50=="LumB" ~ (n/pam50.n["LumB"])*100))
 }
 
-gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4")
+gene.vec <-c("ERBB2","ESR1","TP53","PIK3CA","FGFR4") 
 
 for (g in gene.vec) {
   
@@ -136,10 +138,61 @@ dev.off()
 #######################################################################
 
 # need df in binary format with samples as columns and genes as rows
-all.dmut
+sample.anno <- all.dmut[1:2] %>% distinct(Sample, .keep_all = TRUE)
+all.dmut.binary <- all.dmut %>% 
+  dplyr::select(-c(Mutation_Type, Effect, PAM50)) %>% 
+  distinct(Sample,Gene, .keep_all = TRUE) %>% 
+  mutate(Mutation = 1) %>%  
+  pivot_wider(names_from = Sample, values_from = Mutation) %>% 
+  replace(is.na(.), 0) %>% 
+  filter(Gene %in% gene.vec)
 
-all.dmut.binary <- as.data.frame(matrix(ncol = length(unique(all.dmut$Sample)), 
-                                        nrow = length(gene.vec)))
+res.df <- data.frame()
 
-#t.test()
+pb = txtProgressBar(min = 0, max = nrow(all.dmut.binary), initial = 0, style = 3)
+for (i in 1:nrow(all.dmut.binary)) { #nrow(gex.data)
+  setTxtProgressBar(pb,i)
+  
+  # gene to test
+  gene <- all.dmut.binary$Gene[i]
+  
+  # mutation counts
+  her2e.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                      sample.anno[sample.anno$PAM50=="Her2e","Sample"]]==1)
+  luma.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                                     sample.anno[sample.anno$PAM50=="LumA","Sample"]]==1)
+  lumb.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                                     sample.anno[sample.anno$PAM50=="LumB","Sample"]]==1)
+  
+  # make tbl
+  freq.tbl <- data.frame(her2e = c(her2e.n.mut,
+                                   length(sample.anno[sample.anno$PAM50=="Her2e","Sample"])-
+                                     her2e.n.mut), 
+                         luma = c(luma.n.mut,
+                                  length(sample.anno[sample.anno$PAM50=="LumA","Sample"])-
+                                    luma.n.mut), 
+                         lumb = c(lumb.n.mut,
+                                  length(sample.anno[sample.anno$PAM50=="LumB","Sample"])-
+                                    lumb.n.mut),
+                         row.names = c("mutation", "no_mutation"))
+  
+  # Her2 vs LumA
+  luma.freq.tbl <- freq.tbl[,c("her2e","luma")]
+  luma.res <- fisher.test(luma.freq.tbl)
+  
+  # for Her2 vs LumB
+  lumb.freq.tbl <- freq.tbl[,c("her2e","lumb")]
+  lumb.res <- fisher.test(lumb.freq.tbl)
+  
+  # save results gene | luma_pval | lumb_pval
+  res.df <- rbind(res.df,c(gene,luma.res$p.value,lumb.res$p.value))
+  txt.out <- append(txt.out,c(gene,capture.output(luma.res)))
+  txt.out <- append(txt.out,c(gene,capture.output(lumb.res)))
+  close(pb)
+}
 
+# name output columns
+names(res.df) <- c("gene","luma.pval","lumb.pval")
+
+# save text output
+writeLines(txt.out, txt.file)
