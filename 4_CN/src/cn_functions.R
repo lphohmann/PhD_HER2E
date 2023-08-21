@@ -27,3 +27,15 @@ add_genomepos <- function(cn.data, chr.lengths) {
   
   return(res)
 }
+
+################################################################################
+# function to cbind and fill with NA if nrow not equal
+################################################################################
+
+cbind.fill <- function(...) {
+  nm <- list(...) # all arguments made into list
+  nm <- lapply(nm, as.matrix) # turn into matrices, returns list object
+  n <- max(sapply(nm, nrow)) # sapply return vector, n will be the highest number of rows
+  do.call(cbind, lapply(nm, function (x) 
+    rbind(x, matrix(, n-nrow(x), ncol(x))))) 
+}

@@ -50,7 +50,7 @@ temp <- list.files(
 # load the files
 ascat.files <- lapply(temp, loadRData)
 
-View(ascat.files[[1]])
+#View(ascat.files[[1]])
 
 # select only the segments df and remove sample column
 segment.files <- lapply(ascat.files, function(x) { 
@@ -90,6 +90,8 @@ ploidy.df <- as.data.frame(do.call(rbind,ploidy.list)) %>%
 # name to match the segment sample ids
 ploidy.df$Sample <- ascat.ids$Sample[match(
   ploidy.df$Sample, ascat.ids$Ascat.id)] 
+
+save(ploidy.df,file = "./data/SCANB/4_CN/processed/HER2Esample_ploidy.RData")
 
 # probe anno
 probe.df <- read.delim(

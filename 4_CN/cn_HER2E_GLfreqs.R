@@ -2,6 +2,8 @@
 # Purpose: 
 # 1. calculate frequencies of gain/loss alterations per probe
 
+# input file from cn_HER2Eprocessing.R
+
 # TODO:
 # - 
 

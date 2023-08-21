@@ -46,7 +46,7 @@ chr.lengths <- as.data.frame(read.table(file = "data/BASIS/4_CN/raw/GRCh38_EBV.c
   mutate(genome = lag(genome,default = 0)) # lag by 1 position (cause I have to add the length of the previous chr to the probe positions (0 for chr1 probes))
 chr.lengths$Chr <- as.numeric(gsub('^.{3}','',chr.lengths$Chr))
 
-# calc GL alteration freqs
+# calc GL alteration freqs in %
 cn.luma <- loadRData("data/BASIS/4_CN/processed/LumA_CollectedFrequencyData.RData") 
 cn.luma <- do.call("cbind", list(cn.luma$fData,cn.luma$CN_Gain,cn.luma$CN_Loss)) %>% 
   dplyr::rename(CN_Gain=ncol(.)-1,
@@ -68,7 +68,7 @@ cn.her2p <- do.call("cbind", list(cn.her2p$fData,cn.her2p$CN_Gain,cn.her2p$CN_Lo
   mutate(CN_Gain = (CN_Gain/length(cn.her2p$Samples))*100) %>% 
   mutate(CN_Loss = (CN_Loss/length(cn.her2p$Samples))*100)
 
-#View(cn.lumb)
+#View(head(cn.lumb))
 #View(cn.her2p)
 # lumb.samples <-cn.lumb$Samples
 # lumb.samples
@@ -151,6 +151,69 @@ cn.basis.subtypes <- merge(cn.her2p.postlift,
 head(cn.basis.subtypes)
 
 ################################################################################
+# Make key file for which probes map to which genes
+################################################################################
+
+probe.positions <- cn.basis.subtypes[1:3] %>% 
+  mutate(Chr = paste("chr",as.character(Chr),sep = "")) %>% 
+  filter(Chr != "chr23") # no X chr in scanb data
+
+# create granges objects
+probes <- GRanges(seqnames = probe.positions$Chr,
+                  ranges = IRanges(probe.positions$Position),
+                  ProbeID = probe.positions$ProbeID)
+genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID
+
+# convert to hgnc symbols
+ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
+stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
+mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
+gene.anno <- as.data.frame(genes)
+probe.anno <- as.data.frame(probes)
+
+# which 
+overlap.res <- findOverlaps(genes,probes)
+# queryHits(): indexes of the gene coordinates that overlap the corresponding 
+# subjectHits(): indexes of the probes
+# line up the query column identifier (gene) that overlaps each probe
+f1 <- factor(subjectHits(overlap.res), levels=seq_len(subjectLength(overlap.res)))
+# use of factor() with exactly as many levels as there are subjects ensures that the splitAsList() command returns a 1:1 mapping between the subjects (probes) and the genes in the corresponding CharacterList
+overlap.list <- splitAsList(mcols(genes)[["SYMBOL"]][queryHits(overlap.res)], f1) # split the column of gene symbols into lists corresponding to the regions of overlap
+mcols(probes) <- overlap.list
+
+key.df <- merge(as.data.frame(probes),probe.anno,
+                by=c("seqnames","start","end","width","strand")) %>% 
+  dplyr::rename(Gene_symbol=X,Position=start,Chr=seqnames) %>% 
+  dplyr::select(Chr,ProbeID,Gene_symbol)
+#head(key.df) # why multiple genes per probe??
+
+# add to matrix
+probe.positions <- merge(probe.positions,key.df,by=c("Chr","ProbeID")) %>% 
+  relocate(Gene_symbol,.after = ProbeID)
+
+#head(probe.positions)
+
+# replace character(0) with NA for later filtering of probes without annotation
+probe.positions$Gene_symbol <- lapply(probe.positions$Gene_symbol, 
+                                      function(x) {
+                                        if (identical(x, character(0))) {
+                                          return(NA)
+                                        } else {return(x)}
+                                      })
+
+# filter NA rows
+#probe.positions <- probe.positions[which(!is.na(probe.positions$Gene_symbol)),]
+
+# which probes have multiple mapped genes
+#multi.genes <- probe.positions[which(lengths(probe.positions$Gene_symbol)>1),]
+#nrow(multi.genes) #107629
+
+# key file for gene to probe mapping
+map.key <- probe.positions
+
+#View(map.key) 
+  
+################################################################################
 # add genome position of probes and corresponding genes
 ################################################################################
 # key file for gene to probe mapping - make one for BASIS or just use table14? 
@@ -163,8 +226,12 @@ cnfile <- add_genomepos(cnfile,chr.lengths)
 # add "chr"
 cnfile$Chr <- sub("^", "chr", cnfile$Chr) 
 
+# merge with gene positions
+cnfile <- merge(cnfile,map.key,by=c("Chr","ProbeID","Position")) %>% 
+  relocate(Gene_symbol,.after = ProbeID)
+
 # save
 save(cnfile, 
-     file = paste(data.path,"CN_gainloss_frequencies.RData",sep=""))
+     file = paste(data.path,"CN_gainloss_frequencies_genpos_genmap.RData",sep=""))
 
 

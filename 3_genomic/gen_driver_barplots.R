@@ -39,6 +39,83 @@ library(grid)
 library(gridExtra)
 
 #######################################################################
+# all mut data
+#######################################################################
+
+# scanb
+# ID key file
+id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "Samples")) %>% 
+  dplyr::select(c("Sample","Tumour")) %>% dplyr::rename(sample=Sample)
+
+# load indel data
+indel.muts <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingPindel")) %>% 
+  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
+  dplyr::select(c(sample,gene)) %>% 
+  distinct()
+
+sub.muts <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingASMD_CLPM")) %>% 
+  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
+  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
+  dplyr::select(c(sample,gene)) %>% 
+  distinct()
+
+scanb.muts <- as.data.frame(do.call("rbind", list(sub.muts,indel.muts))) %>% 
+  dplyr::count(sample) %>% 
+  mutate(PAM50 = "Her2e") %>% 
+  dplyr::rename(N_mut=n)
+
+# get full list from VCF files
+
+# basis mut data # HERE GET TEH RIGHT FILE
+basis.muts <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
+  filter(ClinicalGroup == "ERposHER2neg" & PAM50_AIMS %in% c("LumA","LumB")) %>% 
+  mutate(N_mut = nbrIndels + nbrSubs) %>% 
+  dplyr::select(c("sample_name","PAM50_AIMS","N_mut")) %>% 
+  dplyr::rename(sample=sample_name,PAM50=PAM50_AIMS)
+
+# combined
+mutation.sample.counts <- rbind(basis.muts,scanb.muts)
+View(mutation.sample.counts)
+#View(basis.muts)
+
+
+#######################################################################
+# plot TMB
+#######################################################################
+
+# add back the pam50 annot
+#tmb.dat$PAM50 <- all.dmut$PAM50[match(tmb.dat$Sample,all.dmut$Sample)]
+
+p <- ggplot(mutation.sample.counts, aes(x=PAM50,y=N_mut,fill=PAM50)) +
+  geom_boxplot(size=2.5, outlier.size = 7) +
+  ylab("Mutational burden") +
+  xlab("PAM50 subtype") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 60,margin = margin(t=10)),
+        axis.title.x = element_text(size = 60),
+        axis.text.y = element_text(size = 55,margin = margin(r=10)),
+        axis.title.y = element_text(size = 60),
+        plot.title = element_text(size=50),
+        legend.position = "none",
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black",linewidth=2),
+        axis.ticks = element_line(colour = "black", linewidth = 2),
+        axis.ticks.length=unit(0.5, "cm")) +
+  scale_fill_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                    c("Her2e","LumA","LumB"))) +  
+  scale_y_continuous(breaks = scales::breaks_pretty(10)) + 
+  ggtitle("TMB based on SBS and indels") +
+  
+
+
+print(p)
+plot.list <- append(plot.list,list(p))
+
+#######################################################################
+# driver data
 #######################################################################
 
 # scanb mut data
@@ -59,9 +136,9 @@ basis.dmut <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary T
   mutate(Gene = strsplit(Gene, "/")) %>% 
   unnest(Gene) %>% 
   mutate(Mutation_Type = case_when(Mutation_Type=="Sub" ~ "sub",
-                                    Mutation_Type=="Ins" ~ "indel",
-                                    Mutation_Type=="Del" ~ "indel",
-                                    Mutation_Type=="CopyNumber" ~ "CN")) %>% 
+                                   Mutation_Type=="Ins" ~ "indel",
+                                   Mutation_Type=="Del" ~ "indel",
+                                   Mutation_Type=="CopyNumber" ~ "CN")) %>% 
   mutate(Effect = if_else(Effect=="amp","amplified",Effect)) %>% 
   dplyr::select(-c(Tumour_name))
 
