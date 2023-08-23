@@ -1,6 +1,6 @@
 # Script: Mutational and rearrangement signatures in the HER2E subtype (WGS based)
 
-# TODO:
+# TODO: still need to fix the statsitcs part
 # - 
 
 # empty environment
@@ -24,12 +24,17 @@ dir.create(data.path)
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
 plot.file <- paste(output.path,cohort,"_WGS_signatures.pdf",sep = "")
 
+txt.out <- c() # object to store text output
+txt.file <- paste(output.path,cohort,"_WGS_signatures.pdf.txt", sep="")
+
 #packages
-source("scripts/3_genomic/src/mut_functions.R")
+#source("scripts/3_genomic/src/mut_functions.R")
 source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
 library(readxl)
+
+pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
 
 ################################################################################
 # Mutational Signatures
@@ -81,8 +86,8 @@ mut.data <- rbind(mut.basis,mut.scanb)
 # plot 
 
 # luminal subtypes
-group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6")
-plot.data <- mut.data  %>% filter(Subtype != "ERpHER2p")
+group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6", ERpHER2p = "#e67b09")
+plot.data <- mut.data  #%>% filter(Subtype != "ERpHER2p")
 
 for(i in c(1:7)) {
   
@@ -105,60 +110,63 @@ for(i in c(1:7)) {
                 scale_fill_manual(values=group.colors)
     
     plot.list <- append(plot.list,list(plot))
-    #print(plot)
+    print(plot)
 }
 
-# her2p 
-group.colors <- c(HER2E ="#b609e6", ERpHER2p = "#e67b09")
-plot.data <- mut.data  %>% filter(Subtype %in% c("ERpHER2p","HER2E"))
-
-for(i in c(1:7)) {
-    plot <- ggplot(plot.data, aes(x=as.factor(Subtype),y=plot.data[,i+1],fill=as.factor(Subtype))) +
-        geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-        xlab("Subtype") +
-        ylab("Proportion") +
-        ylim(c(0,1)) +
-        ggtitle(paste("Mutational signature ",colnames(plot.data)[i+1],sep="")) +
-        theme_bw() +
-        theme(aspect.ratio=1/1,
-              legend.position = "none",
-              panel.border = element_blank(), 
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              axis.line = element_line(colour = "black",linewidth = 2),
-              axis.ticks = element_line(colour = "black", linewidth = 1),
-              axis.ticks.length=unit(0.2, "cm")) +
-        scale_fill_manual(values=group.colors)
-    
-    plot.list <- append(plot.list,list(plot))
-    #print(plot)
-}
+# # her2p 
+# group.colors <- c(HER2E ="#b609e6", ERpHER2p = "#e67b09")
+# plot.data <- mut.data  %>% filter(Subtype %in% c("ERpHER2p","HER2E"))
+# 
+# for(i in c(1:7)) {
+#     #signature <- colnames(plot.data)[i+1]
+#     plot <- ggplot(plot.data, aes(x=as.factor(Subtype),y=plot.data[,i+1],fill=as.factor(Subtype))) +
+#         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
+#         xlab("Subtype") +
+#         ylab("Proportion") +
+#         ylim(c(0,1)) +
+#         ggtitle(paste("Mutational signature ",colnames(plot.data)[i+1],sep="")) +
+#         theme_bw() +
+#         theme(aspect.ratio=1/1,
+#               legend.position = "none",
+#               panel.border = element_blank(), 
+#               panel.grid.major = element_blank(),
+#               panel.grid.minor = element_blank(),
+#               axis.line = element_line(colour = "black",linewidth = 2),
+#               axis.ticks = element_line(colour = "black", linewidth = 1),
+#               axis.ticks.length=unit(0.2, "cm")) +
+#         scale_fill_manual(values=group.colors)
+#     
+#     plot.list <- append(plot.list,list(plot))
+#     print(plot)
+# }
 
 ################################################################################
 # Statistics
 
 # vars
 mut.data$Subtype <- as.factor(mut.data$Subtype)
-her2e.data <- subset(mut.data, Subtype == "HER2E", select=c(sig.name)) 
 
-# 
-for (subtype in c("LumA","LumB","ERpHER2p")) {
-  for (signature in colnames(mut.data)) {
+for (signature in colnames(mut.data)[-1]) {
+  her2e.data <- subset(mut.data, Subtype == "HER2E", select=c(signature))
+  for (subtype in c("LumA","LumB","ERpHER2p")) {
     # signature data for subtype
     comp.data <- subset(mut.data, Subtype == subtype, select=c(signature))
     # equal variance check
     levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
+    
     # ttest
-    if (levenes.res$p.value <= 0.05) {
+    if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
       res <- t.test(her2e.data, comp.data, var.equal = FALSE)
-    } else {
+    } else if (is.nan(levenes.res$p.value)) {
       res <- t.test(her2e.data, comp.data, var.equal = TRUE)
-    }
+    } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
     # save result
-  }
+    txt.out <- append(txt.out,c(signature,subtype,capture.output(res)))
+
+  } 
 }
 
-
+  
 ################################################################################
 # Rearrangement Signatures
 ################################################################################
@@ -230,7 +238,7 @@ for(i in c(1:6)) {
         scale_fill_manual(values=group.colors)
     
     plot.list <- append(plot.list,list(plot))
-    #print(plot)
+    print(plot)
 }
 
 ################################################################################
@@ -238,33 +246,39 @@ for(i in c(1:6)) {
 
 # vars
 rearr.data$Subtype <- as.factor(rearr.data$Subtype)
-her2e.data <- subset(rearr.data, Subtype == "HER2E", select=c(sig.name)) 
 
-# 
-for (subtype in c("LumA","LumB","ERpHER2p")) {
-  for (signature in colnames(rearr.data)) {
+for (signature in colnames(rearr.data)[-1]) {
+  her2e.data <- subset(rearr.data, Subtype == "HER2E", select=c(signature))
+  for (subtype in c("LumA","LumB","ERpHER2p")) {
     # signature data for subtype
     comp.data <- subset(rearr.data, Subtype == subtype, select=c(signature))
     # equal variance check
     levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
+    
     # ttest
-    if (levenes.res$p.value <= 0.05) {
+    if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
       res <- t.test(her2e.data, comp.data, var.equal = FALSE)
-    } else {
+    } else if (is.nan(levenes.res$p.value)) {
       res <- t.test(her2e.data, comp.data, var.equal = TRUE)
-    }
+    } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
     # save result
-  }
+    txt.out <- append(txt.out,c(signature,subtype,capture.output(res)))
+    
+  } 
 }
 
 #######################################################################
 #######################################################################
 
 # save plots
-pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
+# pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
 
-for(i in 1:length(plot.list)) { 
-  print(plot.list[[i]])
-}
+# for(i in 1:length(plot.list)) { 
+#   print(i)
+#   print(plot.list[[i]])
+# }
 
 dev.off()
+
+# save text output
+writeLines(txt.out, txt.file)

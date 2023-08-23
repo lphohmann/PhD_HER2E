@@ -43,18 +43,50 @@ cn.scanb <- cn.scanb[!is.na(cn.scanb$Gene_symbol),]
 n_occur <- data.frame(table(cn.scanb$Gene_symbol))
 multiprobe.genes <- cn.scanb$Gene_symbol[
   cn.scanb$Gene_symbol %in% n_occur$Var1[n_occur$Freq > 1]]
-# how to handle CN status for multiple probes matching to one gene: MAJORITY SIMPLY?
-# do column wise for the samples and then just drop the ProbeIDs
-for (gene in multiprobe.genes) {
-  for (sample in colnames(cn.scanb)[grepl("^S",colnames(cn.scanb))]) {
-    # see that is the majority CNA and take that
-    
-    # create extra df and then later rbind it with all the genes 
-    # that are only have 1 mapped probe
-  }
-}
-#View(head(cn.scanb))
 
+# get cn data for genes with multiple probes
+splitgenes <- c()
+res.df <- as.data.frame(matrix(nrow=length(multiprobe.genes),ncol=length(colnames(cn.scanb))))
+names(res.df) <- colnames(cn.scanb)
+pb = txtProgressBar(min = 0, max = length(multiprobe.genes), initial = 0, style = 3)
+for (i in 1:length(multiprobe.genes)) {
+  setTxtProgressBar(pb,i)
+  gene <- multiprobe.genes[i]
+  gene.dat <- cn.scanb[which(cn.scanb$Gene_symbol==gene),]
+  # Chr, ProbeID, Gene_symbol, Position, Genome_pos
+  # genome positions are defined as the mean of the probe positions
+  res.df$Chr[i] <- gene.dat$Chr[1]
+  #res.df$ProbeID[i] <- NA
+  res.df$Gene_symbol[i] <- gene
+  res.df$Position[i] <- mean(gene.dat$Position)
+  res.df$Genome_pos[i] <- mean(gene.dat$Genome_pos)
+  
+  for (j in 1:length(colnames(cn.scanb)[grepl("^S",colnames(cn.scanb))])) {
+    sample <- colnames(cn.scanb)[grepl("^S",colnames(cn.scanb))][j]
+    # see that is the majority CNA and take that
+    sample.dat <- gene.dat[sample]
+    tbl <- table(sample.dat[[sample]])
+    most.common <- sort(names(tbl[tbl==max(tbl)]),decreasing = TRUE)
+    if (length(most.common) > 1) {
+      cn.state <- most.common[1] # takes the highest value then
+      splitgenes <- append(splitgenes, gene) # save the genes that have 2 even cn states
+    } else { cn.state <- most.common }
+    
+    res.df[[sample]][i] <- cn.state
+
+  }
+  close(pb)
+}
+
+save(res.df, 
+     file = "data/SCANB/4_CN/processed/CNA_genelevel_prelim.RData")
+
+# combine with the rest of the data
+cn.scanb.final <- rbind(cn.scanb[which(!(cn.scanb$Gene_symbol %in% multiprobe.genes)),],res.df)
+save(cn.scanb.final, 
+     file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
+a <- loadRData("data/SCANB/4_CN/processed/CNA_genelevel.RData")
+View(cn.scanb.final)
 
 # these are the probes mapped to the genes for basis
 cn.basis <- loadRData(

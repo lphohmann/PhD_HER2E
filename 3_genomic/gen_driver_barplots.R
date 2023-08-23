@@ -67,6 +67,7 @@ scanb.muts <- as.data.frame(do.call("rbind", list(sub.muts,indel.muts))) %>%
 
 # get full list from VCF files
 
+
 # basis mut data # HERE GET TEH RIGHT FILE
 basis.muts <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
   filter(ClinicalGroup == "ERposHER2neg" & PAM50_AIMS %in% c("LumA","LumB")) %>% 
