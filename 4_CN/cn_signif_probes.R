@@ -1,4 +1,4 @@
-# Script: testing which cn probes are significant
+# Script: testing which genes are significantly different in terms of CNA freq between subtypes
 
 #TODO: 
 
@@ -33,7 +33,33 @@ library(purrr)
 library(readxl)
 
 ################################################################################
+# scanb get CN data on gene level (1 row per gene)
+################################################################################
 
+# load scanb CNA data for all probes
+cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData")
+# bring it down to gene level
+cn.scanb <- unnest(cn.scanb,cols=c(Gene_symbol)) # duplicates rows where probe matched to two genes so its a 1:1 mapping
+cn.scanb <- cn.scanb[!is.na(cn.scanb$Gene_symbol),] 
+# genes with more than 1 probe mapping to them
+n_occur <- data.frame(table(cn.scanb$Gene_symbol))
+multiprobe.genes <- cn.scanb$Gene_symbol[
+  cn.scanb$Gene_symbol %in% n_occur$Var1[n_occur$Freq > 1]]
+
+# get gene positions
+
+# get segment data
+cn.scanb.segments <- s
+
+# add genome positions (depends what position I have for the genes)
+
+
+
+
+
+
+
+################################################################################
 # load scanb CNA data for all probes
 cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData")
 # bring it down to gene level
