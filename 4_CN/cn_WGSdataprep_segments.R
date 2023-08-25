@@ -20,10 +20,6 @@ dir.create(output.path)
 data.path <- "data/SCANB/4_CN/raw/"
 dir.create(data.path)
 
-# plot
-plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_WGS.pdf",sep = "")
-
 #packages
 source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
@@ -89,11 +85,7 @@ ploidy.df$Sample <- ascat.ids$Sample[match(
 #save(ploidy.df,file = "./data/SCANB/4_CN/processed/HER2Esample_ploidy.RData")
 
 #######################################################################
-# final product: 1 matrix per sample with: segment, ampstatus, gainlosss, loh
 #######################################################################
-#######################################################################
-#######################################################################
-
 
 all.samples.list <- list() # list of sample matrices looking like this: seg, amp, gl, loh
 
@@ -153,6 +145,5 @@ for(j in c(1:length(segment.files))) {
 
 names(all.samples.list) <- names(segment.files)
 
-View(all.samples.list)
-View(all.samples.list[[1]])
+save(all.samples.list,file = "./data/SCANB/4_CN/processed/Segment_CN_states.RData")
 

@@ -80,7 +80,6 @@ mutation.sample.counts <- rbind(basis.muts,scanb.muts)
 View(mutation.sample.counts)
 #View(basis.muts)
 
-
 #######################################################################
 # plot TMB
 #######################################################################

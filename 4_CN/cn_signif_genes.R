@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "COMBINED" #  
+cohort <- "COMBINED" 
 
 # set/create output directory for plots
 output.path <- "output/plots/4_CN/"
@@ -33,27 +33,155 @@ library(purrr)
 library(readxl)
 
 ################################################################################
-# scanb get CN data on gene level (1 row per gene)
+# SCANB get CN data on gene level (1 row per gene)
 ################################################################################
 
-# load scanb CNA data for all probes
-cn.scanb <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData")
-# bring it down to gene level
-cn.scanb <- unnest(cn.scanb,cols=c(Gene_symbol)) # duplicates rows where probe matched to two genes so its a 1:1 mapping
-cn.scanb <- cn.scanb[!is.na(cn.scanb$Gene_symbol),] 
-# genes with more than 1 probe mapping to them
-n_occur <- data.frame(table(cn.scanb$Gene_symbol))
-multiprobe.genes <- cn.scanb$Gene_symbol[
-  cn.scanb$Gene_symbol %in% n_occur$Var1[n_occur$Freq > 1]]
-
-# get gene positions
+# get gene positions & convert to hgnc symbols
+genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID)
+ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
+stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
+mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
+# convert to df and filter out NA gene symbols
+genes <- annoGR2DF(genes) %>% 
+  filter(!is.na(SYMBOL)) %>% 
+  mutate(chr = gsub("^chr","",chr)) %>% 
+  filter(chr %in% c(1:22))
 
 # get segment data
-cn.scanb.segments <- s
+cn.scanb.segments <- loadRData("data/SCANB/4_CN/processed/Segment_CN_states.RData")
 
 # add genome positions (depends what position I have for the genes)
+head(cn.scanb.segments[[1]])
+head(cn.scanb.segments$S000180)
+
+names(cn.scanb.segments)
 
 
+# result storing objects
+gl.names <- c("gene", "chr", "start", "end", "width", "genome_pos", "gainloss", 
+              c(names(cn.scanb.segments)))
+amp.names <- c("gene", "chr", "start", "end", "width", "genome_pos", "amp", 
+               c(names(cn.scanb.segments)))
+gl.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(gl.names)))
+names(gl.df) <- gl.names
+amp.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(amp.names)))
+names(amp.df) <- amp.names
+
+
+# loop over genes
+pb = txtProgressBar(min = 0, max = length(genes$SYMBOL), initial = 0, style = 3)
+for (i in 1:length(genes$SYMBOL)) {
+  setTxtProgressBar(pb,i)
+  
+  gene.id <- genes$SYMBOL[i]
+  gene.chr <- genes$chr[i]
+  gene.start <- genes$start[i]
+  gene.end <- genes$end[i]
+  gene.width <- genes$width[i]
+  
+  # 
+  chr.segments 
+  
+  gene.gl.status <- lapply(cn.scanb.segments, function(x) { # need to add gene as arg? 
+    # get the cn status of the segment the gene is on
+    
+    
+    #test
+    gene.start <- 100
+    gene.end <- 200
+    gene.chr <- 1
+    gene.x <- data.frame(gene.chr,gene.start,gene.end)
+    names(gene.x) <- c("chr","startpos","endpos")
+    gene.x
+    
+    x <- data.frame(c(1,1,1,1),c(10,290,90,111),c(300,300,110,220))
+    names(x) <- c("chr","startpos","endpos")
+    x
+    
+    # check if gene is on more than 1 segment
+    
+    
+    ############### find overlaps . 
+    library(IRanges)
+    
+    # filter on chr before
+
+    query <- with(x, IRanges(startpos, endpos))
+    subject <- with(gene.x, IRanges(startpos, endpos))
+    
+    x$overlap = countOverlaps(query, subject) != 0
+    x
+    
+    hits <- findOverlaps(query, subject)
+    #ranges(hits,query, subject)
+    overlaps <- pintersect(query[queryHits(hits)], subject[subjectHits(hits)])
+    percentOverlap <- width(overlaps) / width(subject[subjectHits(hits)])
+    
+    x <- x[x$overlap == TRUE,]
+    x$percentOverlap <- percentOverlap
+    
+    ###############
+    
+    gene.segments
+    
+    # get the rows from that
+    gene.segments <- 
+    
+    gene.gl.status <- if (nrow(gene.segments)>1) { 
+      # check the majority proportion thing
+      
+    } else {
+      gene.segments$GainLoss
+    }
+    
+    x[which(
+      x$chr >= gene.chr &
+      x$startpos >= gene.start & 
+      x$endpos <= gene.end),]$GainLoss
+    
+    return(gene.gl.status) 
+    
+  })
+  
+  # get the cn state of that gene for all samples
+  gl.status.samples <- append(gl.status.samples, gl.stat)
+  amp.status.samples <- append(amp.status.samples, amp.stat)
+  
+  
+  
+  segment.files <- lapply(ascat.files, function(x) { 
+    x <- x[["segments"]] %>% dplyr::select(-c(sample))
+    x$nTotal <- x$nMinor + x$nMajor
+    return(x) # add nTotal column
+  })
+  for (j in 1:length(names(cn.scanb.segments))) {
+    sample <- names(cn.scanb.segments)[j]
+    chr.matrix[which(chr.matrix$Position >= seg.start & 
+                       chr.matrix$Position <= seg.end),]$CN_state <- state.loh
+    
+    segment.files <- lapply(ascat.files, function(x) { 
+      x <- x[["segments"]] %>% dplyr::select(-c(sample))
+      x$nTotal <- x$nMinor + x$nMajor
+      return(x) # add nTotal column
+    })
+    
+  }
+  # vectors for states for all samples
+  gl.status.samples <- append(gl.status.samples, gl.stat)
+  amp.status.samples <- append(amp.status.samples, amp.stat)
+  
+  # store results
+  gl.df[i,] <- c(gene.id, gene.chr, gene.start, gene.end, gene.width, gl.status.samples)
+  amp.df[i,] <- c(gene.id, gene.chr, gene.start, gene.end, gene.width, amp.status.samples)
+  
+  
+  
+  close(pb)
+}
+
+# final product df: 
+# Gene Chr Position Genome_position Amp_sample1 Amp_sample2 etc.  
+# genes on two segments handle by majority (proportion of gene)
 
 
 
