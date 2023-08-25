@@ -58,9 +58,9 @@ head(cn.scanb.segments[[1]])
 head(genes)
 
 # result storing objects
-gl.names <- c("gene", "chr", "start", "end", "width", "genome_pos", 
+gl.names <- c("gene", "chr", "start", "end",
               c(names(cn.scanb.segments)))
-amp.names <- c("gene", "chr", "start", "end", "width", "genome_pos", 
+amp.names <- c("gene", "chr", "start", "end",
                c(names(cn.scanb.segments)))
 gl.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(gl.names)))
 names(gl.df) <- gl.names
@@ -107,13 +107,27 @@ for (i in 1:nrow(genes)) {
   gene.statuses
 
   # store results
-  gl.df[i,] <- c(gene.id, gene.chr, gene.start, gene.end, gene.width, gl.status.samples)
-  amp.df[i,] <- c(gene.id, gene.chr, gene.start, gene.end, gene.width, amp.status.samples)
+  c("gene", "chr", "start", "end", "width", "genome_pos", 
+    c(names(cn.scanb.segments)))
   
+  gl.df[i,] <- c(gene.dat$SYMBOL,
+                 gene.dat$chr,
+                 gene.dat$start,
+                 gene.dat$end,
+                 unname(unlist(gene.statuses["GainLoss",])))
   
+  amp.df[i,] <- c(gene.dat$SYMBOL,
+                  gene.dat$chr,
+                  gene.dat$start,
+                  gene.dat$end,
+                  unname(unlist(gene.statuses["Amp",])))
   
   close(pb)
 }
+
+
+save(list(gl.df,amp.df), 
+     file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
 
 # final product df: 
 # Gene Chr Position Genome_position Amp_sample1 Amp_sample2 etc.  
