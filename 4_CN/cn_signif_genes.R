@@ -53,6 +53,153 @@ genes <- annoGR2DF(genes) %>%
 # get segment data
 cn.scanb.segments <- loadRData("data/SCANB/4_CN/processed/Segment_CN_states.RData")
 
+# 
+head(cn.scanb.segments[[1]])
+head(genes)
+
+# result storing objects
+gl.names <- c("gene", "chr", "start", "end",
+              c(names(cn.scanb.segments)))
+amp.names <- c("gene", "chr", "start", "end",
+               c(names(cn.scanb.segments)))
+gl.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(gl.names)))
+names(gl.df) <- gl.names
+amp.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(amp.names)))
+names(amp.df) <- amp.names
+
+# loop over genes
+pb = txtProgressBar(min = 0, max = length(genes$SYMBOL), initial = 0, style = 3)
+for (i in 1:nrow(genes)) {
+  setTxtProgressBar(pb,i)
+  
+  gene.dat <- genes[i,]
+  #print(gene.dat)
+  # gene.chr <- genes$chr[i]
+  # gene.start <- genes$start[i]
+  # gene.end <- genes$end[i]
+
+  # get the gainloss and amp state of that gene for all samples
+  gene.statuses <- sapply(cn.scanb.segments, function(segment.df) {
+    segment.df <- segment.df %>% 
+      mutate_at(c('chr','startpos','endpos','GainLoss','Amp'), as.numeric)
+    # get the cn status of the segment the gene is on
+    # only relevant segments
+    chr.segments <- segment.df[segment.df$chr==gene.dat$chr,]
+    
+    segments.query <- with(chr.segments, IRanges(startpos, endpos))
+    gene.subject <- with(gene.dat, IRanges(start, end))
+    # check 
+    chr.segments$overlap = countOverlaps(segments.query, gene.subject) != 0
+    if (sum(chr.segments$overlap)==0) { # no segment covers the gene region
+      gene.gl.state <- NA
+      gene.amp.state <- NA
+    } else {
+      hits <- findOverlaps(segments.query, gene.subject)
+      overlaps <- pintersect(segments.query[queryHits(hits)], gene.subject[subjectHits(hits)])
+      percentOverlap <- width(overlaps) / width(gene.subject[subjectHits(hits)])
+      chr.segments <- chr.segments[chr.segments$overlap == TRUE,]
+      chr.segments$percentOverlap <- percentOverlap
+      # only select the segment with the highest overlap proportion
+      main.segment <- chr.segments[which.max(chr.segments$percentOverlap),]
+      gene.gl.state <- main.segment$GainLoss
+      gene.amp.state <- main.segment$Amp
+      }
+    
+    return(list("GainLoss"=gene.gl.state,"Amp"=gene.amp.state))
+    })
+
+  # store results
+  #print(gene.statuses) #527 #KCNJ18 #S003268 #numeric,0
+  
+  gl.df[i,] <- c(gene.dat$SYMBOL,
+                 gene.dat$chr,
+                 gene.dat$start,
+                 gene.dat$end,
+                 unname(unlist(gene.statuses["GainLoss",])))
+  
+  amp.df[i,] <- c(gene.dat$SYMBOL,
+                  gene.dat$chr,
+                  gene.dat$start,
+                  gene.dat$end,
+                  unname(unlist(gene.statuses["Amp",])))
+
+  close(pb)
+}
+
+cn.list <- list("gainloss"=gl.df,"amp"=amp.df)
+
+save(cn.list,
+     file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
+
+
+
+# add center position
+# convert to genome position
+
+
+################################################################################
+# BASIS get CN data on gene level (1 row per gene)
+################################################################################
+
+# hg19 genes
+# get gene positions & convert to hgnc symbols
+genes <- genes(TxDb.Hsapiens.UCSC.hg19.knownGene)
+ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
+stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
+mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
+# convert to df and filter out NA gene symbols
+genes <- annoGR2DF(genes) %>% 
+  filter(!is.na(SYMBOL)) %>% 
+  mutate(chr = gsub("^chr","",chr)) %>% 
+  filter(chr %in% c(1:22)) %>% 
+  dplyr::select(-c(gene_id,strand, width)) %>% 
+  mutate_at(c('chr','start','end'), as.numeric)
+
+# get segment data
+cn.basis.segments <- loadRData("data/BASIS/4_CN/raw/ASCAT_CEL_Total/ASCAT_CEL_Total_EasySegments.RData")
+#View(head(cn.basis.segments))
+# organize in list of dfs (1 per sample)
+cn.basis.segments <- with(cn.basis.segments, split(
+  cn.basis.segments, list(SampleID)))
+cn.basis.segments <- lapply(cn.basis.segments, function(x) {
+  x <- x %>% dplyr::rename(GainLoss=CNA,startpos=start,endpos=stop)
+  return(x)
+})
+
+# 
+head(cn.basis.segments[[1]])
+head(cn.scanb.segments[[1]])
+
+head(genes)
+# do same as above
+
+
+
+# add center position
+# convert to genome position
+
+# liftover genome position to hg38
+
+
+
+### 
+
+# get gene positions & convert to hgnc symbols
+genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID)
+ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
+stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
+mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
+# convert to df and filter out NA gene symbols
+genes <- annoGR2DF(genes) %>% 
+  filter(!is.na(SYMBOL)) %>% 
+  mutate(chr = gsub("^chr","",chr)) %>% 
+  filter(chr %in% c(1:22)) %>% 
+  dplyr::select(-c(gene_id,strand, width)) %>% 
+  mutate_at(c('chr','start','end'), as.numeric)
+
+# get segment data
+cn.scanb.segments <- loadRData("data/SCANB/4_CN/processed/Segment_CN_states.RData")
+
 # add genome positions (depends what position I have for the genes)
 head(cn.scanb.segments[[1]])
 head(genes)
@@ -73,14 +220,9 @@ for (i in 1:nrow(genes)) {
   setTxtProgressBar(pb,i)
   
   gene.dat <- genes[i,]
-  # gene.id <- genes$SYMBOL[i]
-  # gene.chr <- genes$chr[i]
-  # gene.start <- genes$start[i]
-  # gene.end <- genes$end[i]
-
+  
   # get the gainloss and amp state of that gene for all samples
   gene.statuses <- sapply(cn.scanb.segments, function(segment.df) {
-    
     segment.df <- segment.df %>% 
       mutate_at(c('chr','startpos','endpos','GainLoss','Amp'), as.numeric)
     # get the cn status of the segment the gene is on
@@ -89,26 +231,28 @@ for (i in 1:nrow(genes)) {
     
     segments.query <- with(chr.segments, IRanges(startpos, endpos))
     gene.subject <- with(gene.dat, IRanges(start, end))
-    
     # check 
     chr.segments$overlap = countOverlaps(segments.query, gene.subject) != 0
-    hits <- findOverlaps(segments.query, gene.subject)
-    overlaps <- pintersect(segments.query[queryHits(hits)], gene.subject[subjectHits(hits)])
-    percentOverlap <- width(overlaps) / width(gene.subject[subjectHits(hits)])
-    chr.segments <- chr.segments[chr.segments$overlap == TRUE,]
-    chr.segments$percentOverlap <- percentOverlap
-    # only select the segment with the highest overlap proportion
-    main.segment <- chr.segments[which.max(chr.segments$percentOverlap),]
-    gene.gl.state <- main.segment$GainLoss
-    gene.amp.state <- main.segment$Amp
-    return(list("GainLoss"=gene.gl.state,"Amp"=gene.amp.state))
-    })
+    if (sum(chr.segments$overlap)==0) { # no segment covers the gene region
+      gene.gl.state <- NA
+      gene.amp.state <- NA
+    } else {
+      hits <- findOverlaps(segments.query, gene.subject)
+      overlaps <- pintersect(segments.query[queryHits(hits)], gene.subject[subjectHits(hits)])
+      percentOverlap <- width(overlaps) / width(gene.subject[subjectHits(hits)])
+      chr.segments <- chr.segments[chr.segments$overlap == TRUE,]
+      chr.segments$percentOverlap <- percentOverlap
+      # only select the segment with the highest overlap proportion
+      main.segment <- chr.segments[which.max(chr.segments$percentOverlap),]
+      gene.gl.state <- main.segment$GainLoss
+      gene.amp.state <- main.segment$Amp 
+    }
     
-  gene.statuses
-
+    return(list("GainLoss"=gene.gl.state,"Amp"=gene.amp.state))
+  })
+  
   # store results
-  c("gene", "chr", "start", "end", "width", "genome_pos", 
-    c(names(cn.scanb.segments)))
+  #print(gene.statuses) #527 #KCNJ18 #S003268 #numeric,0
   
   gl.df[i,] <- c(gene.dat$SYMBOL,
                  gene.dat$chr,
@@ -129,10 +273,11 @@ for (i in 1:nrow(genes)) {
 save(list(gl.df,amp.df), 
      file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
 
-# final product df: 
-# Gene Chr Position Genome_position Amp_sample1 Amp_sample2 etc.  
-# genes on two segments handle by majority (proportion of gene)
+View(gl.df)
 
+
+# add center position
+# convert to genome position
 
 
 
