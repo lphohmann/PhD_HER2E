@@ -23,6 +23,7 @@ library(reshape2)
 library(purrr)
 library(readxl)
 library(IRanges)
+library(GenoScan)
 
 # output directories ###########################################################
 
@@ -37,19 +38,34 @@ dir.create(data.path)
 # input & output file paths ####################################################
 
 # input
-scanb.segments <- ""
-basis.segments <- ""
-chr.lengths <- ""
+scanb.segments <- "data/SCANB/4_CN/processed/Segment_CN_states.RData"
+basis.segments <- "data/BASIS/4_CN/raw/ASCAT_CEL_Total/ASCAT_CEL_Total_EasySegments.RData"
+chr.lengths <- "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv"
 
 # output
 plot.file <- paste(output.path,cohort,"_HER2n_signifgenes.pdf",sep = "")
 txt.file <- paste(output.path,cohort,"_HER2n_signifgenes.txt", sep="")
+
+scanb.gene.cna <- "data/SCANB/4_CN/processed/CNA_genelevel.RData"
+basis.gene.cna <- "data/BASIS/4_CN/processed/CNA_genelevel.RData"
 
 # storing objects ##############################################################
 
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
 
 txt.out <- c() # object to store text output
+
+################################################################################
+# required data
+################################################################################
+
+# chr lengths
+# get chr lengths to get genome positions of probes (excluding chr X)
+chr.lengths <- as.data.frame(read.table(file = chr.lengths, sep = '\t', header = FALSE))[1:22,] %>% 
+  dplyr::rename(chr=V1,length=V2) %>% 
+  mutate(genome = cumsum(as.numeric(length))) %>% 
+  mutate(genome = lag(genome,default = 0)) # lag by 1 position (cause I have to add the length of the previous chr to the probe positions (0 for chr1 probes))
+chr.lengths$chr <- as.numeric(gsub('^.{3}','',chr.lengths$chr))
 
 ################################################################################
 # SCANB get CN data on gene level (1 row per gene)
@@ -69,7 +85,7 @@ genes <- annoGR2DF(genes) %>%
   mutate_at(c('chr','start','end'), as.numeric)
 
 # get segment data
-cn.scanb.segments <- loadRData("data/SCANB/4_CN/processed/Segment_CN_states.RData")
+cn.scanb.segments <- loadRData(scanb.segments)
 
 # 
 head(cn.scanb.segments[[1]])
@@ -147,8 +163,8 @@ for (i in 1:nrow(genes)) {
 cn.list <- list("gainloss"=gl.df,"amp"=amp.df)
 
 save(cn.list,
-     file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
-
+     file = scanb.gene.cna)
+#load(scanb.gene.cna)
 
 # add center position
 cn.list <- lapply(cn.list, function(df) {
@@ -164,8 +180,20 @@ cn.list <- lapply(cn.list, function(df) {
 })
 
 # convert to genome position
-
-
+cn.list <- lapply(cn.list, function(df) {
+  df <- df %>% 
+    mutate_at(c("chr","start","end"), as.numeric) %>% 
+    # add new chr genome position column
+    mutate(genome = 0) %>% 
+    # update the genome col to fill in the actual chr positions
+    rows_update(chr.lengths[c("chr","genome")]) %>% 
+    # add a column with the genome position of each probe
+    mutate(Genome_pos = centerPos + genome) %>% 
+    relocate(c(genome,Genome_pos), .after=centerPos) %>% 
+    dplyr::select(-c(genome))
+  return(df)
+})
+#View(cn.list.cl[[1]])
 ################################################################################
 # BASIS get CN data on gene level (1 row per gene)
 ################################################################################
@@ -185,7 +213,7 @@ genes <- annoGR2DF(genes) %>%
   mutate_at(c('chr','start','end'), as.numeric)
 
 # get segment data
-cn.basis.segments <- loadRData("data/BASIS/4_CN/raw/ASCAT_CEL_Total/ASCAT_CEL_Total_EasySegments.RData")
+cn.basis.segments <- loadRData(basis.segments)
 #View(head(cn.basis.segments))
 # organize in list of dfs (1 per sample)
 cn.basis.segments <- with(cn.basis.segments, split(
@@ -195,53 +223,13 @@ cn.basis.segments <- lapply(cn.basis.segments, function(x) {
   return(x)
 })
 
-# 
-head(cn.basis.segments[[1]])
-head(cn.scanb.segments[[1]])
-
-head(genes)
-# do same as above
-
-
-
-# add center position
-# convert to genome position
-
-# liftover genome position to hg38
-
-
-
-### 
-
-# get gene positions & convert to hgnc symbols
-genes <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene) # meta = entrez ID)
-ENTREZID2SYMBOL <- select(org.Hs.eg.db, mcols(genes)$gene_id, c("ENTREZID", "SYMBOL"))
-stopifnot(identical(ENTREZID2SYMBOL$ENTREZID, mcols(genes)$gene_id))
-mcols(genes)$SYMBOL <- ENTREZID2SYMBOL$SYMBOL
-# convert to df and filter out NA gene symbols
-genes <- annoGR2DF(genes) %>% 
-  filter(!is.na(SYMBOL)) %>% 
-  mutate(chr = gsub("^chr","",chr)) %>% 
-  filter(chr %in% c(1:22)) %>% 
-  dplyr::select(-c(gene_id,strand, width)) %>% 
-  mutate_at(c('chr','start','end'), as.numeric)
-
-# get segment data
-cn.scanb.segments <- loadRData("data/SCANB/4_CN/processed/Segment_CN_states.RData")
-
-# add genome positions (depends what position I have for the genes)
-head(cn.scanb.segments[[1]])
-head(genes)
+# no amp data for basis
 
 # result storing objects
 gl.names <- c("gene", "chr", "start", "end",
               c(names(cn.scanb.segments)))
-amp.names <- c("gene", "chr", "start", "end",
-               c(names(cn.scanb.segments)))
 gl.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(gl.names)))
 names(gl.df) <- gl.names
-amp.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(amp.names)))
-names(amp.df) <- amp.names
 
 # loop over genes
 pb = txtProgressBar(min = 0, max = length(genes$SYMBOL), initial = 0, style = 3)
