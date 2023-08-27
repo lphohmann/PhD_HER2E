@@ -1,4 +1,6 @@
-# Script: testing which genes are significantly different in terms of CNA freq between subtypes
+# Script: create gene level CN matrices for SCANB and BASIS for later comparison
+
+#testing which genes are significantly different in terms of CNA freq between subtypes
 
 #TODO: 
 
@@ -11,19 +13,8 @@ setwd("~/PhD_Workspace/Project_HER2E/")
 # indicate for which cohort the analysis is run 
 cohort <- "COMBINED" 
 
-# set/create output directory for plots
-output.path <- "output/plots/4_CN/"
-dir.create(output.path)
+# packages #####################################################################
 
-# set/create output directory for data
-data.path <- "data/SCANB/4_CN/processed/"
-dir.create(data.path)
-
-# plot
-plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_signifprobes.pdf",sep = "")
-
-#packages
 source("scripts/4_CN/src/cn_functions.R")
 library(ggplot2)
 library(tidyverse)
@@ -32,6 +23,33 @@ library(reshape2)
 library(purrr)
 library(readxl)
 library(IRanges)
+
+# output directories ###########################################################
+
+# set/create output directories
+# for plots
+output.path <- "output/plots/4_CN/"
+dir.create(output.path)
+# for data
+data.path <- "data/SCANB/4_CN/processed/"
+dir.create(data.path)
+
+# input & output file paths ####################################################
+
+# input
+scanb.segments <- ""
+basis.segments <- ""
+chr.lengths <- ""
+
+# output
+plot.file <- paste(output.path,cohort,"_HER2n_signifgenes.pdf",sep = "")
+txt.file <- paste(output.path,cohort,"_HER2n_signifgenes.txt", sep="")
+
+# storing objects ##############################################################
+
+plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
+
+txt.out <- c() # object to store text output
 
 ################################################################################
 # SCANB get CN data on gene level (1 row per gene)
@@ -132,8 +150,19 @@ save(cn.list,
      file = "data/SCANB/4_CN/processed/CNA_genelevel.RData")
 
 
-
 # add center position
+cn.list <- lapply(cn.list, function(df) {
+  df <- df %>% mutate_at(c("chr","start","end"), as.numeric)
+  centerPos.vec <- apply(df, 1, function(row) {
+    gene.length <- as.numeric(row[["end"]]) - as.numeric(row[["start"]])
+    centerPos <- as.numeric(row[["start"]]) + (gene.length/2)
+    return(centerPos)
+  })
+  df$centerPos <- centerPos.vec
+  df <- df %>% dplyr::relocate(centerPos, .after=chr)
+  return(df)
+})
+
 # convert to genome position
 
 
