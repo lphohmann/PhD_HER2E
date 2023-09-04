@@ -39,7 +39,7 @@ cn.basis <- loadRData(file = "data/BASIS/4_CN/processed/CN_gainloss_frequencies.
 # convert loss to negative values like in HER2E
 cn.basis[c("freqloss.HER2p","freqloss.LUMA","freqloss.LUMB")] <- lapply(cn.basis[c("freqloss.HER2p","freqloss.LUMA","freqloss.LUMB")], FUN = function(x) {x*-1})
 
-# merge 
+# merge
 cn.data <- rbind.fill(cn.basis,cn.scanb)
 cn.data <- cn.data[order(cn.data$Genome_pos),]
 

@@ -19,7 +19,11 @@ library(reshape2)
 library(purrr)
 library(readxl)
 library(IRanges)
-library(GenoScan)
+library(GenomicFeatures)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(org.Hs.eg.db)
+library(Repitools)
 #-------------------------------------------------------------------------------
 # set/create output directories
 # for plots
@@ -102,6 +106,7 @@ names(gl.df) <- gl.names
 amp.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(amp.names)))
 names(amp.df) <- amp.names
 
+#genes <- genes[1:10,] # delete later
 # loop over genes
 pb = txtProgressBar(min = 0, max = length(genes$SYMBOL), initial = 0, style = 3)
 for (i in 1:nrow(genes)) {
@@ -239,7 +244,6 @@ gl.names <- c("gene", "chr", "start", "end",
               c(names(cn.basis.segments)))
 gl.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(gl.names)))
 names(gl.df) <- gl.names
-genes <- genes[1:10,]
 
 # loop over genes
 start.time <- Sys.time()
@@ -299,5 +303,8 @@ gl.df <- gl.df %>%
   dplyr::select(-c(start,end)) %>% 
   relocate(c(chr,centerPos,Genome_pos), .after=gene)
 
-save(gl.df, 
-     file = basis.gene.cna)
+#save(gl.df, 
+#     file = basis.gene.cna)
+gl.df <- loadRData(basis.gene.cna)
+
+#View(gl.df)

@@ -70,7 +70,7 @@ res.core <- as.data.frame(enrichr(DEGs.core, dbs)[[1]])
 xlsx.list <- append(xlsx.list, list("CoreDEGs" = res.core))
 
 #######################################################################
-# HER2E vs. LumA
+# HER2E vs. LumAs
 #######################################################################
 
 # define DEG set
