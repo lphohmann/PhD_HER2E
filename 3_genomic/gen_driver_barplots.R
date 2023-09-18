@@ -37,6 +37,7 @@ library(ggstatsplot)
 #library(data.table)
 library(grid)
 library(gridExtra)
+library(R.utils)
 
 #######################################################################
 # all mut data
@@ -47,25 +48,61 @@ library(gridExtra)
 id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "Samples")) %>% 
   dplyr::select(c("Sample","Tumour")) %>% dplyr::rename(sample=Sample)
 
-# load indel data
-indel.muts <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingPindel")) %>% 
-  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
-  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
-  dplyr::select(c(sample,gene)) %>% 
-  distinct()
-
-sub.muts <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "AllCodingASMD_CLPM")) %>% 
-  dplyr::rename(Tumour=Sample,gene=VD_Gene,variant_class=VC) %>% 
-  left_join(id.key,by="Tumour") %>% relocate(sample,1) %>% 
-  dplyr::select(c(sample,gene)) %>% 
-  distinct()
-
-scanb.muts <- as.data.frame(do.call("rbind", list(sub.muts,indel.muts))) %>% 
-  dplyr::count(sample) %>% 
-  mutate(PAM50 = "Her2e") %>% 
-  dplyr::rename(N_mut=n)
-
 # get full list from VCF files
+scanb.muts <- read_table("data/SCANB/3_genomic/raw/vcf/WGS_epb3d_003_vs_epb3db_003/caveman/epb3d_003_vs_epb3db_003.annot.muts.vcf.gz")
+# get normal IDs
+id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
+  dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
+  mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
+
+# compile all files into one R object
+caveman.files <- list.files(
+  path="./data/SCANB/3_genomic/raw/vcf/",
+  pattern="*.annot.muts.vcf.gz", full.names = TRUE, recursive = TRUE)
+pindel.files <- list.files(
+  path="./data/SCANB/3_genomic/raw/vcf/",
+  pattern="*.annot.vcf.gz", full.names = TRUE, recursive = TRUE)
+
+# load the files
+caveman.files <- lapply(caveman.files, gunzip) # unzip
+caveman.files <- lapply(caveman.files, read_table) 
+# delete the first lines, filter based on criteria in excel table col
+caveman.files <- lapply(caveman.files, function(x) { 
+  x <- x[["segments"]] %>% dplyr::select(-c(sample))
+  x$nTotal <- x$nMinor + x$nMajor
+  return(x) 
+})
+
+# load the files
+pindel.files <- lapply(pindel.files, gunzip) # unzip
+pindel.files <- lapply(pindel.files, read_table) 
+# delete the first lines, filter based on criteria in excel table col
+pindel.files <- lapply(pindel.files, function(x) { 
+  x <- x[["segments"]] %>% dplyr::select(-c(sample))
+  x$nTotal <- x$nMinor + x$nMajor
+  return(x) 
+})
+
+# get down to one file per sample
+c(caveman.files, pindel.files)
+
+# convert the file names to S identifiers
+# sample ids used in the ascat files
+ascat.ids <- as.data.frame(unlist(lapply(temp, function(x) {
+  gsub("_vs.*","",
+       gsub("./data/SCANB/4_CN/raw/to_lennart//ascat.","",x))}))) %>% dplyr::rename(Ascat.id=1)
+# 1. convert epb IDs to normal sample IDs
+ascat.ids$Sample <- id.key$SENT.TUMOR[match(
+  ascat.ids$Ascat.id, id.key$SENT.TUMOR.aliquot)] 
+# 2. convert the other IDs to normal sample IDs
+ascat.ids$Sample2 <- id.key$SENT.TUMOR[match(
+  ascat.ids$Ascat.id, id.key$TUMOR.alias)] # 2. convert the other IDs to normal sample IDs
+ascat.ids$Sample <- ifelse(is.na(ascat.ids$Sample), ascat.ids$Sample2, ascat.ids$Sample)
+ascat.ids$Sample2 <- NULL
+
+# name the segments dataframes
+names(segment.files) <- ascat.ids$Sample
+
 
 
 # basis mut data # HERE GET TEH RIGHT FILE

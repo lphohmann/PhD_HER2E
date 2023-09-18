@@ -1,7 +1,8 @@
 # Script: 
 # create gene level CN matrices for SCANB and BASIS for later comparison
 
-#TODO: 
+#TODO: also load the in silico file and then just pull out the basis samples that i need (luma and lumb)
+# DROP ALL BASIS HER3p samples!!! also for signature analyses
 
 # empty environment
 rm(list=ls())
@@ -36,13 +37,14 @@ dir.create(data.path)
 # input & output file paths
 # input
 scanb.segments <- "data/SCANB/4_CN/processed/Segment_CN_states.RData"
-basis.segments <- "data/BASIS/4_CN/raw/ASCAT_CEL_Total/ASCAT_CEL_Total_EasySegments.RData"
+basis.segments.1 <- "data/BASIS/4_CN/raw/ASCAT_CEL_Total/ASCAT_CEL_Total_EasySegments.RData"
+basis.segments.2 <- "data/BASIS/4_CN/raw/ASCAT_InSilico/ASCAT_InSilico_EasySegments.RData"
 chr.lengths <- "data/BASIS/4_CN/raw/GRCh38_EBV.chrom.sizes.tsv"
 # output
 plot.file <- "output/plots/4_CN/COMBINED_HER2n_signifgenes.pdf"
 txt.file <- "output/plots/4_CN/COMBINED_HER2n_signifgenes.txt"
 scanb.gene.cna <- "data/SCANB/4_CN/processed/CNA_genelevel.RData"
-basis.gene.cna <- "data/BASIS/4_CN/processed/CNA_genelevel.RData"
+basis.gene.cna <- "data/BASIS/4_CN/processed/CNA_genelevel_all.RData" # del _all
 #-------------------------------------------------------------------------------
 # storing objects 
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
@@ -227,7 +229,23 @@ genes <- annoGR2DF(genes) %>%
   filter(SYMBOL %in% cn.scanb.list[[1]]$gene)
 
 # get segment data
-cn.basis.segments <- loadRData(basis.segments)
+cn.basis.segments.1 <- loadRData(basis.segments.1)
+cn.basis.segments.2 <- loadRData(basis.segments.2)
+cn.basis.segments <- rbind(cn.basis.segments.1,cn.basis.segments.2)
+
+# get relevant sample IDs
+basis.samples <- as.data.frame(loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData")) %>% 
+  dplyr::select(c(sample_name,final.ER,final.HER2,
+                  ClinicalGroup,PAM50_AIMS,MutSigProportions)) %>%
+  mutate(Subtype = 
+           case_when(final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumA" ~ "LumA",
+                     final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumB" ~ "LumB")) %>% 
+  dplyr::filter(Subtype %in% c("LumA","LumB")) %>% 
+  pull(sample_name)
+
+# select relevant samples
+cn.basis.segments$SampleID <- gsub("b","",gsub("a.*","",cn.basis.segments$SampleID))
+cn.basis.segments <- cn.basis.segments %>% filter(SampleID %in% basis.samples)
 
 # organize in list of dfs (1 per sample)
 cn.basis.segments <- with(cn.basis.segments, split(
@@ -307,4 +325,4 @@ gl.df <- gl.df %>%
 #     file = basis.gene.cna)
 gl.df <- loadRData(basis.gene.cna)
 
-#View(gl.df)
+View(gl.df)

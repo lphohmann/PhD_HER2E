@@ -50,15 +50,14 @@ mut.scanb <- as.data.frame(t(apply(t(mut.scanb),2,function(x) (x/sum(x, na.rm=TR
 
 # load the raw signature counts
 mut.basis <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData")
-# I have to define 3 groups: ERpHER2n LumA; ERpHER2n LumA; ERpHER2p
+# I have to define 2 groups: ERpHER2n LumA; ERpHER2n LumA
 mut.basis <- as.data.frame(mut.basis) %>% 
     dplyr::select(c(sample_name,final.ER,final.HER2,
              ClinicalGroup,PAM50_AIMS,MutSigProportions)) %>%
     mutate(Subtype = 
-               case_when(final.ER=="positive" & final.HER2=="positive" ~ "ERpHER2p",
-                         final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumA" ~ "LumA",
+               case_when(final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumA" ~ "LumA",
                          final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumB" ~ "LumB")) %>% 
-    dplyr::filter(Subtype %in% c("ERpHER2p","LumA","LumB")) %>% 
+    dplyr::filter(Subtype %in% c("LumA","LumB")) %>% 
     dplyr::select(Subtype,MutSigProportions)
 
 mut.basis$MutSigProportions <- as.data.frame(mut.basis$MutSigProportions)
@@ -86,7 +85,7 @@ mut.data <- rbind(mut.basis,mut.scanb)
 # plot 
 
 # luminal subtypes
-group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6", ERpHER2p = "#e67b09")
+group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6")
 plot.data <- mut.data  #%>% filter(Subtype != "ERpHER2p")
 
 for(i in c(1:7)) {
@@ -113,33 +112,6 @@ for(i in c(1:7)) {
     print(plot)
 }
 
-# # her2p 
-# group.colors <- c(HER2E ="#b609e6", ERpHER2p = "#e67b09")
-# plot.data <- mut.data  %>% filter(Subtype %in% c("ERpHER2p","HER2E"))
-# 
-# for(i in c(1:7)) {
-#     #signature <- colnames(plot.data)[i+1]
-#     plot <- ggplot(plot.data, aes(x=as.factor(Subtype),y=plot.data[,i+1],fill=as.factor(Subtype))) +
-#         geom_boxplot(alpha=0.7, size=1.5, outlier.size = 5) +
-#         xlab("Subtype") +
-#         ylab("Proportion") +
-#         ylim(c(0,1)) +
-#         ggtitle(paste("Mutational signature ",colnames(plot.data)[i+1],sep="")) +
-#         theme_bw() +
-#         theme(aspect.ratio=1/1,
-#               legend.position = "none",
-#               panel.border = element_blank(), 
-#               panel.grid.major = element_blank(),
-#               panel.grid.minor = element_blank(),
-#               axis.line = element_line(colour = "black",linewidth = 2),
-#               axis.ticks = element_line(colour = "black", linewidth = 1),
-#               axis.ticks.length=unit(0.2, "cm")) +
-#         scale_fill_manual(values=group.colors)
-#     
-#     plot.list <- append(plot.list,list(plot))
-#     print(plot)
-# }
-
 ################################################################################
 # Statistics
 
@@ -148,7 +120,7 @@ mut.data$Subtype <- as.factor(mut.data$Subtype)
 
 for (signature in colnames(mut.data)[-1]) {
   her2e.data <- subset(mut.data, Subtype == "HER2E", select=c(signature))
-  for (subtype in c("LumA","LumB","ERpHER2p")) {
+  for (subtype in c("LumA","LumB")) {
     # signature data for subtype
     comp.data <- subset(mut.data, Subtype == subtype, select=c(signature))
     # equal variance check
@@ -185,10 +157,9 @@ rearr.basis <- rearr.basis %>%
     dplyr::select(c(sample_name,final.ER,final.HER2,
              ClinicalGroup,PAM50_AIMS,RSproportions)) %>%
     mutate(Subtype = 
-               case_when(final.ER=="positive" & final.HER2=="positive" ~ "ERpHER2p",
-                         final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumA" ~ "LumA",
+               case_when(final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumA" ~ "LumA",
                          final.ER=="positive" & final.HER2=="negative" & PAM50_AIMS=="LumB" ~ "LumB")) %>% 
-    filter(Subtype %in% c("ERpHER2p","LumA","LumB")) %>% 
+    filter(Subtype %in% c("LumA","LumB")) %>% 
     dplyr::select(Subtype,RSproportions)
 rearr.basis$RSproportions <- as.data.frame(rearr.basis$RSproportions)
 
@@ -217,7 +188,7 @@ rearr.data <- rbind(rearr.basis,rearr.scanb)
 
 ################################################################################
 # plot
-group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6", ERpHER2p = "#e67b09")
+group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6")
 
 for(i in c(1:6)) {
     plot <- ggplot(rearr.data, aes(x=as.factor(Subtype),y=rearr.data[,i+1],fill=as.factor(Subtype))) +
@@ -249,7 +220,7 @@ rearr.data$Subtype <- as.factor(rearr.data$Subtype)
 
 for (signature in colnames(rearr.data)[-1]) {
   her2e.data <- subset(rearr.data, Subtype == "HER2E", select=c(signature))
-  for (subtype in c("LumA","LumB","ERpHER2p")) {
+  for (subtype in c("LumA","LumB")) {
     # signature data for subtype
     comp.data <- subset(rearr.data, Subtype == subtype, select=c(signature))
     # equal variance check
