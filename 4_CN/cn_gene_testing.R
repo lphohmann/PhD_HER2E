@@ -64,7 +64,7 @@ txt.out <- c() # object to store text output
 scanb.cna <- loadRData(scanb.gene.cna)[["gainloss"]]
 basis.cna <- loadRData(basis.gene.cna) %>% 
   dplyr::select(-c(chr,centerPos,Genome_pos))
-View(basis.cna)
+#View(basis.cna)
 basis.anno <- loadRData(basis.anno) %>% 
   filter(final.ER=="positive" & final.HER2=="negative") %>%
   dplyr::filter(PAM50_AIMS %in% c("LumA","LumB")) %>%
@@ -77,6 +77,8 @@ lumb.ids <- basis.anno %>% filter(PAM50 == "LumB") %>% pull(sample_name)
 #setdiff(luma.ids,names(basis.cna)) #1 luma sample doesnt have wgs data
 
 # include only common genes
+scanb.cna <- scanb.cna %>% drop_na() 
+basis.cna <- basis.cna %>% drop_na()
 common.genes <- intersect(scanb.cna$gene,basis.cna$gene)
 scanb.cna <- scanb.cna %>% filter(gene %in% common.genes)
 basis.cna <- basis.cna %>% filter(gene %in% common.genes)
@@ -87,15 +89,22 @@ basis.cna$Genome_pos <- scanb.cna$Genome_pos[match(basis.cna$gene, scanb.cna$gen
 basis.cna$chr <- scanb.cna$chr[match(basis.cna$gene, scanb.cna$gene)]
 basis.cna <- basis.cna %>% relocate(c(chr,centerPos,Genome_pos), .after=gene)
 
-# save obj
-# gene LumA.Gain.pval LumB.Gain.pval HER2p.Gain.pval LumA.Loss.pval LumB.Loss.pval HER2p.Loss.pval
-i=1
+################################################################################
 
-# which test: chi2?
+# save obj
+# gene LumA.Gain.pval LumB.Gain.pval LumA.Loss.pval LumB.Loss.pval
+LumA.Gain.pval <- c()
+LumB.Gain.pval <- c()
+LumA.Loss.pval <- c()
+LumB.Loss.pval <- c()
+
+pb = txtProgressBar(min = 0, max = length(common.genes), initial = 0, style = 3)
 for(i in 1:length(common.genes)) {
-  
+  setTxtProgressBar(pb,i)
   # get data
   gene <- common.genes[i]
+  #print(i)
+  #print(gene)
   basis.gene.dat <- basis.cna[basis.cna$gene==gene,][,!names(basis.cna) %in% c(
     "gene","chr","centerPos","Genome_pos")]
   # 
@@ -105,9 +114,9 @@ for(i in 1:length(common.genes)) {
   
   comp.list <- list("LumA"=luma.dat,"LumB"=lumb.dat)
   # test for all pairs
-  j = 1
   for(j in 1:length(comp.list)) {
-    comp.dat <- comp.list[[j]]
+    comp.dat <- comp.list[[j]] 
+    comp.group <- names(comp.list)[j]
     # get cross tables
     gain.tbl <- data.frame(her2e=c(sum(her2e.dat>0),sum(her2e.dat<1)), 
                            comp=c(sum(comp.dat>0),sum(comp.dat<1)), 
@@ -128,16 +137,35 @@ for(i in 1:length(common.genes)) {
       loss.pval <- chisq.test(loss.tbl)$p.value 
     }
     # save in vectors
-    
+    if (comp.group=="LumA") {
+      LumA.Gain.pval[i] <- gain.pval
+      LumA.Loss.pval[i] <- loss.pval
+    } else if (comp.group=="LumB") {
+      LumB.Gain.pval[i] <- gain.pval
+      LumB.Loss.pval[i] <- loss.pval
+    }
     
   }
+  close(pb)
 }
 
+
+gene.test.df <- data.frame("gene"=common.genes, 
+           "LumA.Gain.pval"=LumA.Gain.pval,
+           "LumB.Gain.pval"=LumB.Gain.pval,
+           "LumA.Loss.pval"=LumA.Loss.pval,
+           "LumB.Loss.pval"=LumB.Loss.pval)
+
 # adjust pval
+gene.test.df$LumA.Gain.padj <- p.adjust(gene.test.df$LumA.Gain.pval, method = "fdr") # "bonferroni", "fdr"
+gene.test.df$LumB.Gain.padj <- p.adjust(gene.test.df$LumB.Gain.pval, method = "fdr")
+gene.test.df$LumA.Loss.padj <- p.adjust(gene.test.df$LumA.Loss.pval, method = "fdr")
+gene.test.df$LumB.Loss.padj <- p.adjust(gene.test.df$LumB.Loss.pval, method = "fdr")
+View(gene.test.df)
+length(gene.test.df %>% filter(LumA.Gain.padj<=0.05) %>% pull(gene))
+length(gene.test.df %>% filter(LumB.Gain.padj<=0.05) %>% pull(gene))
+length(gene.test.df %>% filter(LumA.Loss.padj<=0.05) %>% pull(gene))
+length(gene.test.df %>% filter(LumB.Loss.padj<=0.05) %>% pull(gene))
+# how cn the same gene be signif lost and gained in luma lumb
 
-# gene LumA.Gain.pval LumB.Gain.pval HER2p.Gain.pval LumA.Loss.pval LumB.Loss.pval HER2p.Loss.pval
-
-
-#x <- loadRData("data/BASIS/4_CN/processed/ERpHER2p_CollectedFrequencyData.RData")
-
-l
+save(gene.test.df, file= signif.genes)
