@@ -152,7 +152,7 @@ chr.lengths <- chr.lengths %>% mutate(chrbreaks = genome - length/2)
 
 cn.data <- gene.freqs
 
-pdf(file = paste(output.path,cohort,"_GLsubtypeprofiles.pdf", sep =""), height = 21.0, width = 72.0)
+pdf(file = plot.file, height = 21.0, width = 72.0)
 
 plot <- ggplot() +  
     ggtitle("Genome-wide frequency of gain/loss CN alterations") +
@@ -210,7 +210,6 @@ plot <- ggplot() +
              geom="text", angle=90, hjust=0.5, 
              size=9, colour=c("black","black")) 
 print(plot)
-dev.off()
 
 ###############################################################################
 # signif gene data
@@ -330,7 +329,7 @@ plot <- ggplot() +
   scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb")) + 
   geom_point(aes(x = genes.AG$Genome_pos, y = genes.AG$y, size=3)) +
   geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y, size=3)) +
-  geom_vline(xintercept = chr.lengths$genome, linetype="dotted",size=2) +
+  geom_vline(xintercept = chr.lengths$genome[-length(chr.lengths$genome)], linetype="dashed",size=1) +
   scale_x_continuous(name="Genome position (chromosome)",
                      breaks=chr.lengths$chrbreaks, 
                      labels=as.character(1:22),
@@ -409,3 +408,4 @@ plot <- ggplot() +
            geom="text", angle=90, hjust=0.5, 
            size=9, colour=c("black","black")) 
 print(plot)
+dev.off()

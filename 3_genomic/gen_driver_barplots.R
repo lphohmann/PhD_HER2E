@@ -21,9 +21,9 @@ dir.create(data.path)
 
 # plot
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_driverBarplots.pdf",sep = "")
+plot.file <- paste(output.path,cohort,"_HER2n_mutBarplots.pdf",sep = "")
 txt.out <- c() # object to store text output
-txt.file <- paste(output.path,cohort,"_HER2n_driverBarplots.txt", sep="")
+txt.file <- paste(output.path,cohort,"_HER2n_mutBarplots.txt", sep="")
 
 #packages
 source("scripts/3_genomic/src/gen_functions.R")
@@ -38,6 +38,7 @@ library(ggstatsplot)
 library(grid)
 library(gridExtra)
 library(R.utils)
+library(vcfR)
 
 #######################################################################
 # all mut data
@@ -51,37 +52,60 @@ id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_Jun
 # get full list from VCF files
 scanb.muts <- read_table("data/SCANB/3_genomic/raw/vcf/WGS_epb3d_003_vs_epb3db_003/caveman/epb3d_003_vs_epb3db_003.annot.muts.vcf.gz")
 # get normal IDs
-id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
-  dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
-  mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
+# id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
+#   dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
+#   mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
 
 # compile all files into one R object
 caveman.files <- list.files(
   path="./data/SCANB/3_genomic/raw/vcf/",
-  pattern="*.annot.muts.vcf.gz", full.names = TRUE, recursive = TRUE)
+  pattern="*.annot.muts.vcf.gz$", full.names = TRUE, recursive = TRUE)
 pindel.files <- list.files(
   path="./data/SCANB/3_genomic/raw/vcf/",
-  pattern="*.annot.vcf.gz", full.names = TRUE, recursive = TRUE)
+  pattern="*.annot.vcf.gz$", full.names = TRUE, recursive = TRUE)
 
 # load the files
-caveman.files <- lapply(caveman.files, gunzip) # unzip
-caveman.files <- lapply(caveman.files, read_table) 
-# delete the first lines, filter based on criteria in excel table col
-caveman.files <- lapply(caveman.files, function(x) { 
-  x <- x[["segments"]] %>% dplyr::select(-c(sample))
-  x$nTotal <- x$nMinor + x$nMajor
-  return(x) 
-})
+#caveman.files <- lapply(caveman.files,read.table)  
+caveman.files <- lapply(caveman.files, function(x) {
+  # load
+  file <- read.vcfR(x)
+  sample <- gsub(".*caveman/(.+)_vs.*", "\\1", x)
+  file.dat <- as.data.frame(file@fix) %>% 
+    # make CLPM and ASMD into own column
+    mutate(ASMD = as.numeric(gsub(".*ASMD=(.+);VT.*", "\\1", INFO))) %>% 
+    mutate(CLPM = as.numeric(gsub(".*CLPM=(.+);ASMD.*", "\\1", INFO))) %>% 
+    filter(CLPM==0 & ASMD >=140) #Caveman counts (CLPM=0,ASMD>=140)_final
+  
+  return(c(sample, nrow(file.dat)))
+})  
+cv <- as.data.frame(do.call(rbind,caveman.files))
+names(cv) <- c("sample","caveman_count")
 
-# load the files
-pindel.files <- lapply(pindel.files, gunzip) # unzip
-pindel.files <- lapply(pindel.files, read_table) 
-# delete the first lines, filter based on criteria in excel table col
-pindel.files <- lapply(pindel.files, function(x) { 
-  x <- x[["segments"]] %>% dplyr::select(-c(sample))
-  x$nTotal <- x$nMinor + x$nMajor
-  return(x) 
+pindel.files <- lapply(pindel.files, function(x) {
+  # load
+  file <- read.vcfR(x)
+  sample <- gsub(".*pindel/(.+)_vs.*", "\\1", x)
+  file.dat <- as.data.frame(file@fix) %>% 
+    # make repeats column
+    mutate(Repeats = as.numeric(gsub(".*REP=(.+);VT.*", "\\1", INFO))) %>% 
+    filter(QUAL>=250 & Repeats>10) #Pindel counts (QUAL>=250,Repeats>10)_final
+  
+  return(c(sample, nrow(file.dat)))
 })
+pd <- as.data.frame(do.call(rbind,pindel.files))
+names(pd) <- c("sample","pindel_count")
+
+# merge and correct IDs
+res <- merge(cv,pd,by="sample")
+save(res, file="./data/SCANB/3_genomic/processed/mutation_counts.RData")
+
+
+# correct ids now
+
+
+
+
+
 
 # get down to one file per sample
 c(caveman.files, pindel.files)
