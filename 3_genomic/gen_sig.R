@@ -25,7 +25,7 @@ plot.list <- list() # object to store plots; note: if the output is not in strin
 plot.file <- paste(output.path,cohort,"_WGS_signatures.pdf",sep = "")
 
 txt.out <- c() # object to store text output
-txt.file <- paste(output.path,cohort,"_WGS_signatures.pdf.txt", sep="")
+txt.file <- paste(output.path,cohort,"_WGS_signatures.txt", sep="")
 
 #packages
 #source("scripts/3_genomic/src/mut_functions.R")
@@ -114,28 +114,44 @@ for(i in c(1:7)) {
 
 ################################################################################
 # Statistics
-
 # vars
 mut.data$Subtype <- as.factor(mut.data$Subtype)
-
 for (signature in colnames(mut.data)[-1]) {
   her2e.data <- subset(mut.data, Subtype == "HER2E", select=c(signature))
   for (subtype in c("LumA","LumB")) {
     # signature data for subtype
     comp.data <- subset(mut.data, Subtype == subtype, select=c(signature))
-    # equal variance check
-    levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
     
-    # ttest
-    if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
-      res <- t.test(her2e.data, comp.data, var.equal = FALSE)
-    } else if (is.nan(levenes.res$p.value)) {
-      res <- t.test(her2e.data, comp.data, var.equal = TRUE)
-    } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
+    test.type <- if(diff(range(unlist(her2e.data))) == 0 |
+                    diff(range(unlist(comp.data))) == 0 ) {
+      # all values identical for one or both -> cant be normally distrib.
+      "non-parametric"
+    } else if(shapiro.test(unlist(her2e.data))$p.value > 0.05 & 
+      shapiro.test(unlist(comp.data))$p.value > 0.05)  {
+      # parametric: both normally distributed
+      "parametric"
+    } else {     
+      # at least one group not normally distributed
+      "non-parametric"
+      }
+                    
+    if(test.type=="parametric") { 
+      # equal variance check
+      levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
+      # t.test
+      if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
+        res <- t.test(her2e.data, comp.data, var.equal = FALSE)
+      } else if (is.nan(levenes.res$p.value)) {
+        res <- t.test(her2e.data, comp.data, var.equal = TRUE)
+      } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
+    } else { 
+      # non-parametric
+      # mann whitney u test
+      res <- wilcox.test(unlist(her2e.data), unlist(comp.data), exact=TRUE)
+    }
     # save result
     txt.out <- append(txt.out,c(signature,subtype,capture.output(res)))
-
-  } 
+  }
 }
 
   
@@ -213,29 +229,46 @@ for(i in c(1:6)) {
 }
 
 ################################################################################
-# Statistics
 
+# Statistics
 # vars
 rearr.data$Subtype <- as.factor(rearr.data$Subtype)
-
 for (signature in colnames(rearr.data)[-1]) {
   her2e.data <- subset(rearr.data, Subtype == "HER2E", select=c(signature))
   for (subtype in c("LumA","LumB")) {
     # signature data for subtype
     comp.data <- subset(rearr.data, Subtype == subtype, select=c(signature))
-    # equal variance check
-    levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
     
-    # ttest
-    if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
-      res <- t.test(her2e.data, comp.data, var.equal = FALSE)
-    } else if (is.nan(levenes.res$p.value)) {
-      res <- t.test(her2e.data, comp.data, var.equal = TRUE)
-    } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
+    test.type <- if(diff(range(unlist(her2e.data))) == 0 |
+                    diff(range(unlist(comp.data))) == 0 ) {
+      # all values identical for one or both -> cant be normally distrib.
+      "non-parametric"
+    } else if(shapiro.test(unlist(her2e.data))$p.value > 0.05 & 
+              shapiro.test(unlist(comp.data))$p.value > 0.05)  {
+      # parametric: both normally distributed
+      "parametric"
+    } else {     
+      # at least one group not normally distributed
+      "non-parametric"
+    }
+    
+    if(test.type=="parametric") { 
+      # equal variance check
+      levenes.res <- var.test(unlist(her2e.data), unlist(comp.data), alternative = "two.sided")
+      # t.test
+      if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
+        res <- t.test(her2e.data, comp.data, var.equal = FALSE)
+      } else if (is.nan(levenes.res$p.value)) {
+        res <- t.test(her2e.data, comp.data, var.equal = TRUE)
+      } else { res <- t.test(her2e.data, comp.data, var.equal = TRUE) }
+    } else { 
+      # non-parametric
+      # mann whitney u test
+      res <- wilcox.test(unlist(her2e.data), unlist(comp.data), exact=TRUE)
+    }
     # save result
     txt.out <- append(txt.out,c(signature,subtype,capture.output(res)))
-    
-  } 
+  }
 }
 
 #######################################################################

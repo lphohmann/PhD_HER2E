@@ -39,9 +39,10 @@ library(grid)
 library(gridExtra)
 library(R.utils)
 library(vcfR)
+library(car)
 
 #######################################################################
-# all mut data
+# load TMB data (extract from VCF files)
 #######################################################################
 
 # scanb
@@ -50,11 +51,6 @@ id.key <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_Jun
   dplyr::select(c("Sample","Tumour")) %>% dplyr::rename(sample=Sample)
 
 # get full list from VCF files
-scanb.muts <- read_table("data/SCANB/3_genomic/raw/vcf/WGS_epb3d_003_vs_epb3db_003/caveman/epb3d_003_vs_epb3db_003.annot.muts.vcf.gz")
-# get normal IDs
-# id.key <- read_excel("data/SCANB/3_genomic/raw/JVCimpression2022-11-09_ERpos_WGS_Batch1-3.xlsx") %>% 
-#   dplyr::select(c(SENT.TUMOR,SENT.TUMOR.aliquot,TUMOR.alias)) %>% 
-#   mutate(SENT.TUMOR.aliquot = gsub("\\.","_",SENT.TUMOR.aliquot))
 
 # compile all files into one R object
 caveman.files <- list.files(
@@ -95,8 +91,6 @@ names(pd) <- c("sample","pindel_count")
 
 # merge and correct IDs
 res <- merge(cv,pd,by="sample")
-save(res, file="./data/SCANB/3_genomic/processed/mutation_counts.RData")
-res <- loadRData("./data/SCANB/3_genomic/processed/mutation_counts.RData")
 
 # correct ids now
 res$sampleID <- id.key$SENT.TUMOR[match(res$sample,id.key$SENT.TUMOR.aliquot)]
@@ -105,11 +99,12 @@ res[is.na(res$sampleID),]$sampleID <- id.key$SENT.TUMOR[match(
 res$sample <- NULL
 res$PAM50 <- rep("HER2E", length(sample))
 res$N_mut <- as.numeric(res$caveman_count) + as.numeric(res$pindel_count)
-res$caveman_count <- NULL
-res$pindel_count <- NULL
-#View(id.key)
-#View(res)
 scanb.muts <- res
+
+#save(scanb.muts, file="./data/SCANB/3_genomic/processed/mutation_counts.RData")
+load("./data/SCANB/3_genomic/processed/mutation_counts.RData")
+scanb.muts$caveman_count <- NULL
+scanb.muts$pindel_count <- NULL
 # basis mut data
 basis.muts <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
   filter(ClinicalGroup == "ERposHER2neg" & PAM50_AIMS %in% c("LumA","LumB")) %>% 
@@ -119,6 +114,8 @@ basis.muts <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.
 
 # combined
 mutation.sample.counts <- rbind(basis.muts,scanb.muts)
+#mutation.sample.counts <- rbind(basis.muts[c("PAM50","N_mut")],scanb.muts)
+
 View(mutation.sample.counts)
 #View(basis.muts)
 
@@ -144,13 +141,54 @@ p <- ggplot(mutation.sample.counts, aes(x=PAM50,y=N_mut,fill=PAM50)) +
   scale_fill_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
                                     c("HER2E","LumA","LumB"))) +  
   scale_y_continuous(breaks = scales::breaks_pretty(10)) + 
+  coord_cartesian(ylim=c(0, 12000)) + 
   ggtitle("TMB based on SBS and indels") 
   
 
 pdf(file = plot.file, onefile = TRUE)
-print(p)
-dev.off()
 plot.list <- append(plot.list,list(p))
+
+
+#######################################################################
+# stat testing TMB 
+#######################################################################
+
+# Her2 vs LumA
+a.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="LumA"),]$N_mut
+h.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="HER2E"),]$N_mut
+# assumptions
+hist(a.dat) # not normal
+hist(h.dat) # not normal
+lev.res <- leveneTest(N_mut~as.factor(PAM50),
+                      data=mutation.sample.counts[which(
+  mutation.sample.counts$PAM50 %in% c("LumA","HER2E")),]) # unequal variances
+#luma.res <- t.test(h.dat, a.dat) # assumptions not fulfilled
+# Mann-Whitney (Wilcoxon) test
+luma.res <- wilcox.test(h.dat, a.dat, exact=TRUE)
+
+# for Her2 vs LumB
+b.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="LumB"),]$N_mut
+h.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="HER2E"),]$N_mut
+# assumptions
+hist(b.dat) # not normal
+hist(h.dat) # not normal
+lev.res <- leveneTest(N_mut~as.factor(PAM50),
+                      data=
+                        mutation.sample.counts[which(mutation.sample.counts$PAM50 %in% c("LumB","HER2E")),]) # unequal variances
+#lumb.res <- t.test(h.dat, b.dat) # assumptions not fulfilled
+# Mann-Whitney (Wilcoxon) test
+lumb.res <- wilcox.test(h.dat, b.dat, exact=TRUE)
+ 
+# save result
+txt.out <- append(txt.out,c(gene,capture.output(luma.res)))
+txt.out <- append(txt.out,c(gene,capture.output(lumb.res)))
+
+# save text output
+writeLines(txt.out, txt.file)
 
 #######################################################################
 # driver data
@@ -239,7 +277,7 @@ for (g in gene.vec) {
 }
 
 # save plots
-pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
+#pdf(file = plot.file, onefile = TRUE, height = 5, width = 5)
 
 for(i in 1:length(plot.list)) { 
   print(plot.list[[i]])
