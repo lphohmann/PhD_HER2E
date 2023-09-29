@@ -43,7 +43,7 @@ txt.out <- c() # object to store text output
 # loading data
 ###############################################################################
 
-# replace with my gene level data
+# gene level data
 scanb.cna <- loadRData(scanb.gene.cna)[["gainloss"]]
 basis.cna <- loadRData(basis.gene.cna) %>% 
   dplyr::select(-c(chr,centerPos,Genome_pos))

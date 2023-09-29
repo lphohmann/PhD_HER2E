@@ -77,17 +77,59 @@ print(p)
 plot.list <- append(plot.list,list(p))#
 
 ################################################################################
-# CN boxplot % of Genes gain/loss 
+# CN boxplot % of genes gain/loss # CONTINUE HERE
 ################################################################################
 
-# WHERE IS THE FILES FOR THE GENES CHECK HOW I GOT THE AMP STATUS
-scanb.probes <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genpos_genmap.RData") %>% 
-  dplyr::select(-c(Gene_symbol)) %>% mutate(Chr = gsub("chr","",Chr))
-View(head(scanb.probes))
+# gene level data
+scanb.cna <- loadRData(
+  "data/SCANB/4_CN/processed/CNA_genelevel.RData")[["gainloss"]]
+basis.cna <- loadRData("data/BASIS/4_CN/processed/CNA_genelevel_all.RData") %>% 
+  dplyr::select(-c(chr,centerPos,Genome_pos))
+basis.anno <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
+  filter(final.ER=="positive" & final.HER2=="negative") %>%
+  dplyr::filter(PAM50_AIMS %in% c("LumA","LumB")) %>%
+  dplyr::rename(PAM50=PAM50_AIMS) %>% 
+  dplyr::select(sample_name,PAM50)
 
-basis.probes <- loadRData("data/BASIS/4_CN/processed/probe_CNA.RData")
-basis.probes <- loadRData("data/BASIS/4_CN/summarized")
-View(head(basis.probes))
+luma.ids <- basis.anno %>% filter(PAM50 == "LumA") %>% 
+  filter(sample_name %in% colnames(basis.cna)) %>% 
+  pull(sample_name)
+lumb.ids <- basis.anno %>% filter(PAM50 == "LumB") %>% 
+  filter(sample_name %in% colnames(basis.cna)) %>% 
+  pull(sample_name)
+
+# include only common genes
+scanb.cna <- scanb.cna %>% drop_na() 
+basis.cna <- basis.cna %>% drop_na()
+common.genes <- intersect(scanb.cna$gene,basis.cna$gene)
+scanb.cna <- scanb.cna %>% filter(gene %in% common.genes)
+basis.cna <- basis.cna %>% filter(gene %in% common.genes)
+
+# exclude not required columns
+scanb.cna <- scanb.cna %>% 
+  dplyr::select(-c("gene","chr","centerPos","Genome_pos"))
+basis.cna <- basis.cna %>% 
+  dplyr::select(-c("gene","chr","centerPos","Genome_pos"))
+
+# per sample: genes gain + genes loss / total genes = freq.altered
+# final matrix: sample freq.altered PAM50
+
+scanb.freq <- apply(scanb.cna, 2, function(x) {(length(x[x != 0])/length(x))*100}) %>% 
+  as.data.frame() %>% 
+  dplyr::rename("freq.altered"=".") %>% 
+  rownames_to_column(var="sampleID") %>% 
+  mutate(PAM50="HER2E")
+basis.freq <- apply(basis.cna, 2, function(x) {(length(x[x != 0])/length(x))*100}) %>% 
+  as.data.frame() %>% 
+  dplyr::rename("freq.altered"=".") %>% 
+  rownames_to_column(var="sampleID")
+basis.freq$PAM50 <- basis.anno$PAM50[match(basis.freq$sampleID,basis.anno$sample_name)]
+
+freqs <- rbind(basis.freq,scanb.freq)
+
+# plot
 
 
-
+################################################################################
+# CN boxplot % of genes gain/loss # CONTINUE HERE
+################################################################################
