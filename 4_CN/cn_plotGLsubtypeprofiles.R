@@ -33,6 +33,7 @@ scanb.gene.cna <- "data/SCANB/4_CN/processed/CNA_genelevel.RData"
 basis.gene.cna <- "data/BASIS/4_CN/processed/CNA_genelevel_all.RData"
 basis.anno <- "data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData"
 # output
+gene.freqs.file <- "data/COMBINED/4_CN/processed/CNA_genefreqs.RData"
 plot.file <- "output/plots/4_CN/COMBINED_HER2n_GLsubtypeprofiles.pdf"
 #-------------------------------------------------------------------------------
 # storing objects 
@@ -145,6 +146,7 @@ chr.lengths <- chr.lengths %>% mutate(chrbreaks = genome - length/2)
 
 #View(cn.data)
 
+save(gene.freqs,file=gene.freqs.file)
 ###############################################################################
 # plot: all profiles without points
 # The genome position is wrong
