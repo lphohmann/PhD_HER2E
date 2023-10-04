@@ -89,13 +89,11 @@ pindel.files <- lapply(pindel.files, function(x) {
 pd <- as.data.frame(do.call(rbind,pindel.files))
 names(pd) <- c("sample","pindel_count")
 
-# merge and correct IDs
+# merge and correct IDs 
 res <- merge(cv,pd,by="sample")
 
 # correct ids now
-res$sampleID <- id.key$SENT.TUMOR[match(res$sample,id.key$SENT.TUMOR.aliquot)]
-res[is.na(res$sampleID),]$sampleID <- id.key$SENT.TUMOR[match(
-  res[is.na(res$sampleID),]$sample,id.key$TUMOR.alias)]
+res$sampleID <- id.key$sample[match(res$sample,id.key$Tumour)]
 res$sample <- NULL
 res$PAM50 <- rep("HER2E", length(sample))
 res$N_mut <- as.numeric(res$caveman_count) + as.numeric(res$pindel_count)
@@ -116,7 +114,7 @@ basis.muts <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.
 mutation.sample.counts <- rbind(basis.muts,scanb.muts)
 #mutation.sample.counts <- rbind(basis.muts[c("PAM50","N_mut")],scanb.muts)
 
-View(mutation.sample.counts)
+#View(mutation.sample.counts)
 #View(basis.muts)
 
 #######################################################################
@@ -159,8 +157,8 @@ a.dat <- mutation.sample.counts[which(
 h.dat <- mutation.sample.counts[which(
   mutation.sample.counts$PAM50=="HER2E"),]$N_mut
 # assumptions
-hist(a.dat) # not normal
-hist(h.dat) # not normal
+#hist(a.dat) # not normal
+#hist(h.dat) # not normal
 lev.res <- leveneTest(N_mut~as.factor(PAM50),
                       data=mutation.sample.counts[which(
   mutation.sample.counts$PAM50 %in% c("LumA","HER2E")),]) # unequal variances
@@ -174,8 +172,8 @@ b.dat <- mutation.sample.counts[which(
 h.dat <- mutation.sample.counts[which(
   mutation.sample.counts$PAM50=="HER2E"),]$N_mut
 # assumptions
-hist(b.dat) # not normal
-hist(h.dat) # not normal
+#hist(b.dat) # not normal
+#hist(h.dat) # not normal
 lev.res <- leveneTest(N_mut~as.factor(PAM50),
                       data=
                         mutation.sample.counts[which(mutation.sample.counts$PAM50 %in% c("LumB","HER2E")),]) # unequal variances
@@ -184,11 +182,11 @@ lev.res <- leveneTest(N_mut~as.factor(PAM50),
 lumb.res <- wilcox.test(h.dat, b.dat, exact=TRUE)
  
 # save result
-txt.out <- append(txt.out,c(gene,capture.output(luma.res)))
-txt.out <- append(txt.out,c(gene,capture.output(lumb.res)))
+txt.out <- append(txt.out,c("TMB-luma",capture.output(luma.res)))
+txt.out <- append(txt.out,c("TMB-lumb",capture.output(lumb.res)))
 
 # save text output
-writeLines(txt.out, txt.file)
+#writeLines(txt.out, txt.file)
 
 #######################################################################
 # driver data
@@ -346,6 +344,28 @@ for (i in 1:nrow(all.dmut.binary)) { #nrow(gex.data)
 
 # name output columns
 names(res.df) <- c("gene","luma.pval","lumb.pval")
+
+
+
+#######################################################################
+# check HRD frequencies
+#######################################################################
+
+# scanb
+HRD.df <- as.data.frame(read_excel("data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "HRDetect")) %>% 
+  mutate(HRD.status = ifelse(Probability >= 0.7,"positive","negative"))
+tbl <- table(HRD.df$HRD.status)
+HER2E.freq <- (tbl["positive"]/sum(tbl))*100
+
+# basis
+HRD.basis <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
+  filter(ClinicalGroup == "ERposHER2neg" & PAM50_AIMS %in% c("LumA","LumB")) %>% 
+  dplyr::select(c("sample_name","PAM50_AIMS","HRDetect","HRDprob")) %>% 
+  dplyr::rename(sampleID=sample_name,PAM50=PAM50_AIMS)
+tbl <- table(HRD.basis[which(HRD.basis$PAM50=="LumA"),]$HRDetect)
+LumA.freq <- (tbl["HRD-high"]/sum(tbl))*100
+tbl <- table(HRD.basis[which(HRD.basis$PAM50=="LumB"),]$HRDetect)
+LumB.freq <- (tbl["HRD-high"]/sum(tbl))*100
 
 # save text output
 writeLines(txt.out, txt.file)

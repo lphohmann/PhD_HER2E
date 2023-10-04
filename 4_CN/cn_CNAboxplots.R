@@ -279,9 +279,25 @@ luma.diff <- as.data.frame(c(luma.diff.loss,luma.diff.gain)) %>%
 freq.diffs <- rbind(lumb.diff,luma.diff)
 
 # plot
-boxplot(Freq.diff~PAM50,data=freq.diffs,col=c("#2176d5","#34c6eb"))
-p <- recordPlot()
-plot.new()
+p <- ggplot(freq.diffs, aes(x=PAM50,y=as.numeric(Freq.diff),fill=PAM50)) +
+  geom_boxplot(size=2.5, outlier.size = 7) +
+  ylab("Alteration frequency diff (%)") +
+  xlab("PAM50 subtype") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black",linewidth=2),
+        axis.ticks = element_line(colour = "black", linewidth = 2),
+        axis.ticks.length = unit(0.5, "cm")) +
+  scale_fill_manual(values = setNames(c("#2176d5","#34c6eb"),
+                                    c("LumA","LumB"))) +  
+  scale_y_continuous(breaks = scales::breaks_pretty(10))
+
+#boxplot(Freq.diff~PAM50,data=freq.diffs,col=c("#2176d5","#34c6eb"))
+#p <- recordPlot()
+#plot.new()
 plot.list <- append(plot.list,list(p))
 
 ########################################################################

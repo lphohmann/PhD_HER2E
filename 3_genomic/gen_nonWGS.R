@@ -19,7 +19,7 @@ dir.create(data.path)
 
 # plot
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_driverWF.pdf",sep = "")
+plot.file <- paste("output/plots/3_genomic/METABRIC_HER2n_mutbarplots.pdf",sep = "")
 txt.out <- c() # object to store text output
 txt.file <- paste(output.path,cohort,"_HER2n_driverBarplots.txt", sep="")
 
@@ -85,10 +85,18 @@ anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>%
   dplyr::select(sample,PAM50)
     
 mut.data <- mut.data %>% filter(sample %in% anno$sample)
-
 #######################################################################
 # 3. Waterfall plots
 #######################################################################
+
+# colors <- c("#8dd3c7",
+#             "#ffffb3",
+#             "#bebada",
+#             "#fb8072",
+#             "#80b1d3",
+#             "#fdb462",
+#             "#b3de69",
+#             "#fccde5")
 
 # Create a vector to save mutation priority order for plotting
 mutation.priority <- as.character(unique(mut.data$variant_class))
@@ -99,23 +107,33 @@ mutation.priority <- c("Nonsense_Mutation","Missense_Mutation","Frame_Shift_Del"
 Her2.samples <- anno %>% filter(PAM50=="Her2") %>% pull(sample)
 mut.data.her2 <- mut.data %>% filter(sample %in% Her2.samples)
 
+pdf(file = "output/plots/3_genomic/METABRIC_HER2n_driverWF.pdf", onefile = TRUE,height = 10, width = 20)#, height = 10, width = 15)
+
 
 wf.plot <- waterfall(mut.data.her2, 
-                    fileType = "Custom", 
-                    variant_class_order = mutation.priority,
-                    mainGrid = TRUE,
-                    #mainPalette = custom.pallete, # adapt this to match SCANB plot
-                    main_geneLabSize = 15,
-                    mainRecurCutoff = 0,
-                    maxGenes = 30,
-                    mainDropMut = TRUE, # drop unused mutation types from legend
-                    #rmvSilent = TRUE,
-                    out= "grob",
-                    mutBurdenLayer = layer,
-                    plotMutBurden = FALSE) #
+                     fileType = "Custom", 
+                     variant_class_order = mutation.priority,
+                     mainGrid = TRUE,
+                     #mainPalette = custom.pallete,
+                     main_geneLabSize = 15,
+                     mainRecurCutoff = 0,
+                     maxGenes = 12,
+                     mainDropMut = TRUE, # drop unused mutation types from legend
+                     #rmvSilent = TRUE,
+                     out= "grob",
+                     mutBurdenLayer = layer,
+                     plotMutBurden = FALSE)
 
+
+
+
+
+grid::grid.newpage()
+grid::grid.draw(wf.plot)
+
+dev.off()
 # append to list
-plot.list <- append(plot.list,list(wf.plot))
+#plot.list <- append(plot.list,list(wf.plot))
 
 #######################################################################
 # plot genes of interest: mutation frequencies
@@ -165,21 +183,6 @@ for (g in gene.vec) {
   plot.list <- append(plot.list,list(p2)) 
   
 }
-
-#######################################################################
-#######################################################################
-
-# save plots
-pdf(file = plot.file, onefile = TRUE, height = 10, width = 15)
-
-for (i in 1:length(plot.list)) {
-  grid::grid.newpage()
-  grid::grid.draw(plot.list[[i]])
-  
-  #print(plot.list[[i]])
-}
-
-dev.off()
 
 #######################################################################
 # stat testing mut. freqs
@@ -242,5 +245,92 @@ for (i in 1:nrow(all.dmut.binary)) { #nrow(gex.data)
 # name output columns
 names(res.df) <- c("gene","luma.pval","lumb.pval")
 
+
+#######################################################################
+# TMB
+#######################################################################
+
+#table(mut.data[!duplicated(mut.data$Sample), ]$PAM50)#
+mutation.sample.counts <- as.data.frame(table(mut.data$Sample)) %>% 
+  dplyr::rename(sampleID = Var1, N_mut=Freq)
+mutation.sample.counts$PAM50 <- anno$PAM50[match(mutation.sample.counts$sampleID,anno$sample)]
+
+mutation.sample.counts[which(mutation.sample.counts$PAM50=="Her2"),]$PAM50 <- "HER2E"
+#table(mutation.sample.counts$PAM50)
+
+
+p <- ggplot(mutation.sample.counts, aes(x=PAM50,y=N_mut,fill=PAM50)) +
+  geom_boxplot(size=2.5, outlier.size = 7) +
+  ylab("Mutational burden") +
+  xlab("PAM50 subtype") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black",linewidth=2),
+        axis.ticks = element_line(colour = "black", linewidth = 2),
+        axis.ticks.length=unit(0.5, "cm")) +
+  scale_fill_manual(values=setNames(c("#d334eb","#2176d5","#34c6eb"),
+                                    c("HER2E","LumA","LumB"))) +  
+  scale_y_continuous(breaks = scales::breaks_pretty(10)) + 
+  coord_cartesian(ylim=c(0, 50)) + 
+  ggtitle("TMB based on SBS and indels") 
+
+plot.list <- append(plot.list,list(p))
+
+
+#testing tmb
+
+
+# Her2 vs LumA
+a.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="LumA"),]$N_mut
+h.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="HER2E"),]$N_mut
+# assumptions
+hist(a.dat) # not normal
+hist(h.dat) # not normal
+lev.res <- leveneTest(N_mut~as.factor(PAM50),
+                      data=mutation.sample.counts[which(
+                        mutation.sample.counts$PAM50 %in% c("LumA","HER2E")),]) # unequal variances
+#luma.res <- t.test(h.dat, a.dat) # assumptions not fulfilled
+# Mann-Whitney (Wilcoxon) test
+luma.res <- wilcox.test(h.dat, a.dat, exact=TRUE)
+
+# for Her2 vs LumB
+b.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="LumB"),]$N_mut
+h.dat <- mutation.sample.counts[which(
+  mutation.sample.counts$PAM50=="HER2E"),]$N_mut
+# assumptions
+hist(b.dat) # not normal
+hist(h.dat) # not normal
+lev.res <- leveneTest(N_mut~as.factor(PAM50),
+                      data=
+                        mutation.sample.counts[which(mutation.sample.counts$PAM50 %in% c("LumB","HER2E")),]) # unequal variances
+#lumb.res <- t.test(h.dat, b.dat) # assumptions not fulfilled
+# Mann-Whitney (Wilcoxon) test
+lumb.res <- wilcox.test(h.dat, b.dat, exact=TRUE)
+
+# save result
+txt.out <- append(txt.out,c("TMB - luma",capture.output(luma.res)))
+txt.out <- append(txt.out,c("TMB - lumb",capture.output(lumb.res)))
+
+
+#######################################################################
+#######################################################################
+
+# save plots
+pdf(file = plot.file, onefile = TRUE)#, height = 10, width = 15)
+
+for (i in 1:length(plot.list)) {
+  grid::grid.newpage()
+  grid::grid.draw(plot.list[[i]])
+  
+  #print(plot.list[[i]])
+}
+
+dev.off()
 # save text output
 writeLines(txt.out, txt.file)

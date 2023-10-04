@@ -271,10 +271,10 @@ plot <- ggplot() +
     y = cn.data[!is.na(cn.data$freq.loss.her2e),]$freq.loss.her2e, 
     color = "HER2E"),size=4) + 
   scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb")) + 
-  geom_point(aes(x = genes.AG$Genome_pos, y = genes.AG$y), size=5) +
-  geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y), size=5) +
-  geom_point(aes(x = genes.BG$Genome_pos, y = genes.BG$y), size=5, colour="red") +
-  geom_point(aes(x = genes.BL$Genome_pos, y = genes.BL$y), size=5, colour="red") +
+  geom_point(aes(x = genes.AG$Genome_pos, y = genes.AG$y), size=12) +
+  geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y), size=12) +
+  geom_point(aes(x = genes.BG$Genome_pos, y = genes.BG$y), size=12, colour="red") +
+  geom_point(aes(x = genes.BL$Genome_pos, y = genes.BL$y), size=12, colour="red") +
   geom_vline(xintercept = chr.lengths$genome[-length(chr.lengths$genome)],
              linetype="dashed",size=1) +
   scale_x_continuous(name="Genome position (chromosome)",
@@ -329,8 +329,8 @@ plot <- ggplot() +
     y = cn.data[!is.na(cn.data$freq.loss.her2e),]$freq.loss.her2e, 
     color = "HER2E"),size=4) + 
   scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb")) + 
-  geom_point(aes(x = genes.AG$Genome_pos, y = genes.AG$y, size=3)) +
-  geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y, size=3)) +
+  geom_point(aes(x = genes.AG$Genome_pos, y = genes.AG$y), size=12) +
+  geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y), size=12) +
   geom_vline(xintercept = chr.lengths$genome[-length(chr.lengths$genome)], linetype="dashed",size=1) +
   scale_x_continuous(name="Genome position (chromosome)",
                      breaks=chr.lengths$chrbreaks, 
@@ -380,8 +380,8 @@ plot <- ggplot() +
     y = cn.data[!is.na(cn.data$freq.loss.her2e),]$freq.loss.her2e, 
     color = "HER2E"),size=4) + 
   scale_colour_manual(name="Subtype", values = c("HER2E"="#d334eb", "LUMA"="#2176d5", "LUMB"="#34c6eb")) + 
-  geom_point(aes(x = genes.BG$Genome_pos, y = genes.BG$y, size=3)) +
-  geom_point(aes(x = genes.BL$Genome_pos, y = genes.BL$y, size=3)) +
+  geom_point(aes(x = genes.BG$Genome_pos, y = genes.BG$y), size=12) +
+  geom_point(aes(x = genes.BL$Genome_pos, y = genes.BL$y), size=12) +
   geom_vline(xintercept = chr.lengths$genome[-length(chr.lengths$genome)],
              linetype="dashed",size=1) +
   scale_x_continuous(name="Genome position (chromosome)",

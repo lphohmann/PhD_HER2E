@@ -179,7 +179,7 @@ for (i in names(datasets)) {
                     mainPalette = custom.pallete,
                     main_geneLabSize = 15,
                     mainRecurCutoff = 0,
-                    maxGenes = 30,
+                    maxGenes = 12,
                     mainDropMut = TRUE, # drop unused mutation types from legend
                     #rmvSilent = TRUE,
                     out= "grob",
