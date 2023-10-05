@@ -140,8 +140,8 @@ dev.off()
 #######################################################################
 
 # sample pam50, gene
-head(mut.data)
-head(anno)
+#head(mut.data)
+#head(anno)
 
 # annotate samples with pam50
 mut.data$PAM50 <- anno$PAM50[match(mut.data$sample,anno$sample)]
@@ -289,8 +289,8 @@ a.dat <- mutation.sample.counts[which(
 h.dat <- mutation.sample.counts[which(
   mutation.sample.counts$PAM50=="HER2E"),]$N_mut
 # assumptions
-hist(a.dat) # not normal
-hist(h.dat) # not normal
+#hist(a.dat) # not normal
+#hist(h.dat) # not normal
 lev.res <- leveneTest(N_mut~as.factor(PAM50),
                       data=mutation.sample.counts[which(
                         mutation.sample.counts$PAM50 %in% c("LumA","HER2E")),]) # unequal variances
@@ -304,8 +304,8 @@ b.dat <- mutation.sample.counts[which(
 h.dat <- mutation.sample.counts[which(
   mutation.sample.counts$PAM50=="HER2E"),]$N_mut
 # assumptions
-hist(b.dat) # not normal
-hist(h.dat) # not normal
+#hist(b.dat) # not normal
+#hist(h.dat) # not normal
 lev.res <- leveneTest(N_mut~as.factor(PAM50),
                       data=
                         mutation.sample.counts[which(mutation.sample.counts$PAM50 %in% c("LumB","HER2E")),]) # unequal variances

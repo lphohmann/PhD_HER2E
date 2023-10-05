@@ -116,7 +116,7 @@ for (subtype in c("LumA","LumB")) {
 
 
 ################################################################################
-# CN boxplot % of genes gain/loss # CONTINUE HERE
+# CN boxplot % of genes gain/loss 
 ################################################################################
 
 # gene level data
@@ -185,7 +185,7 @@ p <- ggplot(freqs, aes(x=PAM50,y=as.numeric(freq.altered),fill=PAM50)) +
 
 
 print(p)
-plot.list <- append(plot.list,list(p))#
+plot.list <- append(plot.list,list(p))
 
 ################################################################################
 

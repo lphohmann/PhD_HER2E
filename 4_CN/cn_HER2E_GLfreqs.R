@@ -44,11 +44,11 @@ gainloss.cn.scanb.freqs <- loadRData("data/SCANB/4_CN/processed/CN_gainloss_genp
 # calc loss/gain freqs per group
 gainloss.cn.scanb.freqs$freqloss.HER2E <- apply(
   gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)], 1, function(x) (
-    length(which(x==-1))/ncol(gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)]))*-100) # i add a minus to make it easier for plotting
+    length(which(x<=-1))/ncol(gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)]))*-100) # i add a minus to make it easier for plotting
 
 gainloss.cn.scanb.freqs$freqgain.HER2E <- apply(
   gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)], 1, function(x) (
-    length(which(x==1))/ncol(gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)]))*100)
+    length(which(x>=1))/ncol(gainloss.cn.scanb.freqs[,5:ncol(gainloss.cn.scanb.freqs)]))*100)
 
 #head(gainloss.cn.scanb.freqs)
 
