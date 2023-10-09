@@ -21,7 +21,7 @@ dir.create(data.path)
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
 plot.file <- paste("output/plots/3_genomic/METABRIC_HER2n_mutbarplots.pdf",sep = "")
 txt.out <- c() # object to store text output
-txt.file <- paste(output.path,cohort,"_HER2n_driverBarplots.txt", sep="")
+txt.file <- paste(output.path,cohort,"_HER2n_mutbarplots.txt", sep="")
 
 #packages
 source("scripts/3_genomic/src/gen_functions.R")
