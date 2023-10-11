@@ -1,5 +1,7 @@
 # Function definitions for transcriptomic data analyses
 
+library(rstatix )
+
 ################################################################################
 # functions
 ################################################################################
@@ -93,6 +95,20 @@ get_gex <- function(id,gex.data,anno) {
         rownames_to_column(var="sampleID")
     # combine with anno
     single.gex <- merge(single.gex, anno[,c("PAM50","sampleID")],by="sampleID") %>% relocate(PAM50,.after=sampleID)
+}
+
+# get gex, sampleid, Group for HER2p script
+get_gex_hp <- function(id,gex.data,anno) {
+  # extract the gex for each gene
+  single.gex <- gex.data %>% 
+    select_if(~ !any(is.na(.))) %>% 
+    rownames_to_column(var = "gene_id") %>% 
+    filter(gene_id == id) %>% 
+    column_to_rownames(var = "gene_id") %>% 
+    t(.) %>% as.data.frame() %>% 
+    rownames_to_column(var="sampleID")
+  # combine with anno
+  single.gex <- merge(single.gex, anno[,c("Group","sampleID")],by="sampleID") %>% relocate(Group,.after=sampleID)
 }
 
 # summary stats.
