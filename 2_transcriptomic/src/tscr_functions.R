@@ -300,7 +300,7 @@ var_ttest <- function(dat1,dat2) {
 
 # 2-group non-parametric test: Mann-Whitney U
 mwu_test <- function(dat1,dat2) {
-  wilcox.test(dat1, dat2, exact=TRUE)
+  wilcox.test(dat1, dat2)
 }
 
 # combined 2-group test function

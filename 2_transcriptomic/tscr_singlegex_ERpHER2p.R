@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -105,44 +105,6 @@ if (cohort=="SCANB") {
 # look into the expression of selected genes # CONTINUE HERE
 #######################################################################
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001 ns not significant
-# #View(gex.data)
-# 
-# #ERBB2-----------------------------------------------------------------
-# erbb2.gex <- get_gex_hp("ERBB2",gex.data,anno)
-# 
-# # base statistics
-# stats <- capture.output(get_stats(erbb2.gex,"Group","ERBB2"))
-# 
-# # comparison data
-# HER2n_HER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2n_HER2E",]$ERBB2 # unlist()
-# HER2p_HER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2p_HER2E",]$ERBB2
-# HER2p_nonHER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2p_nonHER2E",]$ERBB2
-# 
-# # pair comp 1
-# res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
-# txt.out <- append(txt.out,
-#                   c("ERBB2 statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
-#                     capture.output(res)))
-# 
-# # pair comp 2
-# res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
-# txt.out <- append(txt.out,
-#                   c("ERBB2 statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",
-#                     capture.output(res)))
-# 
-# # plot
-# plot <- three_boxplot(erbb2.gex,
-#                       group.var = "Group",
-#                       test.var = "ERBB2",
-#                       g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E",
-#                       colors=setNames(c("#d334eb","#d8b365","#5ab4ac"),
-#                                       c("HER2n_HER2E","HER2p_nonHER2E", 
-#                                         "HER2p_HER2E")),
-#                       ylab = "Expression (log2)", 
-#                       #ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3,3)},
-#                       title = "ERBB2 expression in HER2/PAM50 subtypes")
-# 
-# plot.list <- append(plot.list, list(plot))
 
 gene.vec <- c("ERBB2","ESR1","FGFR4")
 
