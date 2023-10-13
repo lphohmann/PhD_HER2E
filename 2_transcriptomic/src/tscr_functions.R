@@ -1,6 +1,7 @@
 # Function definitions for transcriptomic data analyses
 
-library(rstatix )
+library(rstatix)
+library(stats)
 
 ################################################################################
 # functions
@@ -267,4 +268,47 @@ mg_converter <- function(mg) {
     mg.class[which((mg >= 1) & (mg < 2) )] <- "1 to 2"
     mg.class[which(mg >= 2)] <- ">= 2"
     return(mg.class)
+}
+
+# normality check function
+select_test <- function(dat1,dat2) {
+  if(diff(range(dat1)) == 0 | 
+     diff(range(dat2)) == 0 ) {
+    # all values identical for one or both -> cant be normally distrib.
+    "non-parametric"
+  } else if(shapiro.test(dat1)$p.value > 0.05 & 
+            shapiro.test(dat2)$p.value > 0.05)  {
+    # parametric: both normally distributed
+    "parametric"
+  } else {     
+    # at least one group not normally distributed
+    "non-parametric"
+  }
+}
+
+# 2-group parametric test: t-test
+var_ttest <- function(dat1,dat2) {
+  # equal variance check
+  levenes.res <- var.test(dat1, dat2, alternative = "two.sided")
+  # t.test with or without Welchs correction
+  if (!is.nan(levenes.res$p.value) & levenes.res$p.value <= 0.05) {
+    t.test(dat1, dat2, var.equal = FALSE)
+  } else { 
+    t.test(dat1, dat2, var.equal = TRUE) 
+    }
+}
+
+# 2-group non-parametric test: Mann-Whitney U
+mwu_test <- function(dat1,dat2) {
+  wilcox.test(dat1, dat2, exact=TRUE)
+}
+
+# combined 2-group test function
+duo.test <- function(dat1,dat2) {
+  test.type <- select_test(dat1,dat2)
+  if (test.type=="parametric") {
+    var_ttest(dat1,dat2) 
+  } else if (test.type=="non-parametric") { 
+    mwu_test(dat1,dat2)
+  }
 }

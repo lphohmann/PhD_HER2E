@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -22,6 +22,7 @@ dir.create(data.path)
 # output filenames
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
 plot.file <- paste(output.path,cohort,"_HER2p_singlegex_plots.pdf", sep="")
+
 txt.out <- c() # object to store text output
 txt.file <- paste(output.path,cohort,"_HER2p_singlegex_text.txt", sep="")
 
@@ -29,13 +30,11 @@ txt.file <- paste(output.path,cohort,"_HER2p_singlegex_text.txt", sep="")
 source("./scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
 library(tidyverse)
-#library(matrixStats)
 library(readxl)
 library(biomaRt)
 library(gridExtra)
 library(ggsignif)
 library(janitor)
-library(rstatix)
 library(scales)
 
 #######################################################################
@@ -106,52 +105,95 @@ if (cohort=="SCANB") {
 # look into the expression of selected genes # CONTINUE HERE
 #######################################################################
 # *<0.05, **<0.01 ***<0.001 ****< 0.0001 ns not significant
-#View(gex.data)
-
-#ERBB2-----------------------------------------------------------------
-erbb2.gex <- get_gex_hp("ERBB2",gex.data,anno)
-
-# base statistics
-stats <- capture.output(get_stats(erbb2.gex,"Group","ERBB2"))
-hist(erbb2.gex[erbb2.gex$Group=="HER2n_HER2E",]$ERBB2)
-hist(erbb2.gex[erbb2.gex$Group=="HER2p_nonHER2E",]$ERBB2)
-
-shapiro.test(erbb2.gex[erbb2.gex$Group=="HER2p_nonHER2E",]$ERBB2)
-# test
-res <- pair_ttest(erbb2.gex, 
-                  group.var = "Group",
-                  test.var = "ERBB2", 
-                  g1 = "HER2n_HER2E", g2 = "HER2p_nonHER2E", g3 = "HER2p_HER2E")
-
-txt.out <- append(txt.out,c("ERBB2 stats and t-test",stats,res))
-
-# plot
-plot.list <- append(plot.list, list(
-  three_boxplot(erbb2.gex,
-                group.var = "PAM50",
-                test.var = "ERBB2",
-                g1="Her2",g2="LumA",g3="LumB",
-                colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
-                                c("Her2","LumA","LumB")),
-                ylab = "Expression (log2)", 
-                ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3.5,3)},
-                title = "ERBB2 expression in PAM50 subtypes (ERpHER2n)")))
-
+# #View(gex.data)
 # 
+# #ERBB2-----------------------------------------------------------------
+# erbb2.gex <- get_gex_hp("ERBB2",gex.data,anno)
+# 
+# # base statistics
+# stats <- capture.output(get_stats(erbb2.gex,"Group","ERBB2"))
+# 
+# # comparison data
+# HER2n_HER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2n_HER2E",]$ERBB2 # unlist()
+# HER2p_HER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2p_HER2E",]$ERBB2
+# HER2p_nonHER2E.dat <- erbb2.gex[erbb2.gex$Group=="HER2p_nonHER2E",]$ERBB2
+# 
+# # pair comp 1
+# res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
+# txt.out <- append(txt.out,
+#                   c("ERBB2 statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
+#                     capture.output(res)))
+# 
+# # pair comp 2
+# res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
+# txt.out <- append(txt.out,
+#                   c("ERBB2 statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",
+#                     capture.output(res)))
+# 
+# # plot
+# plot <- three_boxplot(erbb2.gex,
+#                       group.var = "Group",
+#                       test.var = "ERBB2",
+#                       g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E",
+#                       colors=setNames(c("#d334eb","#d8b365","#5ab4ac"),
+#                                       c("HER2n_HER2E","HER2p_nonHER2E", 
+#                                         "HER2p_HER2E")),
+#                       ylab = "Expression (log2)", 
+#                       #ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3,3)},
+#                       title = "ERBB2 expression in HER2/PAM50 subtypes")
+# 
+# plot.list <- append(plot.list, list(plot))
 
-res <- pair_ttest(metagene.scores,
-                  anno = anno,
-                  group.var = "Group",
-                  test.var = mg, 
-                  g1 = "HER2n_HER2E", g2 = "HER2p_nonHER2E", g3 = "HER2p_HER2E")
+gene.vec <- c("ERBB2","ESR1","FGFR4")
 
-plot.list <- append(plot.list, list(
-  three_boxplot(mg.anno,
-                group.var = "Group",
-                test.var = "Basal",
-                g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E",
-                colors=setNames(c("#d334eb","#d8b365","#5ab4ac"),
-                                c("HER2n_HER2E","HER2p_nonHER2E","HER2p_HER2E")),
-                ylim = if (cohort=="SCANB") {c(-1.5,4)} else {c(-1.5,4)},
-                ylab = "Metagene score", 
-                title = "Basal metagene scores in HER2/PAM50 subtypes")))
+for (gene in gene.vec) {
+
+  gene.gex <- get_gex_hp(gene,gex.data,anno)
+  
+  # base statistics
+  stats <- capture.output(get_stats(gene.gex,"Group",gene))
+  
+  # comparison data
+  HER2n_HER2E.dat <- gene.gex[gene.gex$Group=="HER2n_HER2E",][[gene]] # unlist()
+  HER2p_HER2E.dat <- gene.gex[gene.gex$Group=="HER2p_HER2E",][[gene]]
+  HER2p_nonHER2E.dat <- gene.gex[gene.gex$Group=="HER2p_nonHER2E",][[gene]]
+  
+  # pair comp 1
+  res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
+  txt.out <- append(txt.out,
+                    c(gene," statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
+                      capture.output(res)))
+  
+  # pair comp 2
+  res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
+  txt.out <- append(txt.out,
+                    c(gene," statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",
+                      capture.output(res)))
+  
+  # plot
+  plot <- three_boxplot(gene.gex,
+                        group.var = "Group",
+                        test.var = gene,
+                        g1="HER2n_HER2E",g2="HER2p_nonHER2E",g3="HER2p_HER2E",
+                        colors=setNames(c("#d334eb","#d8b365","#5ab4ac"),
+                                        c("HER2n_HER2E","HER2p_nonHER2E", 
+                                          "HER2p_HER2E")),
+                        ylab = "Expression (log2)", 
+                        #ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3,3)},
+                        title = paste(gene," expression in HER2/PAM50 subtypes", 
+                        sep=""))
+  
+  plot.list <- append(plot.list, list(plot))
+}
+#######################################################################
+
+# save plots
+pdf(file = plot.file, 
+    onefile = TRUE, width = 15, height = 15) 
+for (i in 1:length(plot.list)) {
+  print(plot.list[[i]])
+}
+dev.off()
+
+# save text output
+writeLines(txt.out, txt.file)
