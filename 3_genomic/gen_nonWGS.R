@@ -85,6 +85,7 @@ anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>%
   dplyr::select(sample,PAM50)
     
 mut.data <- mut.data %>% filter(sample %in% anno$sample)
+
 #######################################################################
 # 3. Waterfall plots
 #######################################################################

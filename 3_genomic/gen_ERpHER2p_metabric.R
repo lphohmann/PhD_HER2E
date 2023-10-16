@@ -1,0 +1,269 @@
+# Script: Mutational analyses in Metabric (not WGS-based)
+
+# empty environment
+rm(list=ls())
+
+# set working directory to the project directory
+setwd("~/PhD_Workspace/Project_HER2E/")
+
+# indicate for which cohort the analysis is run 
+cohort <- "METABRIC"
+
+# set/create output directory for plots
+output.path <- "output/plots/3_genomic/"
+dir.create(output.path)
+
+# set/create output directory for processed data
+data.path <- paste("data/",cohort,"/3_genomic/processed/",sep="")
+dir.create(data.path)
+
+# plot
+plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
+plot.file <- paste("output/plots/3_genomic/METABRIC_HER2p_mutbarplots.pdf",sep = "")
+txt.out <- c() # object to store text output
+txt.file <- paste(output.path,cohort,"_HER2p_mutbarplots.txt", sep="")
+
+#packages
+source("scripts/3_genomic/src/gen_functions.R")
+source("scripts/4_CN/src/cn_functions.R")
+library(ggplot2)
+library(tidyverse)
+library(matrixStats)
+library(pheatmap)
+#library(Hmisc)
+library(VennDiagram)
+library(readxl)
+library(ggfortify)
+library(janitor)
+library(biomaRt)
+library(ggstatsplot)
+library(GenVisR)
+
+#######################################################################
+# functions
+#######################################################################
+
+# function to convert the freq table to long format
+countsToCases <- function(x, countcol = "Freq") {
+    # Get the row indices to pull from x
+    idx <- rep.int(seq_len(nrow(x)), x[[countcol]])
+    # Drop count column
+    x[[countcol]] <- NULL
+    # Get the rows from x
+    x[idx, ]
+}
+
+# 1 mut per sample
+count.sample <- function(data,gene,group.n) {
+  data <- data %>% 
+    distinct(Sample,Gene, .keep_all = TRUE)
+  data[data$Gene==gene,] %>% 
+    dplyr::count(Group) %>% 
+    mutate(Freq=case_when(Group=="HER2n_HER2E" ~ (n/group.n["HER2n_HER2E"])*100,
+                          Group=="HER2p_nonHER2E" ~ (n/group.n["HER2p_nonHER2E"])*100,
+                          Group=="HER2p_HER2E" ~ (n/group.n["HER2p_HER2E"])*100))
+}
+
+#######################################################################
+# 2. load data
+#######################################################################
+
+# load data
+mut.data <- as.data.frame(read.delim('data/METABRIC/3_genomic/raw/data_mutations_extended.txt', header = FALSE, sep = "\t", dec = "."))
+
+mut.data <- mut.data[-1,] %>% 
+  row_to_names(row_number = 1) %>% 
+  dplyr::rename(gene=Hugo_Symbol,variant_class=Variant_Classification,
+                sample=Tumor_Sample_Barcode) %>% 
+  dplyr::select(sample,gene,variant_class)
+
+# load annotation data
+# extract relevant variables
+anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>% 
+  mutate(ER = if_else(
+    ER_IHC_status=="pos","Positive","Negative")) %>% 
+  mutate(HER2 = case_when(
+    HER2_SNP6_state == "GAIN" ~ "Positive",
+    HER2_SNP6_state == "UNDEF" ~ "Undefined",
+    HER2_SNP6_state %in% c("LOSS","NEUT") ~ "Negative")) %>%
+  filter(ER == "Positive") %>% 
+  mutate(Group = case_when(
+    HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
+    HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
+    HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
+  filter(Group %in% 
+           c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E")) %>% 
+  dplyr::rename(sample=METABRIC_ID) %>% # rename to match SCANB variables
+  dplyr::select(sample,Group)
+    
+mut.data <- mut.data %>% filter(sample %in% anno$sample)
+
+#######################################################################
+# 3. Waterfall plots
+#######################################################################
+
+# colors <- c("#8dd3c7",
+#             "#ffffb3",
+#             "#bebada",
+#             "#fb8072",
+#             "#80b1d3",
+#             "#fdb462",
+#             "#b3de69",
+#             "#fccde5")
+
+# Create a vector to save mutation priority order for plotting
+mutation.priority <- as.character(unique(mut.data$variant_class))
+
+mutation.priority <- c("Nonsense_Mutation","Missense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Splice_Region","Intron","3'UTR","Nonstop_Mutation","Translation_Start_Site","3'Flank","Silent")
+
+# her2 wf plot
+Her2p.samples <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sample)
+mut.data.her2p <- mut.data %>% filter(sample %in% Her2p.samples)
+
+pdf(file = "output/plots/3_genomic/METABRIC_HER2pHER2E_WF.pdf", onefile = TRUE,height = 10, width = 20)#, height = 10, width = 15)
+
+
+wf.plot <- waterfall(mut.data.her2p, 
+                     
+                     fileType = "Custom", 
+                     variant_class_order = mutation.priority,
+                     mainGrid = TRUE,
+                     #mainPalette = custom.pallete,
+                     main_geneLabSize = 15,
+                     mainRecurCutoff = 0,
+                     maxGenes = 5,
+                     mainDropMut = TRUE, # drop unused mutation types from legend
+                     #rmvSilent = TRUE,
+                     plotSamples = anno[anno$Group=="HER2p_HER2E",]$sample,
+                     out= "grob",
+                     mutBurdenLayer = layer,
+                     plotMutBurden = FALSE)
+
+grid::grid.newpage()
+grid::grid.draw(wf.plot)
+
+dev.off()
+
+#######################################################################
+# plot genes of interest: mutation frequencies
+#######################################################################
+
+# annotate samples with pam50
+mut.data$Group <- anno$Group[match(mut.data$sample,anno$sample)]
+
+# adapt colnames 
+mut.data <- mut.data %>% 
+  dplyr::rename(Sample=sample,Gene=gene)
+
+# sample numbers
+group.n <- table(
+  mut.data[!duplicated(mut.data[,c("Sample")]),]$Group) 
+
+# selected genes
+gene.vec <-c("ERBB2","TP53","PIK3CA")
+
+for (g in gene.vec) {
+  
+  # Plots freq samples mutated in Group groups
+  p2 <- ggplot(count.sample(mut.data,gene=g,group.n), aes(fill=as.factor(Group),x=Group,y=Freq)) +
+    geom_bar(position="stack", stat="identity") +
+    ggtitle(g) +
+    theme_bw() +
+    theme(aspect.ratio=1/1,
+          legend.position = "none",
+          panel.border = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black",linewidth = 2),
+          axis.ticks = element_line(colour = "black", linewidth = 1),
+          axis.ticks.length=unit(0.2, "cm")) +
+    scale_fill_manual(values=setNames(c("#d334eb","#d8b365","#5ab4ac"),
+                                      c("HER2n_HER2E","HER2p_nonHER2E", 
+                                        "HER2p_HER2E"))) +
+    scale_y_continuous(breaks = scales::breaks_pretty(10),
+                       limits = c(0,80)) +
+    ylab("Mutation frequency (%)") +
+    xlab("Group subtype")
+  
+  plot.list <- append(plot.list,list(p2)) 
+  
+}
+
+#######################################################################
+# stat testing mut. freqs
+#######################################################################
+
+# need df in binary format with samples as columns and genes as rows
+sample.anno <- mut.data[c("Sample","Group")] %>% distinct(Sample, .keep_all = TRUE)
+all.dmut.binary <- mut.data %>% 
+  dplyr::select(-c(variant_class, Group)) %>% 
+  distinct(Sample,Gene, .keep_all = TRUE) %>% 
+  mutate(Mutation = 1) %>%  
+  pivot_wider(names_from = Sample, values_from = Mutation) %>% 
+  replace(is.na(.), 0) %>% 
+  filter(Gene %in% gene.vec)
+
+res.df <- data.frame()
+
+pb = txtProgressBar(min = 0, max = nrow(all.dmut.binary), initial = 0, style = 3)
+for (i in 1:nrow(all.dmut.binary)) { #nrow(gex.data)
+  setTxtProgressBar(pb,i)
+  
+  # gene to test
+  gene <- all.dmut.binary$Gene[i]
+  
+  # mutation counts
+  HER2n_HER2E.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                  sample.anno[sample.anno$Group=="HER2n_HER2E","Sample"]]==1)
+  
+  HER2p_nonHER2E.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                  sample.anno[sample.anno$Group=="HER2p_nonHER2E","Sample"]]==1)
+  
+  HER2p_HER2E.n.mut <- sum(all.dmut.binary[all.dmut.binary$Gene==gene,
+                  sample.anno[sample.anno$Group=="HER2p_HER2E","Sample"]]==1)
+  
+  # make tbl
+  freq.tbl <- data.frame(
+    HER2n_HER2E = 
+      c(HER2n_HER2E.n.mut,length(sample.anno[sample.anno$Group=="HER2n_HER2E","Sample"])-HER2n_HER2E.n.mut),
+    HER2p_nonHER2E = 
+      c(HER2p_nonHER2E.n.mut,length(sample.anno[sample.anno$Group=="HER2p_nonHER2E","Sample"])-HER2p_nonHER2E.n.mut),
+    HER2p_HER2E = 
+      c(HER2p_HER2E.n.mut,length(sample.anno[sample.anno$Group=="HER2p_HER2E","Sample"])-HER2p_HER2E.n.mut),
+    row.names = c("mutation", "no_mutation"))
+  
+  # HER2n_HER2E vs HER2p_nonHER2E
+  HER2p_nonHER2E.freq.tbl <- freq.tbl[,c("HER2n_HER2E","HER2p_nonHER2E")]
+  HER2p_nonHER2E.res <- fisher.test(HER2p_nonHER2E.freq.tbl)
+  
+  # for HER2n_HER2E vs HER2p_HER2E
+  HER2p_HER2E.freq.tbl <- freq.tbl[,c("HER2n_HER2E","HER2p_HER2E")]
+  HER2p_HER2E.res <- fisher.test(HER2p_HER2E.freq.tbl)
+  
+  # save results 
+  res.df <- rbind(res.df,c(
+    gene,HER2p_nonHER2E.res$p.value,HER2p_HER2E.res$p.value))
+  txt.out <- append(txt.out,c(gene,capture.output(HER2p_nonHER2E.res)))
+  txt.out <- append(txt.out,c(gene,capture.output(HER2p_HER2E.res)))
+  close(pb)
+}
+
+# name output columns
+names(res.df) <- c("gene","HER2p_nonHER2E.pval","HER2p_HER2E.pval")
+
+#######################################################################
+#######################################################################
+
+# save plots
+pdf(file = plot.file, onefile = TRUE)#, height = 10, width = 15)
+
+for (i in 1:length(plot.list)) {
+  grid::grid.newpage()
+  grid::grid.draw(plot.list[[i]])
+  
+  #print(plot.list[[i]])
+}
+
+dev.off()
+# save text output
+writeLines(txt.out, txt.file)

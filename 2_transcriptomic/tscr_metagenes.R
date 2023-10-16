@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -167,37 +167,36 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 # 5. statistics for metagene scores between groups
 #######################################################################
 
-# get pvalues and save test output to txt file
-mg.pvals <- data.frame() # store pvals
-for(i in 1:ncol(metagene.scores)) {
-  # save output to txt file
-  mg <- colnames(metagene.scores)[i]
-  txt.label <- paste(mg, " metagene t-test results",sep="")
-  res <- pair_ttest(metagene.scores,
-                    anno = anno,
-                    group.var = "PAM50",
-                    test.var = mg, 
-                    g1 = "Her2", g2 = "LumA", g3 = "LumB")
-  txt.out <- append(txt.out,c(txt.label,res))
+mg.pvals <- data.frame()
+metagene.vec <- colnames(metagene.scores)
+for (metagene in metagene.vec) {
   
-  # store pvals
-  mg.pvals <- rbind(mg.pvals, 
-                    c(mg,
-                      as.numeric(
-                        gsub('^.{2}', '', sub(
-                          '.+p-value (.+)', '\\1', res[6]))),
-                      as.numeric(
-                        gsub('^.{2}', '', sub(
-                          '.+p-value (.+)', '\\1', res[19])))))
+  metagene.score <- metagene.scores[metagene]
+  
+  # comparison data
+  Her2.dat <- metagene.score[anno[anno$PAM50=="Her2",]$sampleID,]
+  Lumb.dat <- metagene.score[anno[anno$PAM50=="LumB",]$sampleID,]
+  LumA.dat <- metagene.score[anno[anno$PAM50=="LumA",]$sampleID,]
+  
+  # pair comp 1
+  res <- duo.test(Her2.dat,Lumb.dat)
+  Lumb.pval <- res$p.value
+  txt.out <- append(txt.out,
+                    c(metagene," statistics: Her2.dat vs. Lumb.dat",
+                      capture.output(res)))
+  
+  # pair comp 2
+  res <- duo.test(Her2.dat,LumA.dat)
+  LumA.pval <- res$p.value
+  txt.out <- append(txt.out,
+                    c(metagene," statistics: Her2.dat vs. LumA.dat",
+                      capture.output(res)))
+  
+  # append to final res df
+  mg.pvals[
+    metagene,
+    c("Her2.Lumb.pval","Her2.LumA.pval")] <- c(Lumb.pval,LumA.pval)
 }
-
-# name column and set rownames
-mg.pvals <- mg.pvals %>% 
-  data.table::setnames(., old = colnames(mg.pvals),
-                       new = c("metagene",
-                       paste(res[1],".pval",sep=""),
-                       paste(res[14],".pval",sep=""))) %>% 
-  column_to_rownames(var="metagene")
 
 # make combined data and anno object for plotting
 mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c("sampleID","PAM50")],by="sampleID")

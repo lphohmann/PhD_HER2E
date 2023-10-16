@@ -16,7 +16,7 @@ output.path <- "output/plots/4_CN/"
 dir.create(output.path)
 
 # set/create output directory for processed data
-data.path <- paste("data/",cohort,"/4_CN/processed/",sep="")
+data.path <- paste("data/",cohort,"/4_CN/processed/", sep="")
 dir.create(data.path)
 plot.file <- paste(output.path,cohort,"_HER2n_cnplots.pdf",sep = "")
 

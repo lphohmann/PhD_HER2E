@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -181,40 +181,36 @@ metagene.scores <- merge(metagene.scores,stroma.scores,by=0) %>% column_to_rowna
 # 5. statistics for metagene scores between groups
 #######################################################################
 
-#mutate(Group = fct_relevel(Group,"HER2p_nonHER2E","HER2p_HER2E","HER2n_HER2E")) 
-
-# get pvalues
 mg.pvals <- data.frame()
-for(i in 1:ncol(metagene.scores)) {
-  # save output to txt file
-  mg <- colnames(metagene.scores)[i]
-  txt.label <- paste(mg, " metagene t-test results",sep="")
-  res <- pair_ttest(metagene.scores,
-                    anno = anno,
-                    group.var = "Group",
-                    test.var = mg, 
-                    g1 = "HER2n_HER2E", g2 = "HER2p_nonHER2E", g3 = "HER2p_HER2E")
-  txt.out <- append(txt.out,c(txt.label,res))
+metagene.vec <- colnames(metagene.scores)
+for (metagene in metagene.vec) {
   
-  # store pvals
-  mg.pvals <- rbind(mg.pvals, 
-                    c(mg,
-                      as.numeric(
-                        gsub('^.{2}', '', sub(
-                          '.+p-value (.+)', '\\1', res[6]))),
-                      as.numeric(
-                        gsub('^.{2}', '', sub(
-                          '.+p-value (.+)', '\\1', res[19])))))
+  metagene.score <- metagene.scores[metagene]
+  
+  # comparison data
+  HER2n_HER2E.dat <- metagene.score[anno[anno$Group=="HER2n_HER2E",]$sampleID,]
+  HER2p_HER2E.dat <- metagene.score[anno[anno$Group=="HER2p_HER2E",]$sampleID,]
+  HER2p_nonHER2E.dat <- metagene.score[anno[anno$Group=="HER2p_nonHER2E",]$sampleID,]
+  
+  # pair comp 1
+  res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
+  HER2p_HER2E.pval <- res$p.value
+  txt.out <- append(txt.out,
+                    c(metagene," statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
+                      capture.output(res)))
+  
+  # pair comp 2
+  res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
+  HER2p_nonHER2E.pval <- res$p.value
+  txt.out <- append(txt.out,
+                    c(metagene," statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",
+                      capture.output(res)))
+  
+  # append to final res df
+  mg.pvals[
+    metagene,
+    c("HER2n_HER2E.HER2p_HER2E.pval","HER2n_HER2E.HER2p_nonHER2E.pval")] <- c(HER2p_HER2E.pval,HER2p_nonHER2E.pval)
 }
-
-# name column and set rownames
-mg.pvals <- mg.pvals %>% 
-  data.table::setnames(., old = colnames(mg.pvals),
-                       new = c("metagene",
-                               paste(res[1],".pval",sep=""),
-                               paste(res[14],".pval",sep=""))) %>% 
-  column_to_rownames(var="metagene")
-
 
 # make combined data and anno object for plotting
 mg.anno <- merge(metagene.scores %>% 

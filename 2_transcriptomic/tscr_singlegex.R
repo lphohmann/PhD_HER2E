@@ -25,7 +25,7 @@ plot.file <- paste(output.path,cohort,"_HER2n_singlegex_plots.pdf", sep="")
 txt.out <- c() # object to store text output
 txt.file <- paste(output.path,cohort,"_HER2n_singlegex_text.txt", sep="")
 
-#packages
+# packages
 source("./scripts/2_transcriptomic/src/tscr_functions.R")
 library(ggplot2)
 library(tidyverse)
@@ -82,94 +82,8 @@ if (cohort=="SCANB") {
 # look into the expression of selected genes
 #######################################################################
 
-# *<0.05, **<0.01 ***<0.001 ****< 0.0001 ns not significant
-
-# #ERBB2-----------------------------------------------------------------
-# erbb2.gex <- get_gex("ERBB2",gex.data,anno)
-#   
-# # base statistics
-# stats <- capture.output(get_stats(erbb2.gex,"PAM50","ERBB2"))
-#   
-# # test
-# res <- pair_ttest(erbb2.gex, 
-#             group.var = "PAM50",
-#             test.var = "ERBB2", 
-#             g1 = "Her2", g2 = "LumA", g3 = "LumB")
-#   
-# txt.out <- append(txt.out,c("ERBB2 stats and t-test",stats,res))
-#   
-# # plot
-# plot.list <- append(plot.list, list(
-#     three_boxplot(erbb2.gex,
-#                   group.var = "PAM50",
-#                   test.var = "ERBB2",
-#                   g1="Her2",g2="LumA",g3="LumB",
-#                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
-#                              c("Her2","LumA","LumB")),
-#                   ylab = "Expression (log2)", 
-#                   ylim = if (cohort=="SCANB") {c(-6.5,9)} else {c(-3.5,3)},
-#                   title = "ERBB2 expression in PAM50 subtypes (ERpHER2n)")))
-#   
-# #ESR1------------------------------------------------------------------
-#     
-# esr1.gex <- get_gex("ESR1",gex.data,anno)
-# 
-# # base statistics
-# stats <- capture.output(get_stats(esr1.gex,"PAM50","ESR1"))
-# 
-# # test
-# res <- pair_ttest(esr1.gex, 
-#                   group.var = "PAM50",
-#                   test.var = "ESR1", 
-#                   g1 = "Her2", g2 = "LumA", g3 = "LumB")
-# 
-# txt.out <- append(txt.out,c("ESR1 stats and t-test",stats,res))
-# 
-# # plot
-# plot.list <- append(plot.list, list(
-#     three_boxplot(esr1.gex,
-#                   group.var = "PAM50",
-#                   test.var = "ESR1",
-#                   g1="Her2",g2="LumA",g3="LumB",
-#                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
-#                                   c("Her2","LumA","LumB")),
-#                   ylab = "Expression (log2)", 
-#                   ylim = if (cohort=="SCANB") {c(-4.5,3)} else {c(-2,2)},
-#                   title = "ESR1 expression in PAM50 subtypes (ERpHER2n)")))
-#     
-# #FGFR4-----------------------------------------------------------------
-#   
-# fgfr4.gex <- get_gex("FGFR4",gex.data,anno)
-#   
-# # save for later analysis
-# #save(fgfr4.gex,file = paste(data.path,"fgfr4.gex.RData",sep=""))
-# 
-# # base statistics
-# stats <- capture.output(get_stats(fgfr4.gex,"PAM50","FGFR4"))
-#     
-# # test
-# res <- pair_ttest(fgfr4.gex, 
-#                   group.var = "PAM50",
-#                   test.var = "FGFR4", 
-#                   g1 = "Her2", g2 = "LumA", g3 = "LumB")
-#   
-# txt.out <- append(txt.out,c("FGFR4 stats and t-test",stats,res))
-# 
-# # plot
-# plot.list <- append(plot.list, list(
-#     three_boxplot(fgfr4.gex,
-#                   group.var = "PAM50",
-#                   test.var = "FGFR4",
-#                   g1="Her2",g2="LumA",g3="LumB",
-#                   colors=setNames(c("#d334eb","#2176d5","#34c6eb"),
-#                                   c("Her2","LumA","LumB")),
-#                   ylab = "Expression (log2)", 
-#                   ylim = if (cohort=="SCANB") {c(-1,6.5)} else {c(-1.5,5)},
-#                   title = "FGFR4 expression in PAM50 subtypes (ERpHER2n)")))
-    
-#######################################################################
 gene.vec <- c("ERBB2","ESR1","FGFR4")
-gene <- "ERBB2"
+
 for (gene in gene.vec) {
   
   gene.gex <- get_gex(gene,gex.data,anno)
