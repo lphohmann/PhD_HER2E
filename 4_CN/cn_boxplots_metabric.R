@@ -52,13 +52,18 @@ cn.data <- read.delim("./data/METABRIC/4_CN/raw/data_CNA.txt",header = TRUE, sep
   column_to_rownames(var = "Hugo_Symbol")
 
 # annotation data
-anno <- loadRData("./data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>% 
-  as.data.frame(.) %>% 
-  filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>% 
-  filter(grepl('ERpHER2n', ClinGroup)) %>% 
-  dplyr::rename(sampleID=METABRIC_ID) %>% 
-  dplyr::select(sampleID,PAM50) %>% 
-  mutate(sampleID = gsub("-",".",sampleID)) # have to get identifiers in same format
+# load anno data
+anno <- loadRData("data/METABRIC/1_clinical/processed/Merged_annotations_ERpHER2n.RData") %>% 
+  dplyr::rename(sampleID=METABRIC_ID) %>% # rename to match SCANB variables
+  mutate(sampleID = gsub("-",".",sampleID)) %>% 
+  dplyr::select(sampleID,PAM50)
+# anno <- loadRData("./data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>%
+#   as.data.frame(.) %>%
+#   filter(PAM50 %in% c("LumA", "LumB", "Her2")) %>%
+#   filter(grepl('ERpHER2n', ClinGroup)) %>%
+#   dplyr::rename(sampleID=METABRIC_ID) %>%
+#   dplyr::select(sampleID,PAM50) %>%
+#   mutate(sampleID = gsub("-",".",sampleID)) # have to get identifiers in same format
 
 cn.data <- cn.data  %>% 
   dplyr::select(any_of(anno$sampleID))
@@ -235,7 +240,7 @@ gene.test.df$LumB.Loss.padj <- p.adjust(gene.test.df$LumB.Loss.pval, method = "f
 # length(gene.test.df %>% filter(LumA.Loss.padj<=0.05) %>% pull(gene))
 # length(gene.test.df %>% filter(LumB.Loss.padj<=0.05) %>% pull(gene))
 
-#save(gene.test.df, file= "data/METABRIC/4_CN/processed/Metabric_gene_cna_signif.RData")
+save(gene.test.df, file= "data/METABRIC/4_CN/processed/Metabric_gene_cna_signif.RData")
 
 # for the signfiicant genes, calc the difference in CNfreq and then visualize
 genes <- loadRData("data/METABRIC/4_CN/processed/Metabric_gene_cna_signif.RData")
@@ -306,8 +311,8 @@ gainloss.freqs$freq.gain.lumb <- apply(
 )
 
 # save
-#save(gainloss.freqs,
-#     file = "data/METABRIC/4_CN/processed/CN_gainloss_frequencies.RData")
+save(gainloss.freqs,
+     file = "data/METABRIC/4_CN/processed/CN_gainloss_frequencies.RData")
 
 gene.freqs <- gainloss.freqs
 

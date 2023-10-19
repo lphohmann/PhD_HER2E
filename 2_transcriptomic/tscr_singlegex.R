@@ -9,7 +9,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "SCANB" # SCANB or METABRIC
+cohort <- "METABRIC" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -82,7 +82,7 @@ if (cohort=="SCANB") {
 # look into the expression of selected genes
 #######################################################################
 
-gene.vec <- c("ERBB2","ESR1","FGFR4")
+gene.vec <- c("ERBB2","ESR1","FGFR4","CD274")
 
 for (gene in gene.vec) {
   
