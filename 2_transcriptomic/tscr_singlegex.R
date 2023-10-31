@@ -97,13 +97,13 @@ for (gene in gene.vec) {
   LumA.dat <- gene.gex[gene.gex$PAM50=="LumA",][[gene]]
   
   # pair comp 1
-  res <- duo.test(Her2.dat,LumB.dat)
+  res <- mwu_test(Her2.dat,LumB.dat)
   txt.out <- append(txt.out,
                     c(gene," statistics: Her2.dat vs. LumB.dat",
                       capture.output(res)))
   
   # pair comp 2
-  res <- duo.test(Her2.dat,LumA.dat)
+  res <- mwu_test(Her2.dat,LumA.dat)
   txt.out <- append(txt.out,
                     c(gene," statistics: Her2.dat vs. LumA.dat",
                       capture.output(res)))

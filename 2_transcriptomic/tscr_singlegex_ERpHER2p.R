@@ -121,13 +121,13 @@ for (gene in gene.vec) {
   HER2p_nonHER2E.dat <- gene.gex[gene.gex$Group=="HER2p_nonHER2E",][[gene]]
   
   # pair comp 1
-  res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
+  res <- mwu_test(HER2n_HER2E.dat,HER2p_HER2E.dat)
   txt.out <- append(txt.out,
                     c(gene," statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
                       capture.output(res)))
   
   # pair comp 2
-  res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
+  res <- mwu_test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
   txt.out <- append(txt.out,
                     c(gene," statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",
                       capture.output(res)))

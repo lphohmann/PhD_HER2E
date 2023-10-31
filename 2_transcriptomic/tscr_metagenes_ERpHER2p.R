@@ -193,14 +193,14 @@ for (metagene in metagene.vec) {
   HER2p_nonHER2E.dat <- metagene.score[anno[anno$Group=="HER2p_nonHER2E",]$sampleID,]
   
   # pair comp 1
-  res <- duo.test(HER2n_HER2E.dat,HER2p_HER2E.dat)
+  res <- mwu_test(HER2n_HER2E.dat,HER2p_HER2E.dat)
   HER2p_HER2E.pval <- res$p.value
   txt.out <- append(txt.out,
                     c(metagene," statistics: HER2n_HER2E.dat vs. HER2p_HER2E.dat",
                       capture.output(res)))
   
   # pair comp 2
-  res <- duo.test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
+  res <- mwu_test(HER2n_HER2E.dat,HER2p_nonHER2E.dat)
   HER2p_nonHER2E.pval <- res$p.value
   txt.out <- append(txt.out,
                     c(metagene," statistics: HER2n_HER2E.dat vs. HER2p_nonHER2E.dat",

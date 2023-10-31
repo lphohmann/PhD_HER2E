@@ -179,14 +179,14 @@ for (metagene in metagene.vec) {
   LumA.dat <- metagene.score[anno[anno$PAM50=="LumA",]$sampleID,]
   
   # pair comp 1
-  res <- duo.test(Her2.dat,Lumb.dat)
+  res <- mwu_test(Her2.dat,Lumb.dat)
   Lumb.pval <- res$p.value
   txt.out <- append(txt.out,
                     c(metagene," statistics: Her2.dat vs. Lumb.dat",
                       capture.output(res)))
   
   # pair comp 2
-  res <- duo.test(Her2.dat,LumA.dat)
+  res <- mwu_test(Her2.dat,LumA.dat)
   LumA.pval <- res$p.value
   txt.out <- append(txt.out,
                     c(metagene," statistics: Her2.dat vs. LumA.dat",
