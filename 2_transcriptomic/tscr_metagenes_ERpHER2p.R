@@ -219,6 +219,21 @@ mg.anno <- merge(metagene.scores %>%
 mg.anno.list <- list(mg.anno, mg.pvals)
 save(mg.anno.list,file = paste(data.path,"mg_anno_HER2p.RData",sep=""))
 
+
+mg.pvals$HER2n_HER2E.HER2p_HER2E.padj <- p.adjust(mg.pvals$HER2n_HER2E.HER2p_HER2E.pval, 
+                                    method = p.adjust.methods, 
+                                    n = 16)
+mg.pvals$HER2n_HER2E.HER2p_nonHER2E.padj <- p.adjust(mg.pvals$HER2n_HER2E.HER2p_nonHER2E.pval, 
+                                    method = p.adjust.methods, 
+                                    n = 16)
+
+
+mg.pvals <- mg.pvals %>% 
+  mutate_if(is.numeric, round, digits=4) %>% 
+  rownames_to_column(var="Metagene")
+txt.out <- append(txt.out, c("FDR ADJUSTED P-VALUES"))
+txt.out <- append(txt.out, c(capture.output(mg.pvals)))
+
 #######################################################################
 # 5. Boxplots
 #######################################################################

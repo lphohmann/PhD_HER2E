@@ -10,7 +10,7 @@ rm(list=ls())
 setwd("~/PhD_Workspace/Project_HER2E/")
 
 # indicate for which cohort the analysis is run 
-cohort <- "METABRIC" # SCANB or METABRIC
+cohort <- "SCANB" # SCANB or METABRIC
 
 # set/create output directory for plots
 output.path <- "output/plots/2_transcriptomic/"
@@ -203,6 +203,20 @@ mg.anno <- merge(metagene.scores %>% rownames_to_column(var="sampleID"),anno[,c(
 
 mg.anno.list <- list(mg.anno, mg.pvals)
 save(mg.anno.list,file = paste(data.path,"mg_anno.RData",sep=""))
+
+mg.pvals$Her2.Lumb.padj <- p.adjust(mg.pvals$Her2.Lumb.pval, 
+                                    method = p.adjust.methods, 
+                                    n = 16)
+mg.pvals$Her2.Luma.padj <- p.adjust(mg.pvals$Her2.LumA.pval, 
+                                    method = p.adjust.methods, 
+                                    n = 16)
+
+
+mg.pvals <- mg.pvals %>% 
+  mutate_if(is.numeric, round, digits=4) %>% 
+  rownames_to_column(var="Metagene")
+txt.out <- append(txt.out, c("FDR ADJUSTED P-VALUES"))
+txt.out <- append(txt.out, c(capture.output(mg.pvals)))
 
 #######################################################################
 # 5. Boxplots
