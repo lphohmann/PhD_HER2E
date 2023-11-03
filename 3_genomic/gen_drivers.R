@@ -121,9 +121,10 @@ names(cn.drivers.long) <- c("sample", "gene", "variant_class")
 
 # make and save combined driver dataset for plotting
 drivers.df <- do.call("rbind", list(cn.drivers.long, sub.drivers, indel.drivers))
-save(drivers.df, 
-     file = paste(data.path,"driver_mutations_all.RData",sep=""))
-
+#save(drivers.df, 
+#     file = paste(data.path,"driver_mutations_all.RData",sep=""))
+load(paste(data.path,"driver_mutations_all.RData",sep=""))
+#drivers.df[which(drivers.df$gene=="ERBB2"),]$sample # none mut with erbb2 high gex
 ################################################################################
 # Waterfall plotting parameters
 ################################################################################
