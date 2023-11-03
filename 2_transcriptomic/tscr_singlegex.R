@@ -81,6 +81,9 @@ if (cohort=="SCANB") {
 #######################################################################
 # look into the expression of selected genes
 #######################################################################
+# extreme <- gene.gex[is_outlier(gene.gex$ERBB2, coef = 3),]
+#extreme %>% filter(ERBB2 > 0)
+#c("S004036","S004794","S005551","S005605","S006395","S008332")
 
 gene.vec <- c("ERBB2","ESR1","FGFR4","CD274")
 
