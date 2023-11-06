@@ -154,7 +154,7 @@ grid::grid.draw(plot)
 setEnrichrSite("Enrichr") 
 dbs <- listEnrichrDbs() # see avaiable dbs and select 
 
-dbs <- c("GO_Biological_Process_2023")#"GO_Biological_Process_2023")#, "WikiPathway_2021_Human", "KEGG_2021_Human", "GO_Molecular_Function_2023")
+dbs <- c("WikiPathway_2023_Human")#"GO_Biological_Process_2023")#, "WikiPathway_2021_Human", "KEGG_2021_Human", "GO_Molecular_Function_2023")
 res.core <- as.data.frame(enrichr(DEGs.core, dbs)[[1]])  %>% 
   mutate(Comp="All") %>% 
   mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% 

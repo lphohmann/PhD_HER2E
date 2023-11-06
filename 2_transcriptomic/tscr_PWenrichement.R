@@ -17,9 +17,9 @@ dir.create(output.path)
 
 # output filenames
 plot.list <- list() # object to store plots; note: if the output is not in string format use capture.output()
-plot.file <- paste(output.path,cohort,"_HER2n_pwenrichment_plots.pdf", sep="")
+plot.file <- paste(output.path,cohort,"_HER2n_pwenrichment_plots_wikipathways.pdf", sep="")
 xlsx.list <- list() # object to store dataframes -> excel tables 
-xlsx.file <- paste("output/supplementary_data/HER2n_pwenrichment.xlsx", sep="")
+xlsx.file <- paste("output/supplementary_data/HER2n_pwenrichment_wikipathways.xlsx", sep="")
 
 #packages
 source("./scripts/2_transcriptomic/src/tscr_functions.R")
@@ -39,7 +39,10 @@ DE.res.metabric <- loadRData("./data/METABRIC/2_transcriptomic/processed/DE_resu
 # set database parameters
 setEnrichrSite("Enrichr") 
 dbs <- listEnrichrDbs() # see avaiable dbs and select 
-dbs <- c("GO_Biological_Process_2021") #"KEGG_2021_Human", "GO_Molecular_Function_2021", "GO_Biological_Process_2021
+dbs <- c("WikiPathway_2023_Human") #"GO_Biological_Process_2021, "WikiPathway_2023_Human"
+plot.file <- paste(output.path,cohort,"_HER2n_pwenrichment_plots_",dbs,".pdf", sep="")
+xlsx.list <- list() # object to store dataframes -> excel tables 
+xlsx.file <- paste("output/supplementary_data/HER2n_pwenrichment_",dbs,".xlsx", sep="")
 
 #######################################################################
 # Core DEGs
@@ -158,6 +161,14 @@ plot.list <- append(plot.list, list(
   pwplot(res.all,title="Enriched pathways in DEG sets")))
 
 #######################################################################
+# top core DEGs
+#######################################################################
+dbs <- c("WikiPathway_2023_Human") 
+tc.degs <- c("ESR1","TBC1D9","CCDC170","RERG","IGF1R","FGFR4","BCL2","SOX11","THSD4")
+
+head(as.data.frame(enrichr(tc.degs, dbs)[[1]]))
+
+#######################################################################
 # save plots and excel file
 #######################################################################
 
@@ -165,7 +176,7 @@ plot.list <- append(plot.list, list(
 write.xlsx(xlsx.list, file = xlsx.file)
 
 # save plots
-pdf(file = plot.file, onefile = TRUE, width = 20, height = 14) #
+pdf(file = plot.file, onefile = TRUE, width = 25, height = 14) #
 
 for (i in 1:length(plot.list)) {
   print(plot.list[[i]])

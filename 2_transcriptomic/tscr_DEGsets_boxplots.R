@@ -206,3 +206,8 @@ if (length(top.DEGs) != 0) {
   dev.off()
 
 }
+
+#boxplot(Freq.diff~PAM50,data=freq.diffs,col=c("#d334eb","#2176d5","#34c6eb"))
+#p <- recordPlot()
+#plot.new()
+#plot.list <- append(plot.list,list(p))
