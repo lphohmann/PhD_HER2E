@@ -271,7 +271,9 @@ for (g in gene.vec) {
     xlab("PAM50 subtype")
   
   plot.list <- append(plot.list,list(p2)) 
-  txt.out <- append(txt.out, c(capture.output(count.sample(all.dmut, gene=g))))
+  txt.out <- append(txt.out, c(g))
+  txt.out <- append(txt.out, c(capture.output(
+    count.sample(all.dmut, gene=g))))
 }
 
 # save plots
@@ -369,3 +371,4 @@ LumB.freq <- (tbl["HRD-high"]/sum(tbl))*100
 
 # save text output
 writeLines(txt.out, txt.file)
+
