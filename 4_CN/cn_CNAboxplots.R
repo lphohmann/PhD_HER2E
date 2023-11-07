@@ -287,6 +287,14 @@ txt.out <- append(txt.out,
                     paste("LumA: ",length(luma.genes.loss),"; LumB: ",length(lumb.genes.loss),sep="")))
 
 
+stats <- freq.diffs %>%
+  group_by(PAM50) %>%
+  summarise_each(funs(mean, median, sd), Freq.diff)
+txt.out <- append(txt.out,
+                  c("Signfic genes stats: Frequency diff in alterations",
+                    capture.output(stats)))
+
+
 # plot
 p <- ggplot(freq.diffs, aes(x=PAM50,y=as.numeric(Freq.diff),fill=PAM50)) +
   geom_boxplot(size=2.5, outlier.size = 7) +
