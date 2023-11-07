@@ -271,7 +271,7 @@ for (g in gene.vec) {
     xlab("PAM50 subtype")
   
   plot.list <- append(plot.list,list(p2)) 
-  
+  txt.out <- append(txt.out, c(capture.output(count.sample(all.dmut, gene=g))))
 }
 
 # save plots
