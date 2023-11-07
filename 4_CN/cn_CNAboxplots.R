@@ -278,6 +278,15 @@ luma.diff <- as.data.frame(c(luma.diff.loss,luma.diff.gain)) %>%
   mutate(PAM50 = "LumA")
 freq.diffs <- rbind(lumb.diff,luma.diff)
 
+# save the number of gain altered to text file
+txt.out <- append(txt.out,
+                  c("Number of genes signif. altered - Gain ",
+                    paste("LumA: ",length(luma.genes.gain),"; LumB: ",length(lumb.genes.gain),sep="")))
+txt.out <- append(txt.out,
+                  c("Number of genes signif. altered - Loss ",
+                    paste("LumA: ",length(luma.genes.loss),"; LumB: ",length(lumb.genes.loss),sep="")))
+
+
 # plot
 p <- ggplot(freq.diffs, aes(x=PAM50,y=as.numeric(Freq.diff),fill=PAM50)) +
   geom_boxplot(size=2.5, outlier.size = 7) +
