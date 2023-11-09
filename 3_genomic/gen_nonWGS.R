@@ -68,6 +68,9 @@ count.sample <- function(data,gene) {
 # 2. load data
 #######################################################################
 
+# genes 
+driver.genes <- loadRData("data/SCANB/3_genomic/processed/driver_mutations_all.RData") %>% pull(gene) %>% unique()
+
 # load data
 mut.data <- as.data.frame(read.delim('data/METABRIC/3_genomic/raw/data_mutations_extended.txt', header = FALSE, sep = "\t", dec = "."))
 
@@ -86,6 +89,21 @@ anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>%
     
 mut.data <- mut.data %>% filter(sample %in% anno$sample)
 
+# add amp alterations to this 
+cn.data <- read.delim("./data/METABRIC/4_CN/raw/data_CNA.txt",header = TRUE, sep = "\t", dec = ".") %>% 
+  dplyr::select(-c(Entrez_Gene_Id)) 
+names(cn.data) <- gsub(x = names(cn.data), 
+                       pattern = "\\.", 
+                       replacement = "-") 
+cn.data <- cn.data %>% 
+  dplyr::select(any_of(c("Hugo_Symbol",anno$sample))) %>% 
+  pivot_longer(cols= any_of(anno$sample), names_to = "sample", values_to="variant_class") %>% 
+  dplyr::rename("gene"="Hugo_Symbol") %>% 
+  filter(variant_class == 2) %>% 
+  mutate(variant_class = "amplified")
+  
+mut.data <- rbind(mut.data,cn.data) %>% filter(gene %in% driver.genes)
+
 #######################################################################
 # 3. Waterfall plots
 #######################################################################
@@ -102,7 +120,7 @@ mut.data <- mut.data %>% filter(sample %in% anno$sample)
 # Create a vector to save mutation priority order for plotting
 mutation.priority <- as.character(unique(mut.data$variant_class))
 
-mutation.priority <- c("Nonsense_Mutation","Missense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Splice_Region","Intron","3'UTR","Nonstop_Mutation","Translation_Start_Site","3'Flank","Silent")
+mutation.priority <- c("amplified","Missense_Mutation","Nonsense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Splice_Region","Intron","3'UTR","Nonstop_Mutation","Translation_Start_Site","3'Flank","Silent")
 
 # her2 wf plot
 Her2.samples <- anno %>% filter(PAM50=="Her2") %>% pull(sample)
@@ -115,7 +133,14 @@ wf.plot <- waterfall(mut.data.her2,
                      fileType = "Custom", 
                      variant_class_order = mutation.priority,
                      mainGrid = TRUE,
-                     #mainPalette = custom.pallete,
+                     mainPalette = c("#8dd3c7",
+                                               "#ffffb3",
+                                               "#bebada",
+                                               "#fb8072",
+                                               "#80b1d3",
+                                               "#fdb462",
+                                               "#b3de69",
+                                               "#fccde5"),
                      main_geneLabSize = 15,
                      mainRecurCutoff = 0,
                      maxGenes = 12,

@@ -65,8 +65,35 @@ count.sample <- function(data,gene,group.n) {
 }
 
 #######################################################################
+# add anno column
+#######################################################################
+
+# # add her2 amp status to anno
+# # extract relevant variables
+# anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData")
+# cn.data <- read.delim("./data/METABRIC/4_CN/raw/data_CNA.txt",header = TRUE, sep = "\t", dec = ".") %>% 
+#   dplyr::select(-c(Entrez_Gene_Id)) 
+# names(cn.data) <- gsub(x = names(cn.data), 
+#                        pattern = "\\.", 
+#                        replacement = "-") 
+# cn.data <- cn.data %>% 
+#   filter(Hugo_Symbol=="ERBB2") %>% 
+#   dplyr::select(any_of(c("Hugo_Symbol",anno$METABRIC_ID))) %>% 
+#   pivot_longer(cols= any_of(anno$METABRIC_ID), 
+#                names_to = "METABRIC_ID", 
+#                values_to="HER2_amp") %>% 
+#   dplyr::select(-c("Hugo_Symbol")) %>% 
+#   mutate(HER2_amp = ifelse(HER2_amp==2,"yes","no"))
+# # join on sample name sample HER2_amp
+# anno <- as.data.frame(merge(anno,cn.data,by="METABRIC_ID",all=TRUE))
+# save(anno, file= "data/METABRIC/1_clinical/raw/Merged_annotations.RData")
+
+#######################################################################
 # 2. load data
 #######################################################################
+
+# genes 
+driver.genes <- loadRData("data/SCANB/3_genomic/processed/driver_mutations_all.RData") %>% pull(gene) %>% unique()
 
 # load data
 mut.data <- as.data.frame(read.delim('data/METABRIC/3_genomic/raw/data_mutations_extended.txt', header = FALSE, sep = "\t", dec = "."))
@@ -77,26 +104,36 @@ mut.data <- mut.data[-1,] %>%
                 sample=Tumor_Sample_Barcode) %>% 
   dplyr::select(sample,gene,variant_class)
 
-# load annotation data
 # extract relevant variables
 anno <- loadRData("data/METABRIC/1_clinical/raw/Merged_annotations.RData") %>% 
   mutate(ER = if_else(
     ER_IHC_status=="pos","Positive","Negative")) %>% 
-  mutate(HER2 = case_when(
-    HER2_SNP6_state == "GAIN" ~ "Positive",
-    HER2_SNP6_state == "UNDEF" ~ "Undefined",
-    HER2_SNP6_state %in% c("LOSS","NEUT") ~ "Negative")) %>%
   filter(ER == "Positive") %>% 
   mutate(Group = case_when(
-    HER2 == "Negative" & PAM50 == "Her2" ~ "HER2n_HER2E",
-    HER2 == "Positive" & PAM50 == "Her2" ~ "HER2p_HER2E",
-    HER2 == "Positive" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
+    ClinGroup == "ERpHER2n" & PAM50 == "Her2" ~ "HER2n_HER2E",
+    HER2_amp == "yes" & PAM50 == "Her2" ~ "HER2p_HER2E",
+    HER2_amp == "yes" & PAM50 != "Her2" ~ "HER2p_nonHER2E")) %>% 
   filter(Group %in% 
            c("HER2n_HER2E","HER2p_HER2E","HER2p_nonHER2E")) %>% 
   dplyr::rename(sample=METABRIC_ID) %>% # rename to match SCANB variables
   dplyr::select(sample,Group)
     
 mut.data <- mut.data %>% filter(sample %in% anno$sample)
+
+# add amp alterations to this 
+cn.data <- read.delim("./data/METABRIC/4_CN/raw/data_CNA.txt",header = TRUE, sep = "\t", dec = ".") %>% 
+  dplyr::select(-c(Entrez_Gene_Id)) 
+names(cn.data) <- gsub(x = names(cn.data), 
+                       pattern = "\\.", 
+                       replacement = "-") 
+cn.data <- cn.data %>% 
+  dplyr::select(any_of(c("Hugo_Symbol",anno$sample))) %>% 
+  pivot_longer(cols= any_of(anno$sample), names_to = "sample", values_to="variant_class") %>% 
+  dplyr::rename("gene"="Hugo_Symbol") %>% 
+  filter(variant_class == 2) %>% 
+  mutate(variant_class = "amplified")
+
+mut.data <- rbind(mut.data,cn.data) %>% filter(gene %in% driver.genes)
 
 #######################################################################
 # 3. Waterfall plots
@@ -114,7 +151,7 @@ mut.data <- mut.data %>% filter(sample %in% anno$sample)
 # Create a vector to save mutation priority order for plotting
 mutation.priority <- as.character(unique(mut.data$variant_class))
 
-mutation.priority <- c("Nonsense_Mutation","Missense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Splice_Region","Intron","3'UTR","Nonstop_Mutation","Translation_Start_Site","3'Flank","Silent")
+mutation.priority <- c("amplified","Missense_Mutation","Nonsense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Splice_Region","Intron","3'UTR","Nonstop_Mutation","Translation_Start_Site","3'Flank","Silent")
 
 # her2 wf plot
 Her2p.samples <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sample)
@@ -128,7 +165,15 @@ wf.plot <- waterfall(mut.data.her2p,
                      fileType = "Custom", 
                      variant_class_order = mutation.priority,
                      mainGrid = TRUE,
-                     #mainPalette = custom.pallete,
+                     mainPalette = c("#8dd3c7",
+                                     "#ffffb3",
+                                     "#bebada",
+                                     "#fb8072",
+                                     "#80b1d3",
+                                     "#fdb462",
+                                     "#b3de69",
+                                     "#fccde5",
+                                     "#a432a8"),
                      main_geneLabSize = 15,
                      mainRecurCutoff = 0,
                      maxGenes = 5,
@@ -186,7 +231,9 @@ for (g in gene.vec) {
     xlab("Group subtype")
   
   plot.list <- append(plot.list,list(p2)) 
-  
+  txt.out <- append(txt.out, c(g))
+  txt.out <- append(txt.out, c(capture.output(
+    count.sample(mut.data,gene=g,group.n))))
 }
 
 #######################################################################
