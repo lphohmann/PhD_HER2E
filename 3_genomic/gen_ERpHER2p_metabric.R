@@ -193,7 +193,7 @@ dev.off()
 # plot genes of interest: mutation frequencies
 #######################################################################
 
-# annotate samples with pam50
+# annotate samples 
 mut.data$Group <- anno$Group[match(mut.data$sample,anno$sample)]
 
 # adapt colnames 
@@ -209,8 +209,14 @@ gene.vec <-c("ERBB2","TP53","PIK3CA")
 
 for (g in gene.vec) {
   
+  if (g=="ERBB2") { # dont ocunt amp alterations duh
+    plot.data <- count.sample(mut.data[which(mut.data$variant_class != "amplified"),],gene=g,group.n)
+  } else {
+    plot.data <- count.sample(mut.data,gene=g,group.n)
+  }
+  
   # Plots freq samples mutated in Group groups
-  p2 <- ggplot(count.sample(mut.data,gene=g,group.n), aes(fill=as.factor(Group),x=Group,y=Freq)) +
+  p2 <- ggplot(plot.data, aes(fill=as.factor(Group),x=Group,y=Freq)) +
     geom_bar(position="stack", stat="identity") +
     ggtitle(g) +
     theme_bw() +
