@@ -205,7 +205,7 @@ group.n <- table(
   mut.data[!duplicated(mut.data[,c("Sample")]),]$Group) 
 
 # selected genes
-gene.vec <-c("ERBB2","TP53","PIK3CA")
+gene.vec <-c("ERBB2","TP53","PIK3CA","MYC")
 
 for (g in gene.vec) {
   
