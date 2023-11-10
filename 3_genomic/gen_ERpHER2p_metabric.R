@@ -238,8 +238,7 @@ for (g in gene.vec) {
   
   plot.list <- append(plot.list,list(p2)) 
   txt.out <- append(txt.out, c(g))
-  txt.out <- append(txt.out, c(capture.output(
-    count.sample(mut.data,gene=g,group.n))))
+  txt.out <- append(txt.out, c(capture.output(plot.data)))
 }
 
 #######################################################################
@@ -254,7 +253,17 @@ all.dmut.binary <- mut.data %>%
   mutate(Mutation = 1) %>%  
   pivot_wider(names_from = Sample, values_from = Mutation) %>% 
   replace(is.na(.), 0) %>% 
-  filter(Gene %in% gene.vec)
+  filter(Gene %in% gene.vec) %>% 
+  filter(Gene != "ERBB2") # remove erbb2 to replce in next step
+
+# replace erbb2 row without the amp alterations
+erbb2.row <- mut.data[which(mut.data$Gene == "ERBB2" & mut.data$variant_class != "amplified"),c("Sample","Gene")] %>% 
+  distinct(Sample,Gene, .keep_all = TRUE) %>% 
+  mutate(Mutation = 1) %>%  
+  pivot_wider(names_from = Sample, values_from = Mutation)
+
+all.dmut.binary <- bind_rows(all.dmut.binary, erbb2.row) %>% 
+  replace(is.na(.), 0)
 
 res.df <- data.frame()
 
