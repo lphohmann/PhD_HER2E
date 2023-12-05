@@ -29,6 +29,7 @@ library(openxlsx)
 library(enrichR)
 library(janitor)
 library(ggvenn)
+library(GenVisR)
 #-------------------------------------------------------------------------------
 # set/create output directories
 # for plots
