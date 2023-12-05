@@ -110,7 +110,7 @@ kat.counts <- rbind(kat.basis.counts,kat.scanb.counts)
 
 # binary column
 kat.counts <- kat.counts %>% mutate(Kat_binary = ifelse(Kat_events == 0, 0, 1))
-
+save(kat.counts,file = "./data/SCANB/4_CN/processed/CN_kataegis.RData")
 #######################################################################
 #######################################################################
 
@@ -178,11 +178,11 @@ txt.out <- append(txt.out,c("Kataegis frequencies:",
                             "  LumA =",luma.freq,
                             "  LumB =",lumb.freq))
 
-res <- chisq.test(table(
+res <- fisher.test(table(
   kat.counts[which(
     kat.counts$PAM50 %in% c("HER2E","LumA")),c("PAM50", "Kat_binary")]))
 txt.out <- append(txt.out,c(capture.output(res)))
-res <- chisq.test(table(
+res <- fisher.test(table(
   kat.counts[which(
     kat.counts$PAM50 %in% c("HER2E","LumB")),c("PAM50", "Kat_binary")]))
 txt.out <- append(txt.out,c(capture.output(res)))

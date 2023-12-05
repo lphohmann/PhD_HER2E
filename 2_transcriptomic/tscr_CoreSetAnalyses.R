@@ -170,14 +170,19 @@ CS.clust.1 <- read.table(CS.cluster1) %>% pull(V1)
 CS.clust.2 <- read.table(CS.cluster2) %>% pull(V1)
 #length(CS.clust.1)+length(CS.clust.2)
 # 1. GSEA
-res.CS.clust.1 <- as.data.frame(enrichr(CS.clust.1, dbs)[[1]])  %>% 
+res.CS.clust.1 <- as.data.frame(enrichr(CS.clust.1, dbs)[[1]])
+save(res.CS.clust.1, file = "./output/supplementary_data/HER2E_cluster1_PWE_WP2023.RData")
+res.CS.clust.1 <- res.CS.clust.1  %>% 
   mutate(Comp="Sub1") %>% 
   mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% 
   arrange(dplyr::desc(Gene_count),Adjusted.P.value) %>% 
   mutate(Adjusted.P.value= round(Adjusted.P.value,3)) %>% 
   dplyr::slice(1:3)
-  
-res.CS.clust.2 <- as.data.frame(enrichr(CS.clust.2, dbs)[[1]])  %>% 
+
+res.CS.clust.2 <- as.data.frame(enrichr(CS.clust.2, dbs)[[1]])
+save(res.CS.clust.2, file = "./output/supplementary_data/HER2E_cluster2_PWE_WP2023.RData")
+
+res.CS.clust.2 <- res.CS.clust.2  %>% 
   mutate(Comp="Sub2") %>% 
   mutate(Gene_count = as.numeric(sapply(strsplit(Overlap, "/"), "[[", 1))) %>% 
   arrange(dplyr::desc(Gene_count),Adjusted.P.value) %>% 
@@ -211,6 +216,8 @@ pwplot <- ggplot(res.all, aes(y=Gene_count,
 
 #grid::grid.newpage()
 grid::grid.draw(pwplot)
+
+
 
 # 2. HER2-low check in ERpHER2n stratified by PAM50
 #  to understand if these genes "target" HER2-low cancers as well. 

@@ -337,3 +337,283 @@ View(r)
 View(r$segments)
 nrow(r$segments)
 View(r$nA)
+
+
+##
+
+View(head(SCANB.ERpHER2n.data))
+
+
+## her2p de results
+x <- read_table("data/SCANB/2_transcriptomic/processed/DEG_analysis_results_DEGgenes_HER2E_vs_ERpHER2p.txt") %>% as.data.frame()
+x$p.val.wilcox.HER2E_vs_ERpHER2pHER2E.fdr <- p.adjust(x$p.val.wilcox.HER2E_vs_ERpHER2pHER2E,
+                                                      method = "fdr")
+x$p.val.wilcox.HER2E_vs_ERpHER2pNonHER2E.fdr <- p.adjust(x$p.val.wilcox.HER2E_vs_ERpHER2pNonHER2E,
+                                                      method = "fdr")
+
+x %>% filter(p.val.wilcox.HER2E_vs_ERpHER2pHER2E.fdr <=0.05)
+x %>% filter(p.val.wilcox.HER2E_vs_ERpHER2pNonHER2E.fdr <=0.05)
+
+y <-x %>% filter(p.val.wilcox.HER2E_vs_ERpHER2pNonHER2E.fdr <=0.05) %>% pull(Gene.Name) %>% unique()
+length(y)
+
+
+
+##########################################################################
+# create supplementary files
+##########################################################################
+
+# 1. DE results: HER2E SCANB, HER2E METBARIC, CORE SETS 1,2,3, PWE?
+DE.res.scanb <- loadRData("./data/SCANB/2_transcriptomic/processed/DE_results.RData") %>% 
+  dplyr::select(-c("Her2.LumA.de","Her2.LumB.de"))
+
+DE.res.metabric <- loadRData("./data/METABRIC/2_transcriptomic/processed/DE_results.RData") %>% 
+  dplyr::select(-c("Her2.LumA.de","Her2.LumB.de"))
+
+# core sets
+# define DEG set
+DEGs.scanb <- DE.res.scanb %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% pull(Gene)
+DEGs.metabric <- DE.res.metabric %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% pull(Gene) 
+# core gex
+HER2E.DEGs.core <- intersect(DEGs.scanb,DEGs.metabric)
+# define DEG set
+LumA.DEGs.scanb <- DE.res.scanb %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% 
+  pull(Gene)
+LumA.DEGs.metabric <- DE.res.metabric %>% 
+  filter(Her2.LumA.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% 
+  pull(Gene) 
+# gex
+LumA.DEGs.core <- intersect(LumA.DEGs.scanb,LumA.DEGs.metabric)
+# define DEG set
+LumB.DEGs.scanb <- DE.res.scanb %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% 
+  pull(Gene)
+LumB.DEGs.metabric <- DE.res.metabric %>% 
+  filter(Her2.LumB.padj <= 0.05) %>% 
+  rownames_to_column("Gene") %>% 
+  pull(Gene) 
+# core top gex
+LumB.DEGs.core <- intersect(LumB.DEGs.scanb,LumB.DEGs.metabric)
+
+
+sq <- seq(max(length(HER2E.DEGs.core), length(LumA.DEGs.core), length(LumB.DEGs.core)))
+coreset.df <- data.frame(HER2E.core.set = HER2E.DEGs.core[sq],
+                         LumA.core.set = LumA.DEGs.core[sq],
+                         LumB.core.set = LumB.DEGs.core[sq])
+
+#pwe 
+GSEA.HER2E.core.set <- openxlsx::read.xlsx("./output/supplementary_data/HER2n_pwenrichment_WikiPathway_2023_Human.xlsx",
+                                           sheet="CoreDEGs")
+GSEA.LumA.core.set <- openxlsx::read.xlsx("./output/supplementary_data/HER2n_pwenrichment_WikiPathway_2023_Human.xlsx",
+                                           sheet="LumA_coreDEGs")
+GSEA.LumB.core.set <- openxlsx::read.xlsx("./output/supplementary_data/HER2n_pwenrichment_WikiPathway_2023_Human.xlsx",
+                                           sheet="LumB_coreDEGs")
+
+
+#View(coreset.df)
+
+# save results
+wb <- openxlsx::createWorkbook()
+openxlsx::addWorksheet(wb=wb, sheetName="DE_results_SCANB")
+openxlsx::writeDataTable(wb=wb,sheet="DE_results_SCANB",x=DE.res.scanb %>% rownames_to_column(var="Gene"))
+
+openxlsx::addWorksheet(wb=wb, sheetName="DE_results_METABRIC")
+openxlsx::writeDataTable(wb=wb,sheet="DE_results_METABRIC",x=DE.res.metabric %>% rownames_to_column(var="Gene"))
+
+openxlsx::addWorksheet(wb=wb, sheetName="Core_gene_sets")
+openxlsx::writeDataTable(wb=wb,sheet="Core_gene_sets",keepNA = TRUE,x=coreset.df)
+
+openxlsx::addWorksheet(wb=wb, sheetName="GSEA.HER2E.core.set")
+openxlsx::writeDataTable(wb=wb,sheet="GSEA.HER2E.core.set",x=GSEA.HER2E.core.set)
+
+openxlsx::addWorksheet(wb=wb, sheetName="GSEA.LumA.core.set")
+openxlsx::writeDataTable(wb=wb,sheet="GSEA.LumA.core.set",x=GSEA.LumA.core.set)
+
+openxlsx::addWorksheet(wb=wb, sheetName="GSEA.LumB.core.set")
+openxlsx::writeDataTable(wb=wb,sheet="GSEA.LumB.core.set",x=GSEA.LumB.core.set)
+
+openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S2.xlsx",overwrite=TRUE)
+
+# 2. core Set: HER2E core set, cytoscape cluster, PWE, TFBS
+
+CS.cluster1 <- read.table("data/SCANB/2_transcriptomic/processed/DEGs_HER2E_Sub1_network_nCon4_corCut0.5_GENES.txt") %>% 
+  pull(V1)
+CS.cluster2 <-read.table("data/SCANB/2_transcriptomic/processed/DEGs_HER2E_Sub2_network_nCon4_corCut0.5_GENES.txt") %>% 
+  pull(V1)
+clusters.df <- as.data.frame(HER2E.DEGs.core) %>% 
+  mutate(CS_clust1 = ifelse(HER2E.DEGs.core %in% CS.cluster1,1,0)) %>% 
+  mutate(CS_clust2 = ifelse(HER2E.DEGs.core %in% CS.cluster2,1,0))
+
+GSEA.cluster1 <- loadRData("./output/supplementary_data/HER2E_cluster1_PWE_WP2023.RData")
+GSEA.cluster2 <- loadRData("./output/supplementary_data/HER2E_cluster2_PWE_WP2023.RData")
+TFBS.transfak.cluster1 <- "data/SCANB/2_transcriptomic/processed/TF_Sub1_Transfac_tfsearch_TFBS_significant_analysis_file_100000_p(1.0).txt"
+TFBS.transfak.cluster2 <- "data/SCANB/2_transcriptomic/processed/TF_Sub2_Transfac_tfsearch_TFBS_significant_analysis_file_100000_p(1.0).txt"
+TFBS.transfak.all <- "data/SCANB/2_transcriptomic/processed/TF_Lenart_Transfac_tfsearch_TFBS_significant_analysis_file_100000_p(1.0).txt"
+TFBS.jaspar.all <- "data/SCANB/2_transcriptomic/processed/TF_Lenart_JASPAR_new_tfsearch_TFBS_significant_analysis_file_100000_p(1.0).txt"
+TFBS.transfak.cluster1 <- read.table(TFBS.transfak.cluster1,header=TRUE,sep = "\t")
+TFBS.transfak.cluster2 <- read.table(TFBS.transfak.cluster2,header=TRUE,sep = "\t")
+TFBS.transfak.all <- read.table(TFBS.transfak.all,header=TRUE,sep = "\t")
+TFBS.jaspar.all <- read.table(TFBS.jaspar.all,header=TRUE,sep = "\t")
+
+HER2E_vs_ERpHER2p_DE_results <- read.table("./data/SCANB/2_transcriptomic/processed/DEG_analysis_results_DEGgenes_HER2E_vs_ERpHER2p.txt",header = TRUE)
+
+# save results
+wb <- openxlsx::createWorkbook()
+openxlsx::addWorksheet(wb=wb, sheetName="HER2E.core.set.Clusters")
+openxlsx::writeDataTable(wb=wb, sheet="HER2E.core.set.Clusters", x=clusters.df)
+
+openxlsx::addWorksheet(wb=wb, sheetName="GSEA.cluster1")
+openxlsx::writeDataTable(wb=wb,sheet="GSEA.cluster1",x=GSEA.cluster1)
+
+openxlsx::addWorksheet(wb=wb, sheetName="GSEA.cluster2")
+openxlsx::writeDataTable(wb=wb,sheet="GSEA.cluster2",x=GSEA.cluster2)
+
+openxlsx::addWorksheet(wb=wb, sheetName="HER2E_vs_ERpHER2p_DE_results")
+openxlsx::writeDataTable(wb=wb,sheet="HER2E_vs_ERpHER2p_DE_results",x=HER2E_vs_ERpHER2p_DE_results)
+
+openxlsx::addWorksheet(wb=wb, sheetName="TFBS.jaspar.all")
+openxlsx::writeDataTable(wb=wb,sheet="TFBS.jaspar.all",x=TFBS.jaspar.all)
+
+openxlsx::addWorksheet(wb=wb, sheetName="TFBS.transfak.all")
+openxlsx::writeDataTable(wb=wb,sheet="TFBS.transfak.all",x=TFBS.transfak.all)
+
+openxlsx::addWorksheet(wb=wb, sheetName="TFBS.transfak.cluster1")
+openxlsx::writeDataTable(wb=wb,sheet="TFBS.transfak.cluster1",x=TFBS.transfak.cluster1)
+
+openxlsx::addWorksheet(wb=wb, sheetName="TFBS.transfak.cluster2")
+openxlsx::writeDataTable(wb=wb,sheet="TFBS.transfak.cluster2",x=TFBS.transfak.cluster2)
+
+openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S3.xlsx",overwrite=TRUE)
+
+# 3. CNA: signif. genes  One supp table dumping the significant CNA genes per comparison.
+HER2E_vs_LumA_LumB_CNA_results <- loadRData("data/COMBINED/4_CN/processed/CNA_genelevel.RData")
+
+#colnames(genes)
+luma.genes.loss <- HER2E_vs_LumA_LumB_CNA_results %>% 
+  filter(LumA.Loss.padj <= 0.05) %>% 
+  pull(gene)
+luma.genes.gain <- HER2E_vs_LumA_LumB_CNA_results %>% 
+  filter(LumA.Gain.padj <= 0.05) %>% 
+  pull(gene)
+lumb.genes.loss <- HER2E_vs_LumA_LumB_CNA_results %>% 
+  filter(LumB.Loss.padj <= 0.05) %>% 
+  pull(gene)
+lumb.genes.gain <- HER2E_vs_LumA_LumB_CNA_results %>% 
+  filter(LumB.Gain.padj <= 0.05) %>% 
+  pull(gene)
+
+sq <- seq(max(length(luma.genes.loss),length(lumb.genes.loss)))
+
+Genes_signif_LossFreqDiff <- data.frame(HER2E_vs_LumA=luma.genes.loss[sq],
+                                       HER2E_vs_LumB=lumb.genes.loss[sq])
+sq <- seq(max(length(luma.genes.gain),length(lumb.genes.gain)))
+Genes_signif_GainFreqDiff <- data.frame(HER2E_vs_LumA=luma.genes.gain[sq],
+                                       HER2E_vs_LumB=lumb.genes.gain[sq])
+
+# save results
+wb <- openxlsx::createWorkbook()
+openxlsx::addWorksheet(wb=wb, sheetName="HER2E_vs_LumA_LumB_CNA_results")
+openxlsx::writeDataTable(wb=wb, sheet="HER2E_vs_LumA_LumB_CNA_results", x=HER2E_vs_LumA_LumB_CNA_results)
+
+openxlsx::addWorksheet(wb=wb, sheetName="Genes_signif_LossFreqDiff")
+openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_LossFreqDiff",x=Genes_signif_LossFreqDiff)
+
+openxlsx::addWorksheet(wb=wb, sheetName="Genes_signif_GainFreqDiff")
+openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_GainFreqDiff",x=Genes_signif_GainFreqDiff)
+
+openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S4.xlsx",overwrite=TRUE)
+#
+
+
+
+# repository file prep
+# prep all sheets with correct sampleIDs
+Samples <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="Samples") %>% mutate(Final.QC="PASS")
+idkey <- Samples[1:2]
+Samples <- Samples %>% dplyr::select(-c("Tumour","Missing","X9","NCN.PAM50")) %>% mutate(PAM50="HER2E")
+
+HRDetect <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="HRDetect") %>% 
+  mutate(Call = ifelse(Probability >= 0.7,"HRD-high","HRD-low"))
+HRDetect$Sample <- idkey$Sample[match(HRDetect$Sample,idkey$Tumour)]
+HRDetect <- HRDetect %>% dplyr::select(-c("Sample_pair","Normal"))
+
+Rearrangement_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="RearrangementSig")
+Rearrangement_Sig$Sample <- idkey$Sample[match(Rearrangement_Sig$Sample,idkey$Tumour)]
+Rearrangement_Sig <- Rearrangement_Sig %>% dplyr::select(-c("Sample_pair","Normal"))
+
+SBS_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="SBSsig")
+SBS_Sig$Sample <- idkey$Sample[match(SBS_Sig$Sample,idkey$Tumour)]
+SBS_Sig <- SBS_Sig %>% dplyr::select(-c("Sample_pair","X3"))
+
+Caveman_Drivers <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="CavemanDrivers")
+Caveman_Drivers$Sample <- idkey$Sample[match(Caveman_Drivers$Sample,idkey$Tumour)]
+Caveman_Drivers <- Caveman_Drivers %>% dplyr::select(-c("Normal"))
+
+Pindel_Drivers <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="PindelDrivers")
+Pindel_Drivers$Sample <- idkey$Sample[match(Pindel_Drivers$Sample,idkey$Tumour)]
+Pindel_Drivers <- Pindel_Drivers %>% dplyr::select(-c("Normal"))
+
+BRASS_Drivers <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                                         sheet="BRASS_dirvers")
+BRASS_Drivers$sample <- idkey$Sample[match(BRASS_Drivers$Tumour,idkey$Tumour)]
+BRASS_Drivers <- BRASS_Drivers %>% dplyr::select(-c("Tumour")) %>% dplyr::rename(Sample=sample) %>% mutate(QC="PASS")
+
+AllCodingASMD_CLPM <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                               sheet="AllCodingASMD_CLPM")
+AllCodingASMD_CLPM$Sample <- idkey$Sample[match(AllCodingASMD_CLPM$Sample,idkey$Tumour)]
+AllCodingASMD_CLPM <- AllCodingASMD_CLPM %>% dplyr::select(-c("Normal"))
+
+AllCodingPindel <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                                      sheet="AllCodingPindel")
+AllCodingPindel$Sample <- idkey$Sample[match(AllCodingPindel$Sample, idkey$Tumour)]
+AllCodingPindel <- AllCodingPindel %>% dplyr::select(-c("Normal"))
+
+
+
+# kataegis and TMB
+MutationCounts <- loadRData("./data/SCANB/3_genomic/processed/mutation_counts.RData") %>% relocate(PAM50,.after=N_mut) %>% 
+  relocate(sampleID,.before=caveman_count) %>% dplyr::rename(Sample=sampleID)
+
+Kataegis <- loadRData("./data/SCANB/4_CN/processed/CN_kataegis.RData") %>% 
+  filter(PAM50=="HER2E") %>% 
+  relocate(PAM50,.after=Kat_binary) %>% 
+  dplyr::rename(Sample=SampleID)
+
+# get segment data with CN states
+x <- loadRData("./data/SCANB/4_CN/processed/Segment_CN_states.RData")
+# add sample name as column for each
+x <- lapply(seq_along(x), y=x, n=names(x), function(i, y, n) {
+  df <- y[[i]]
+  sample <- n[[i]]
+  df <- df %>% mutate(Sample = sample) %>% relocate(Sample,.before=chr)
+  return(df)
+})
+# rbind together with sampleID column
+CNA_segments <- do.call("rbind", x)
+
+wb <- openxlsx::createWorkbook()
+for(i in c("Samples","HRDetect","Rearrangement_Sig","SBS_Sig",
+           "Caveman_Drivers","Pindel_Drivers","BRASS_Drivers",
+           "AllCodingASMD_CLPM","AllCodingPindel","MutationCounts","Kataegis","CNA_segments")) {
+  
+  openxlsx::addWorksheet(wb=wb, sheetName=i)
+  openxlsx::writeDataTable(wb=wb, sheet=i, x=eval(as.name(paste(i))))
+  
+}
+openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S1.xlsx",overwrite=TRUE)

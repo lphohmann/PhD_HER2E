@@ -1,6 +1,6 @@
 # Script: Driver mutations barplots for SCANB and BASIS
 
-#TODO:  add ttest for mut freqs
+#TODO:  
 
 # empty environment
 rm(list=ls())
@@ -305,19 +305,53 @@ names(res.df) <- c("gene","luma.pval","lumb.pval")
 
 # scanb
 HRD.df <- as.data.frame(read_excel("data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "HRDetect")) %>% 
-  mutate(HRD.status = ifelse(Probability >= 0.7,"positive","negative"))
-tbl <- table(HRD.df$HRD.status)
-HER2E.freq <- (tbl["positive"]/sum(tbl))*100
+  mutate(HRDetect = ifelse(Probability >= 0.7,"HRD-high","HRD-low")) %>% 
+  mutate(PAM50="HER2E") %>% 
+  dplyr::select(PAM50,HRDetect)
 
 # basis
 HRD.basis <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 
   filter(ClinicalGroup == "ERposHER2neg" & PAM50_AIMS %in% c("LumA","LumB")) %>% 
-  dplyr::select(c("sample_name","PAM50_AIMS","HRDetect","HRDprob")) %>% 
-  dplyr::rename(sampleID=sample_name,PAM50=PAM50_AIMS)
-tbl <- table(HRD.basis[which(HRD.basis$PAM50=="LumA"),]$HRDetect)
-LumA.freq <- (tbl["HRD-high"]/sum(tbl))*100
-tbl <- table(HRD.basis[which(HRD.basis$PAM50=="LumB"),]$HRDetect)
-LumB.freq <- (tbl["HRD-high"]/sum(tbl))*100
+  dplyr::select(c("PAM50_AIMS","HRDetect")) %>% 
+  dplyr::rename(PAM50=PAM50_AIMS)
+
+HRD.all <- rbind(HRD.df,HRD.basis)
+
+# freqs
+her2e.dat <- HRD.all[HRD.all$PAM50 == "HER2E",]$HRDetect
+her2e.freq <- (length(her2e.dat[her2e.dat == "HRD-high"])/length(her2e.dat))*100
+luma.dat <- HRD.all[HRD.all$PAM50 == "LumA",]$HRDetect
+luma.freq <- (length(luma.dat[luma.dat == "HRD-high"])/length(luma.dat))*100
+lumb.dat <- HRD.all[HRD.all$PAM50 == "LumB",]$HRDetect
+lumb.freq <- (length(lumb.dat[lumb.dat == "HRD-high"])/length(lumb.dat))*100
+
+# chi2
+txt.out <- append(txt.out,c("Testing HRD Frequency"))
+txt.out <- append(txt.out,c("Kataegis frequencies:",
+                            "  HER2E =",her2e.freq,
+                            "  LumA =",luma.freq,
+                            "  LumB =",lumb.freq))
+
+res <- fisher.test(table(
+  HRD.all[which(
+    HRD.all$PAM50 %in% c("HER2E","LumA")),c("PAM50", "HRDetect")]))
+
+txt.out <- append(txt.out,c(capture.output(res)))
+res <- fisher.test(table(
+  HRD.all[which(
+    HRD.all$PAM50 %in% c("HER2E","LumB")),c("PAM50", "HRDetect")]))
+txt.out <- append(txt.out,c(capture.output(res)))
+
+
+
+
+
+
+
+
+
+
+
 
 # save text output
 writeLines(txt.out, txt.file)

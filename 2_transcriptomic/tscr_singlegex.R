@@ -93,7 +93,8 @@ for (gene in gene.vec) {
   
   # base statistics
   stats <- capture.output(get_stats(gene.gex,"PAM50",gene))
-  
+  txt.out <- append(txt.out,
+                    c(gene,stats))
   # comparison data
   Her2.dat <- gene.gex[gene.gex$PAM50=="Her2",][[gene]] # unlist()
   LumB.dat <- gene.gex[gene.gex$PAM50=="LumB",][[gene]]
