@@ -327,7 +327,7 @@ lumb.freq <- (length(lumb.dat[lumb.dat == "HRD-high"])/length(lumb.dat))*100
 
 # chi2
 txt.out <- append(txt.out,c("Testing HRD Frequency"))
-txt.out <- append(txt.out,c("Kataegis frequencies:",
+txt.out <- append(txt.out,c("HRD frequencies:",
                             "  HER2E =",her2e.freq,
                             "  LumA =",luma.freq,
                             "  LumB =",lumb.freq))

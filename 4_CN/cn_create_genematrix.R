@@ -1,8 +1,5 @@
-# Script: 
-# create gene level CN matrices for SCANB and BASIS for later comparison
-
-#TODO: also load the in silico file and then just pull out the basis samples that i need (luma and lumb)
-# DROP ALL BASIS HER3p samples!!! also for signature analyses
+# Script: create gene level CN matrices for SCANB and BASIS for later comparison
+# based on the segment file with assigned CN status
 
 # empty environment
 rm(list=ls())
@@ -108,7 +105,6 @@ names(gl.df) <- gl.names
 amp.df <- as.data.frame(matrix(nrow=length(genes$SYMBOL),ncol=length(amp.names)))
 names(amp.df) <- amp.names
 
-#genes <- genes[1:10,] # delete later
 # loop over genes
 pb = txtProgressBar(min = 0, max = length(genes$SYMBOL), initial = 0, style = 3)
 for (i in 1:nrow(genes)) {

@@ -31,7 +31,7 @@ library(tidyverse)
 library(readxl)
 library(GenVisR)
 library(reshape2)
-library(ggstatsplot)
+#library(ggstatsplot)
 #library(data.table)
 library(grid)
 
@@ -78,49 +78,69 @@ sub.drivers <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriche
   filter(gene %in% driver.genes) %>% 
   distinct()
 
-# processed amplification data
-amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
-cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>% 
-  filter(!is.na(Gene_symbol)) %>% 
-  filter(as.character(Gene_symbol) %in% driver.genes) %>% 
-  filter(if_any(starts_with("S"), ~ . > 0))
-
-# final matrix 
-cn.drivers.long <- data.frame()
-
-# get it down to gene level
-for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
-  # get sample data
-  sample.data <- cn.drivers[c(sample,"ProbeID","Gene_symbol")] #%>% filter(.[[sample]] > 0)
-  
-  # jump to next iteration if the sample has no driver amps
-  if (sort(unique(sample.data[[sample]]))[1]==0 & 
-      length(unique(sample.data[[sample]]))==1) { 
-    #print(paste("No amps in this sample: ",sample,sep=""))
-    next
-  }
-  #print(paste("AMP IN THIS SAMPLE: ",sample,sep=""))
-  for (gene in unique(sample.data$Gene_symbol)) {
-     # probes for a gene
-     gene.probes <- sample.data %>% 
-       filter(Gene_symbol == !!gene) %>% 
-       pull("ProbeID")
-     probe.count <- sample.data %>% 
-       filter(ProbeID %in% gene.probes) %>% 
-       filter(.[[sample]] > 0) %>% 
-       pull("ProbeID") %>% length(.)
-     if (probe.count >= length(gene.probes)/2) { # majority status called
-       cn.drivers.long <- rbind(cn.drivers.long,c(sample,gene,"amplified"))
-       
-     }
-   }
-}
-
-# set col names
-names(cn.drivers.long) <- c("sample", "gene", "variant_class")
+# # processed amplification data
+# amp.dat <- loadRData("data/SCANB/4_CN/processed/CN_amp_genpos_genmap.RData")
+# cn.drivers <- amp.dat[lengths(amp.dat$Gene_symbol) > 0,] %>% 
+#   filter(!is.na(Gene_symbol)) %>% 
+#   filter(as.character(Gene_symbol) %in% driver.genes) %>% 
+#   filter(if_any(starts_with("S"), ~ . > 0))
+# 
+# # final matrix 
+# cn.drivers.long <- data.frame()
+# 
+# # get it down to gene level
+# for (sample in colnames(cn.drivers)[grepl("S",colnames(cn.drivers))]) {
+#   # get sample data
+#   sample.data <- cn.drivers[c(sample,"ProbeID","Gene_symbol")] #%>% filter(.[[sample]] > 0)
+#   
+#   # jump to next iteration if the sample has no driver amps
+#   if (sort(unique(sample.data[[sample]]))[1]==0 & 
+#       length(unique(sample.data[[sample]]))==1) { 
+#     #print(paste("No amps in this sample: ",sample,sep=""))
+#     next
+#   }
+#   #print(paste("AMP IN THIS SAMPLE: ",sample,sep=""))
+#   for (gene in unique(sample.data$Gene_symbol)) {
+#      # probes for a gene
+#      gene.probes <- sample.data %>% 
+#        filter(Gene_symbol == !!gene) %>% 
+#        pull("ProbeID")
+#      probe.count <- sample.data %>% 
+#        filter(ProbeID %in% gene.probes) %>% 
+#        filter(.[[sample]] > 0) %>% 
+#        pull("ProbeID") %>% length(.)
+#      if (probe.count >= length(gene.probes)/2) { # majority status called
+#        cn.drivers.long <- rbind(cn.drivers.long,c(sample,gene,"amplified"))
+#        
+#      }
+#    }
+# }
+# 
+# # set col names
+# names(cn.drivers.long) <- c("sample", "gene", "variant_class")
+# 
+# View(cn.drivers.long)
+# HERE ADD NEW DATA replace cn.drivers.long
+# amplification status
+cna.genes <- loadRData("./data/SCANB/3_genomic/processed/ASCAT_genelevel.RData")
+#View(cna.genes)
+names(cna.genes) <- gsub("\\..*", "", names(cna.genes))
+qc.scanb <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "Samples"))
+cna.genes <- cna.genes[names(cna.genes) %in% qc.scanb$Sample]
+cna.driver.genes <- lapply(cna.genes, function(x) {
+  #x <- cna.genes[[1]]
+  filt.x <- x[x$gene %in% driver.genes & x$Amp==1,]
+  filt.x <- filt.x[,c("sample","gene")]
+  filt.x$sample <- gsub("\\..*", "", filt.x$sample)
+  return(filt.x)
+})
+driv.amp <- do.call(rbind, cna.driver.genes)
+rownames(driv.amp) <- NULL
+colnames(driv.amp) <- c("sample","gene")
+driv.amp$variant_class <- "amplified"
 
 # make and save combined driver dataset for plotting
-drivers.df <- do.call("rbind", list(cn.drivers.long, sub.drivers, indel.drivers))
+drivers.df <- do.call("rbind", list(driv.amp, sub.drivers, indel.drivers))
 #save(drivers.df, 
 #     file = paste(data.path,"driver_mutations_all.RData",sep=""))
 load(paste(data.path,"driver_mutations_all.RData",sep=""))
@@ -160,7 +180,7 @@ colors <- c("#8dd3c7",
 datasets <- list(drivers = drivers.df,
                  sub.drivers = sub.drivers,
                  indel.drivers = indel.drivers,
-                 cn.drivers = cn.drivers.long)
+                 cn.drivers = driv.amp)
 
 for (i in names(datasets)) { 
   

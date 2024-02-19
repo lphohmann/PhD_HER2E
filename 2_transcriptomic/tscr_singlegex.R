@@ -85,7 +85,7 @@ if (cohort=="SCANB") {
 #extreme %>% filter(ERBB2 > 0)
 #c("S004036","S004794","S005551","S005605","S006395","S008332")
 
-gene.vec <- c("ERBB2","ESR1","FGFR4","CD274")
+gene.vec <- c("ERBB2","ESR1","FGFR4","CD274") #TACSTD2
 
 for (gene in gene.vec) {
   
