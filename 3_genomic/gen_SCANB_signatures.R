@@ -44,7 +44,7 @@ qc.scanb <- as.data.frame(read_excel(infile.1, sheet = "Samples"))
 pass.scanb.samples <- qc.scanb$Sample # all pass
 
 # load palette
-color.palette <- group.colors <- c(LumA = "#0f1bbd", LumB = "#09d3e6", HER2E ="#b609e6")
+color.palette <- c(HER2E ="#b609e6", LumA = "#0f1bbd", LumB = "#09d3e6")
 
 sign.mut <- read.table(infile.6, sep = ",", header = TRUE)
 sign.mut <- sign.mut[c("Lund.tumour.id","SBS1","SBS2","SBS3","SBS5",
@@ -150,7 +150,7 @@ for (sig in common.sigs) {
   
   # plot
   plot.par <- list(
-    data = list(LumA=luma.dat,LumB=lumb.dat,HER2E=her2e.dat), 
+    data = list(HER2E=her2e.dat,LumA=luma.dat,LumB=lumb.dat), 
     col = color.palette, 
     names = names(color.palette),
     ylab = "proportion",
