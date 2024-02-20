@@ -33,7 +33,7 @@ library(tidyverse)
 library(readxl)
 library(GenVisR)
 library(reshape2)
-library(ggstatsplot)
+#library(ggstatsplot)
 #library(data.table)
 library(grid)
 library(gridExtra)
@@ -150,6 +150,34 @@ scanb.dmut <- loadRData("data/SCANB/3_genomic/processed/driver_mutations_all.RDa
   mutate(Mutation_Type = sub("_$","",str_extract(Effect,"^.*?_"))) %>% 
   mutate(Effect = gsub("^.*?_","",Effect)) %>% 
   mutate(Mutation_Type = if_else(Effect=="amplified","CN",Mutation_Type)) 
+
+# LOAD UPDATED DATA HERE (AMP)
+# for the following genes
+genes <- unique(scanb.dmut$Gene)
+samples <- unique(scanb.dmut$Sample)
+cna.genes <- loadRData("./data/SCANB/3_genomic/processed/ASCAT_genelevel.RData")
+#View(cna.genes)
+names(cna.genes) <- gsub("\\..*", "", names(cna.genes))
+cna.genes <- cna.genes[names(cna.genes) %in% samples]
+cna.driver.genes <- lapply(cna.genes, function(x) {
+  #x <- cna.genes[[1]]
+  filt.x <- x[x$gene %in% genes & x$Amp==1,]
+  filt.x <- filt.x[,c("sample","gene")]
+  filt.x$sample <- gsub("\\..*", "", filt.x$sample)
+  return(filt.x)
+})
+driv.amp <- do.call(rbind, cna.driver.genes)
+rownames(driv.amp) <- NULL
+driv.amp$Effect <- "amplified"
+driv.amp$PAM50 <- "Her2e"
+driv.amp$Mutation_Type <- "CN"
+names(driv.amp) <- colnames(scanb.dmut)
+driv.amp <- driv.amp[complete.cases(driv.amp), ]
+#View(driv.amp)
+
+# replace in old data object
+scanb.dmut <- scanb.dmut[scanb.dmut$Mutation_Type!="CN",]
+scanb.dmut <- rbind(scanb.dmut,driv.amp)
 
 # basis mut data
 basis.dmut <- as.data.frame(read_excel("data/BASIS/3_genomic/raw/Supplementary Table 14.Driver.Events.By.Mutation.Type.01052015.v2.xlsx", sheet = "COMBINED_EVENTS")) %>% 
