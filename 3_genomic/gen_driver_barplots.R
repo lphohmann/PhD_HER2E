@@ -332,10 +332,17 @@ names(res.df) <- c("gene","luma.pval","lumb.pval")
 #######################################################################
 
 # scanb
-HRD.df <- as.data.frame(read_excel("data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "HRDetect")) %>% 
-  mutate(HRDetect = ifelse(Probability >= 0.7,"HRD-high","HRD-low")) %>% 
-  mutate(PAM50="HER2E") %>% 
-  dplyr::select(PAM50,HRDetect)
+
+HRD.df <- as.data.frame(read_csv("./data/SCANB/3_genomic/raw/2024_02_14_hrdetect_refsig_params_low_burden_sv_accounted_for.csv"))
+HRD.df$HRDetect <-  ifelse(HRD.df$Probability >= 0.7,"HRD-high","HRD-low")
+HRD.df$Lund.tumour.id <- gsub("\\..*$", "", HRD.df$Lund.tumour.id)
+HRD.df$PAM50 <- "HER2E"
+HRD.df <- HRD.df[HRD.df$Lund.tumour.id %in% samples, c("PAM50","HRDetect")]
+
+# HRD.df <- as.data.frame(read_excel("data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "HRDetect")) %>% 
+#   mutate(HRDetect = ifelse(Probability >= 0.7,"HRD-high","HRD-low")) %>% 
+#   mutate(PAM50="HER2E") %>% 
+#   dplyr::select(PAM50,HRDetect)
 
 # basis
 HRD.basis <- loadRData("data/BASIS/1_clinical/raw/Summarized_Annotations_BASIS.RData") %>% 

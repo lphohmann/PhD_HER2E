@@ -493,71 +493,122 @@ openxlsx::writeDataTable(wb=wb,sheet="TFBS.transfak.cluster1",x=TFBS.transfak.cl
 openxlsx::addWorksheet(wb=wb, sheetName="TFBS.transfak.cluster2")
 openxlsx::writeDataTable(wb=wb,sheet="TFBS.transfak.cluster2",x=TFBS.transfak.cluster2)
 
-openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S3.xlsx",overwrite=TRUE)
+openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S3.xlsx", overwrite=TRUE)
 
 # 3. CNA: signif. genes  One supp table dumping the significant CNA genes per comparison.
-HER2E_vs_LumA_LumB_CNA_results <- loadRData("data/COMBINED/4_CN/processed/CNA_genelevel.RData")
 
-#colnames(genes)
-luma.genes.loss <- HER2E_vs_LumA_LumB_CNA_results %>% 
-  filter(LumA.Loss.padj <= 0.05) %>% 
-  pull(gene)
-luma.genes.gain <- HER2E_vs_LumA_LumB_CNA_results %>% 
-  filter(LumA.Gain.padj <= 0.05) %>% 
-  pull(gene)
-lumb.genes.loss <- HER2E_vs_LumA_LumB_CNA_results %>% 
-  filter(LumB.Loss.padj <= 0.05) %>% 
-  pull(gene)
-lumb.genes.gain <- HER2E_vs_LumA_LumB_CNA_results %>% 
-  filter(LumB.Gain.padj <= 0.05) %>% 
-  pull(gene)
-
+# new data
+gl.freqs <- loadRData("./data/SCANB/4_CN/processed/CNA_GLFreqs_all.RData")
+gl.freqs <- gl.freqs[gl.freqs$chr!=23,]
+gene.test.df <- loadRData("data/SCANB/4_CN/processed/CNA_genetest.RData")
+gene.test.df <- gene.test.df[gene.test.df$gene %in% gl.freqs$gene,]
+luma.genes.loss <- gene.test.df[gene.test.df$LumA.Loss.padj <= 0.05, ]$gene
+lumb.genes.loss <- gene.test.df[gene.test.df$LumB.Loss.padj <= 0.05, ]$gene
+luma.genes.gain <- gene.test.df[gene.test.df$LumA.Gain.padj <= 0.05, ]$gene
+lumb.genes.gain <- gene.test.df[gene.test.df$LumB.Gain.padj <= 0.05, ]$gene
 sq <- seq(max(length(luma.genes.loss),length(lumb.genes.loss)))
-
 Genes_signif_LossFreqDiff <- data.frame(HER2E_vs_LumA=luma.genes.loss[sq],
-                                       HER2E_vs_LumB=lumb.genes.loss[sq])
+                                        HER2E_vs_LumB=lumb.genes.loss[sq])
 sq <- seq(max(length(luma.genes.gain),length(lumb.genes.gain)))
 Genes_signif_GainFreqDiff <- data.frame(HER2E_vs_LumA=luma.genes.gain[sq],
-                                       HER2E_vs_LumB=lumb.genes.gain[sq])
+                                        HER2E_vs_LumB=lumb.genes.gain[sq])
+
+# sheets
+#gl.freqs
+#gene.test.df
+#Genes_signif_LossFreqDiff
+#Genes_signif_GainFreqDiff
 
 # save results
 wb <- openxlsx::createWorkbook()
 openxlsx::addWorksheet(wb=wb, sheetName="HER2E_vs_LumA_LumB_CNA_results")
-openxlsx::writeDataTable(wb=wb, sheet="HER2E_vs_LumA_LumB_CNA_results", x=HER2E_vs_LumA_LumB_CNA_results)
+openxlsx::writeDataTable(wb=wb, sheet="HER2E_vs_LumA_LumB_CNA_results", 
+                         x=gl.freqs)
+
+openxlsx::addWorksheet(wb=wb, sheetName="HER2E_vs_LumA_LumB_CNA_test")
+openxlsx::writeDataTable(wb=wb, sheet="HER2E_vs_LumA_LumB_CNA_test", 
+                         x=gene.test.df)
 
 openxlsx::addWorksheet(wb=wb, sheetName="Genes_signif_LossFreqDiff")
-openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_LossFreqDiff",x=Genes_signif_LossFreqDiff)
+openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_LossFreqDiff", 
+                         x=Genes_signif_LossFreqDiff)
 
 openxlsx::addWorksheet(wb=wb, sheetName="Genes_signif_GainFreqDiff")
-openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_GainFreqDiff",x=Genes_signif_GainFreqDiff)
+openxlsx::writeDataTable(wb=wb,sheet="Genes_signif_GainFreqDiff", 
+                         x=Genes_signif_GainFreqDiff)
 
 openxlsx::saveWorkbook(wb=wb,file="./output/supplementary_data/Manuscript_files/Table_S4.xlsx",overwrite=TRUE)
-#
-
-
 
 # repository file prep
 # prep all sheets with correct sampleIDs
-Samples <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
-                               sheet="Samples") %>% mutate(Final.QC="PASS")
-idkey <- Samples[1:2]
-Samples <- Samples %>% dplyr::select(-c("Tumour","Missing","X9","NCN.PAM50")) %>% mutate(PAM50="HER2E")
+# qc sheet
+qc.scanb <- as.data.frame(read_excel("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx", sheet = "Samples"))
+idkey <- qc.scanb[1:2]
+qc.scanb <- qc.scanb[c("Sample","Batch","Final QC","ER","HER2")]
+qc.scanb$PAM50 <- "HER2E"
+qc.scanb$`Final QC` <- "pass"
 
-HRDetect <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
-                               sheet="HRDetect") %>% 
-  mutate(Call = ifelse(Probability >= 0.7,"HRD-high","HRD-low"))
-HRDetect$Sample <- idkey$Sample[match(HRDetect$Sample,idkey$Tumour)]
-HRDetect <- HRDetect %>% dplyr::select(-c("Sample_pair","Normal"))
+# mut sig sheet
+sign.mut <- read.table("./data/SCANB/3_genomic/raw/2024_02_11_snv_sig_refsig_errperc20_correct_exposures_combined_502.csv", sep = ",", header = TRUE)
+sign.mut <- sign.mut[c("Lund.tumour.id","SBS1","SBS2","SBS3","SBS5",
+                       "SBS8","SBS13","SBS17","SBS18","SBS127","SBS6",
+                       "unassigned")]
+names(sign.mut)[1] <- "Sample"
+sign.mut$Sample <- gsub("\\..*", "", sign.mut$Sample)
+sign.mut <- sign.mut[sign.mut$Sample %in% qc.scanb$Sample,]
+sign.mut[2:ncol(sign.mut)] <- as.data.frame(t(apply(sign.mut[2:ncol(sign.mut)],1,function(x) (x/sum(x, na.rm=TRUE)))))
+sign.mut[is.na(sign.mut)] <- 0
 
-Rearrangement_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
-                               sheet="RearrangementSig")
-Rearrangement_Sig$Sample <- idkey$Sample[match(Rearrangement_Sig$Sample,idkey$Tumour)]
-Rearrangement_Sig <- Rearrangement_Sig %>% dplyr::select(-c("Sample_pair","Normal"))
 
-SBS_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
-                               sheet="SBSsig")
-SBS_Sig$Sample <- idkey$Sample[match(SBS_Sig$Sample,idkey$Tumour)]
-SBS_Sig <- SBS_Sig %>% dplyr::select(-c("Sample_pair","X3"))
+# rearr sig sheet
+sign.rearr <- read.table("./data/SCANB/3_genomic/raw/2024_02_14_SCANB_ERpos_rearr_sig_502.csv", sep = ",", header = TRUE)
+sign.rearr <- sign.rearr[c("Lund.tumour.id","RefSigR2", "RefSigR4","RefSigR6a",
+                           "RefSigR1","RefSigR5","RefSigR6b","RefSigR8","RefSigR3","RefSigR11",
+                           "unassigned")]
+names(sign.rearr)[1] <- "Sample"
+sign.rearr$Sample <- gsub("\\..*", "", sign.rearr$Sample)
+sign.rearr <- sign.rearr[sign.rearr$Sample %in% qc.scanb$Sample,]
+#sign.rearr$sum <-apply(sign.rearr[2:ncol(sign.rearr)],1,sum) #exclude and redo
+sign.rearr[2:ncol(sign.rearr)] <- as.data.frame(t(apply(sign.rearr[2:ncol(sign.rearr)],1,function(x) (x/sum(x, na.rm=TRUE)))))
+sign.rearr[is.na(sign.rearr)] <- 0
+
+# hrdetect
+# sampleid as rownames
+hrd.dat <- read.table("./data/SCANB/3_genomic/raw/2024_02_14_hrdetect_refsig_params_low_burden_sv_accounted_for.csv", sep = ",", header = TRUE)
+hrd.dat$Sample <- gsub("\\..*", "", hrd.dat$Lund.tumour.id)
+hrd.dat <- hrd.dat[hrd.dat$Sample %in% qc.scanb$Sample,]
+# HRD calling
+hrd.dat$HRDetect <- ifelse(hrd.dat$Probability >= 0.7,"HRD-high","HRD-low")
+hrd.dat <- hrd.dat[c("Sample","HRDetect")]
+
+####
+
+# CONTINUE HERE THEN
+
+
+
+
+
+#Samples <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+                              # sheet="Samples") %>% mutate(Final.QC="PASS")
+#idkey <- Samples[1:2]
+#Samples <- Samples %>% dplyr::select(-c("Tumour","Missing","X9","NCN.PAM50")) %>% mutate(PAM50="HER2E")
+# 
+# HRDetect <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+#                                sheet="HRDetect") %>% 
+#   mutate(Call = ifelse(Probability >= 0.7,"HRD-high","HRD-low"))
+# HRDetect$Sample <- idkey$Sample[match(HRDetect$Sample,idkey$Tumour)]
+# HRDetect <- HRDetect %>% dplyr::select(-c("Sample_pair","Normal"))
+# 
+# Rearrangement_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+#                                sheet="RearrangementSig")
+# Rearrangement_Sig$Sample <- idkey$Sample[match(Rearrangement_Sig$Sample,idkey$Tumour)]
+# Rearrangement_Sig <- Rearrangement_Sig %>% dplyr::select(-c("Sample_pair","Normal"))
+# 
+# SBS_Sig <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
+#                                sheet="SBSsig")
+# SBS_Sig$Sample <- idkey$Sample[match(SBS_Sig$Sample,idkey$Tumour)]
+# SBS_Sig <- SBS_Sig %>% dplyr::select(-c("Sample_pair","X3"))
 
 Caveman_Drivers <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched_June23_ForJohan.xlsx",
                                sheet="CavemanDrivers")
@@ -584,8 +635,6 @@ AllCodingPindel <- openxlsx::read.xlsx("./data/SCANB/3_genomic/raw/HER2_enriched
 AllCodingPindel$Sample <- idkey$Sample[match(AllCodingPindel$Sample, idkey$Tumour)]
 AllCodingPindel <- AllCodingPindel %>% dplyr::select(-c("Normal"))
 
-
-
 # kataegis and TMB
 MutationCounts <- loadRData("./data/SCANB/3_genomic/processed/mutation_counts.RData") %>% relocate(PAM50,.after=N_mut) %>% 
   relocate(sampleID,.before=caveman_count) %>% dplyr::rename(Sample=sampleID)
@@ -595,20 +644,29 @@ Kataegis <- loadRData("./data/SCANB/4_CN/processed/CN_kataegis.RData") %>%
   relocate(PAM50,.after=Kat_binary) %>% 
   dplyr::rename(Sample=SampleID)
 
-# get segment data with CN states
-x <- loadRData("./data/SCANB/4_CN/processed/Segment_CN_states.RData")
-# add sample name as column for each
-x <- lapply(seq_along(x), y=x, n=names(x), function(i, y, n) {
-  df <- y[[i]]
-  sample <- n[[i]]
-  df <- df %>% mutate(Sample = sample) %>% relocate(Sample,.before=chr)
-  return(df)
-})
-# rbind together with sampleID column
-CNA_segments <- do.call("rbind", x)
+
+# CONT HERE WITH BASE SEGMENT DATA
+ascat.list <- loadRData("../Project_Basal/data/SCANB/3_WGS/raw/ASCAT_segments_list_BASEprocessing.RData")
+ascat.df <- do.call(rbind,ascat.list)
+ascat.df$sample <- gsub("\\..*$", "", ascat.df$sample)
+row.names(ascat.df) <- NULL
+#View(head(ascat.df))
+CNA_segments <- ascat.df[ascat.df$sample %in% qc.scanb$Sample,]
+
+# # get segment data with CN states
+# x <- loadRData("./data/SCANB/4_CN/processed/Segment_CN_states.RData")
+# # add sample name as column for each
+# x <- lapply(seq_along(x), y=x, n=names(x), function(i, y, n) {
+#   df <- y[[i]]
+#   sample <- n[[i]]
+#   df <- df %>% mutate(Sample = sample) %>% relocate(Sample,.before=chr)
+#   return(df)
+# })
+# # rbind together with sampleID column
+# CNA_segments <- do.call("rbind", x)
 
 wb <- openxlsx::createWorkbook()
-for(i in c("Samples","HRDetect","Rearrangement_Sig","SBS_Sig",
+for(i in c("qc.scanb","hrd.dat","sign.rearr","sign.mut",
            "Caveman_Drivers","Pindel_Drivers","BRASS_Drivers",
            "AllCodingASMD_CLPM","AllCodingPindel","MutationCounts","Kataegis","CNA_segments")) {
   

@@ -141,9 +141,8 @@ driv.amp$variant_class <- "amplified"
 
 # make and save combined driver dataset for plotting
 drivers.df <- do.call("rbind", list(driv.amp, sub.drivers, indel.drivers))
-#save(drivers.df, 
-#     file = paste(data.path,"driver_mutations_all.RData",sep=""))
-load(paste(data.path,"driver_mutations_all.RData",sep=""))
+save(drivers.df, file = paste(data.path,"driver_mutations_all.RData",sep=""))
+#load(paste(data.path,"driver_mutations_all.RData",sep=""))
 #drivers.df[which(drivers.df$gene=="ERBB2"),]$sample # none mut with erbb2 high gex
 ################################################################################
 # Waterfall plotting parameters
@@ -200,7 +199,7 @@ for (i in names(datasets)) {
                     mainPalette = custom.pallete,
                     main_geneLabSize = 15,
                     mainRecurCutoff = 0,
-                    maxGenes = 12,
+                    maxGenes = 10,
                     mainDropMut = TRUE, # drop unused mutation types from legend
                     #rmvSilent = TRUE,
                     out= "grob",

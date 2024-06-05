@@ -94,8 +94,13 @@ gl.freqs$Genome_pos <- gl.freqs$centerPos + gl.freqs$genome
 # signif gene data
 ###############################################################################
 
+# exclucde chr 23
+gl.freqs <- gl.freqs[gl.freqs$chr!=23,]
+
 # prep dat
 gene.test.df <- loadRData(infile.7)
+gene.test.df <- gene.test.df[gene.test.df$gene %in% gl.freqs$gene,]
+
 # subset signif genes
 genes.AG <- gl.freqs[gl.freqs$gene %in% 
                        gene.test.df[gene.test.df$LumA.Gain.padj <= 0.05, ]$gene, ]
@@ -159,12 +164,12 @@ plot <- ggplot() +
   geom_point(aes(x = genes.AL$Genome_pos, y = genes.AL$y), size=12) +
   geom_point(aes(x = genes.BG$Genome_pos, y = genes.BG$y), size=12, colour="red") +
   geom_point(aes(x = genes.BL$Genome_pos, y = genes.BL$y), size=12, colour="red") +
-  geom_vline(xintercept = chr.lengths$genome[-length(chr.lengths$genome)],
+  geom_vline(xintercept = chr.lengths$genome[1:22],
              linetype="dashed",size=1) + 
   scale_x_continuous(name="Genome position (chromosome)",
-                     breaks=chr.lengths$genome, 
-                     labels=as.character(1:23),
-                     limits = c(0,max(chr.lengths$genome)), #+50000000
+                     breaks=chr.lengths$genome[1:22], 
+                     labels=as.character(1:22),
+                     limits = c(0,max(chr.lengths$genome[1:22])), #+50000000
                      expand = c(0, 0)) +
   scale_y_continuous(name="Alteration frequency (%)",
                      breaks=c(seq(-100,100,25)),

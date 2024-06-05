@@ -53,12 +53,17 @@ color.palette <- c(her2e ="#b609e6", LumA = "#0f1bbd", LumB = "#09d3e6")
 # load
 gl.freqs <- loadRData(infile.6)
 
+# exclucde chr 23
+gl.freqs <- gl.freqs[gl.freqs$chr!=23,]
+
 ###############################################################################
 # signif gene data
 ###############################################################################
 
 # prep dat
 gene.test.df <- loadRData(infile.7)
+gene.test.df <- gene.test.df[gene.test.df$gene %in% gl.freqs$gene,]
+
 # subset signif genes
 genes.AG <- gl.freqs[gl.freqs$gene %in% 
                        gene.test.df[gene.test.df$LumA.Gain.padj <= 0.05, ]$gene, ]
@@ -99,6 +104,9 @@ luma.dat <- c(genes.AG.diff,genes.AL.diff)
 genes.BG.diff <- abs(genes.BG$freqgain.her2e - genes.BG$freqgain.LumB)
 genes.BL.diff <- abs(genes.BL$freqloss.her2e - genes.BL$freqloss.LumB)
 lumb.dat <- c(genes.BG.diff,genes.BL.diff)
+
+mean(luma.dat)
+mean(lumb.dat)
 
 txt.out <- append(txt.out, c("\nGenes with significant difference in CNA Frequency compared to her2e-like\n",
                              "\n###########################################\n"))

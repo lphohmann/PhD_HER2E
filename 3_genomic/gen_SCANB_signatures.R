@@ -69,6 +69,12 @@ sign.rearr$RefSigR6 <- sign.rearr$RefSigR6a + sign.rearr$RefSigR6b
 sign.rearr$RefSigR6a <- NULL
 sign.rearr$RefSigR6b <- NULL
 
+# which samples have <25 rearr snvs
+sign.rearr.exclude <- sign.rearr
+sign.rearr.exclude <- sign.rearr.exclude[pass.scanb.samples,]
+sign.rearr.exclude$sum <-apply(sign.rearr.exclude,1,sum) #exclude and redo
+sign.rearr.exclude <- row.names(sign.rearr.exclude[sign.rearr.exclude$sum < 25,])
+
 # convert SCANB to proportion per sample
 sign.rearr <- as.data.frame(apply(sign.rearr,1,function(x) (x/sum(x, na.rm=TRUE))))
 sign.rearr[is.na(sign.rearr)] <- 0
@@ -104,6 +110,7 @@ colnames(sign.scanb) <- gsub("SBS","S", colnames(sign.scanb))
 common.sigs <- intersect(colnames(sign.scanb),colnames(sign.basis))
 
 # exclude non-shared ones
+rownames.her2e <- sign.scanb$Sample
 sign.scanb <- sign.scanb[,common.sigs]
 pam50.basis <- sign.basis$PAM50_AIMS
 sign.basis <- sign.basis[,common.sigs]
@@ -115,20 +122,29 @@ sign.scanb$PAM50 <- "HER2E"
 # put together in an object ready for plotting 
 sign.dat <- rbind(sign.scanb,sign.basis)
 #View(sign.dat)
+row.names(sign.dat)[1:length(rownames.her2e)] <- rownames.her2e
+
 
 #######################################################################
 # plot
 #######################################################################
-#sig="RS2"
+sig="RS2"
 for (sig in common.sigs) {
   
   txt.out <- append(txt.out, c("\n",sig,"\n",
                                "\n###########################################\n"))
   
+  
+  
   # sig data
   luma.dat <- sign.dat[sign.dat$PAM50=="LumA",sig]
   lumb.dat <- sign.dat[sign.dat$PAM50=="LumB",sig]
-  her2e.dat <- sign.dat[sign.dat$PAM50=="HER2E",sig]
+  # have to filter samples for rearr signatures below <25
+  if (grepl("RS", sig)) {
+    her2e.dat <- sign.dat[sign.dat$PAM50=="HER2E",]
+    her2e.dat <- her2e.dat[!row.names(her2e.dat) %in% sign.rearr.exclude,sig]
+  } else { her2e.dat <- sign.dat[sign.dat$PAM50=="HER2E",sig] }
+  
   
   # statistics
   # summary statistics
@@ -170,7 +186,8 @@ for (i in 1:length(plot.parameters)) {
                 col = plot.parameters[[i]]$col,
                 names = plot.parameters[[i]]$names,
                 ylab = plot.parameters[[i]]$ylab,
-                main = plot.parameters[[i]]$main)
+                main = plot.parameters[[i]]$main,
+                ylim= c(0,1))
   axis(3,at=1:length(bp$n),labels=bp$n)
 }
 par(mfrow = c(1, 1))
