@@ -80,7 +80,7 @@ gex <- as.data.frame(loadRData(infile.3))
 gex <- as.data.frame(log2(gex + 1)) #log transform
 #gex.scaled <- as.data.frame(loadRData(infile.4))
 #gex.scaled[1:3,1:3]
-gex[1:3,(ncol(gex)-3):ncol(gex)]
+#gex[1:3,(ncol(gex)-3):ncol(gex)]
 
 #######################################################################
 # calc risk scores
@@ -163,18 +163,47 @@ plot.parameters <- append(plot.parameters, list(plot.par))
 
 dat <- res$risk
 # subtype data
-her2.dat <- as.numeric(as.vector(
-  dat[anno$Sample[anno$NCN.PAM50 =="Her2"]]))
-luma.dat <- as.numeric(as.vector(
-  dat[anno$Sample[anno$NCN.PAM50 =="LumA"]]))
-lumb.dat <- as.numeric(as.vector(
-  dat[anno$Sample[anno$NCN.PAM50 =="LumB"]]))
+# her2.dat <- as.numeric(as.vector(
+#   dat[anno$Sample[anno$NCN.PAM50 =="Her2"]]))
+# luma.dat <- as.numeric(as.vector(
+#   dat[anno$Sample[anno$NCN.PAM50 =="LumA"]]))
+# lumb.dat <- as.numeric(as.vector(
+#   dat[anno$Sample[anno$NCN.PAM50 =="LumB"]]))
 
 dat.an <- as.data.frame(dat)
 rownames(anno) <- anno$Sample
 dat.an <- merge(dat.an, anno[,c("NCN.PAM50"), drop = FALSE], by="row.names")
 
-table(dat.an$dat,dat.an$NCN.PAM50)
+ct <- table(dat.an$NCN.PAM50,dat.an$dat)
+
+res.luma <- fisher.test(ct[c("Her2","LumA"),])
+res.lumb <- fisher.test(ct[c("Her2","LumB"),])
+
+txt.out <- append(txt.out, 
+                  c("\nOncotypeDX_riskgroup\n",
+                    "\n###########################################\n"))
+txt.out <- append(txt.out, c(capture.output(res.luma), "\n###########################################\n"))
+txt.out <- append(txt.out, c(capture.output(res.lumb), "\n###########################################\n"))
+
+variable <- c("low","intermediate","high")
+her.counts <- unname(ct["Her2",])
+luma.counts <- unname(ct["LumA",])
+lumb.counts <- unname(ct["LumB",])
+her.perc <- round((her.counts/sum(ct["Her2",]))*100,2)
+luma.perc <- round((luma.counts/sum(ct["LumA",]))*100,2)
+lumb.perc <- round((lumb.counts/sum(ct["LumB",]))*100,2)
+
+ot.df <- as.data.frame(cbind(variable,
+                              her.counts,her.perc,
+                              luma.counts,luma.perc,
+                              lumb.counts,lumb.perc))
+
+#names(ot.df) <- x
+
+#ot.df
+
+txt.out <- append(txt.out, c(capture.output(ot.df), "\n###########################################\n"))
+
 
 #######################################################################
 
