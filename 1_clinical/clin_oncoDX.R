@@ -235,7 +235,6 @@ txt.out <- append(txt.out,
                   "\n# ROR SCORE #\n",
                   "\n###########################################\n"))
 
-txt.out <- append(txt.out, c(capture.output(luma.res), "\n###########################################\n"))
 txt.out <- append(txt.out, c("Her2e\n",capture.output(her2.stats), "\n",
                              "LumA\n",capture.output(luma.stats), "\n",
                              "LumB\n",capture.output(lumb.stats),
