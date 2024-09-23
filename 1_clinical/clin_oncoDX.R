@@ -66,6 +66,7 @@ get_stats <- function(vec) {
 # load data
 #######################################################################
 
+
 # 
 data(sig.oncotypedx)
 
@@ -75,13 +76,6 @@ anno <- anno[anno$Follow.up.cohort == TRUE & anno$ER == "Positive" & anno$HER2 =
 anno <- anno[anno$NCN.PAM50 %in% c("Her2","LumA","LumB"), ] 
 # only include groups of interests (her2e, luma, lumb)
 
-# load and prep gene expr. data
-gex <- as.data.frame(loadRData(infile.3))
-gex <- as.data.frame(log2(gex + 1)) #log transform
-#gex.scaled <- as.data.frame(loadRData(infile.4))
-#gex.scaled[1:3,1:3]
-#gex[1:3,(ncol(gex)-3):ncol(gex)]
-
 # lod ssp ror data
 ror.dat <- read_excel(infile.5)
 ror.dat <- ror.dat[ror.dat$Follow.up.cohort == TRUE & 
@@ -89,14 +83,29 @@ ror.dat <- ror.dat[ror.dat$Follow.up.cohort == TRUE &
                    c("Sample","NCN.PAM50","NCN.ROR.risk.cat",
                      "NCN.ROR.binary.risk.cat",
                      "NCN.ROR.asT0","NCN.ROR.asT1")]
+ror.dat <- ror.dat[!is.na(ror.dat$NCN.ROR.risk.cat), ]
+
+# keep only samples present within both
+anno <- anno[anno$Sample %in% ror.dat$Sample,]
+
+# load and prep gene expr. data
+gex <- as.data.frame(loadRData(infile.3))
+gex <- as.data.frame(log2(gex + 1)) #log transform
+#gex.scaled <- as.data.frame(loadRData(infile.4))
+#gex.scaled[1:3,1:3]
+#gex[1:3,(ncol(gex)-3):ncol(gex)]
+# correct colnames
+gex <- gex[anno$GEX.assay]
+names(gex) <- anno$Sample[match(colnames(gex),anno$GEX.assay)]
+
+#length(ror.dat$Sample)
+#length(anno$Sample)
+#ncol(gex)
 
 #######################################################################
 # calc risk scores
 #######################################################################
 
-# correct colnames
-gex <- gex[anno$GEX.assay]
-names(gex) <- anno$Sample[match(colnames(gex),anno$GEX.assay)]
 # correct gene names
 gex$Ensemble_ID <- gsub("\\..*$", "", rownames(gex))
 rownames(gex) <- NULL
@@ -181,7 +190,12 @@ dat.an <- as.data.frame(dat)
 rownames(anno) <- anno$Sample
 dat.an <- merge(dat.an, anno[,c("NCN.PAM50"), drop = FALSE], by="row.names")
 
+# sample ids for later comparison
+dx.high <- dat.an[which(dat.an$dat==1),c("Row.names")]
+dx.high.her2e <- dat.an[which(dat.an$dat==1 & dat.an$NCN.PAM50=="Her2"),c("Row.names")]
+
 ct <- table(dat.an$NCN.PAM50,dat.an$dat)
+print(ct)
 
 res.luma <- fisher.test(ct[c("Her2","LumA"),])
 res.lumb <- fisher.test(ct[c("Her2","LumB"),])
@@ -250,8 +264,27 @@ txt.out <- append(txt.out, c(capture.output(lumb.res), "\n######################
 #######################################################################
 # summarize results: risk
 #######################################################################
+# comp to oncodx class
+her2e.ids <- anno$Sample[anno$NCN.PAM50=="Her2"]
+ror.high <- ror.dat[which(ror.dat$NCN.ROR.risk.cat=="High"),][["Sample"]]
+ror.high.her2e <- ror.dat[which(
+  ror.dat$NCN.ROR.risk.cat=="High" & 
+    ror.dat$NCN.PAM50=="Her2"),][["Sample"]]
+
+# oncoDX high in both
+common_high <- intersect(dx.high, ror.high)
+percent_dxhigh <- (length(common_high) / length(dx.high)) * 100
+
+#common_high <- intersect(ror.high, dx.high)
+#percent_rorhigh <- (length(common_high) / length(ror.high)) * 100
+
+# her2e high in both
+num_common_ids <- sum(her2e.ids %in% common_high)
+percent_her2e <- (num_common_ids / length(her2e.ids)) * 100
 
 ct <- table(ror.dat$NCN.PAM50,ror.dat$NCN.ROR.risk.cat)
+
+print(ct)
 
 res.luma <- fisher.test(ct[c("Her2","LumA"),])
 res.lumb <- fisher.test(ct[c("Her2","LumB"),])
