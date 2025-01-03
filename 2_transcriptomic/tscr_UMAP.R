@@ -169,6 +169,17 @@ umap.gex$PAM50 <- factor(umap.gex$PAM50,levels = c("LumA","LumB","Her2"))
 
 # run umap
 umap <- umap(umap.gex[1:(ncol(umap.gex)-2)],n_neighbors=50)
+
+## export source dat
+umap.sourcefile <- umap.gex[c("PAM50")]
+umap.sourcefile$sampleID <- rownames(umap.sourcefile)
+rownames(umap.sourcefile) <- NULL
+umap.sourcefile <- umap.sourcefile[c("sampleID","PAM50")]
+umap.sourcefile$UMAP1 <- umap$layout[,1]
+umap.sourcefile$UMAP2 <- umap$layout[,2]
+save(umap.sourcefile, file="./output/source_data/R_objects/Figure_3_umap.RData")
+##
+
 df <- data.frame(x = umap$layout[,1],
                  y = umap$layout[,2],
                  PAM50 = umap.gex["PAM50"],

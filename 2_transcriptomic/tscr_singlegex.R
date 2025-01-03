@@ -60,6 +60,13 @@ if (cohort=="SCANB") {
   # z-transform
   gex.data <- as.data.frame(t(apply(gex.data, 1, function(y) (y - mean(y)) / sd(y) ^ as.logical(sd(y))))) # for some rows there may be 0 variance so i have to handle these cases
   
+  # source file export
+  source.dat <- as.data.frame(t(gex.data[c("CD274","ESR1","ERBB2","FGFR4"),]))
+  source.dat$sampleID <- rownames(source.dat)
+  rownames(source.dat) <- NULL
+  source.dat <- source.dat[c("sampleID","CD274","ESR1","ERBB2","FGFR4")]
+  source.dat <- merge(anno[c("sampleID","PAM50")],source.dat,by="sampleID")
+  save(source.dat,file = "./output/source_data/R_objects/Figure_3_singlegex.RData")
   #---------------------------------------------------------------------#
   
 } else if (cohort=="METABRIC") {

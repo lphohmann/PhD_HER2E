@@ -44,6 +44,8 @@ library(grid)
 library(gridExtra)
 library(ggplotify)
 
+source_dat_path <- "./output/source_data/R_objects/"  
+
 #######################################################################
 # Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
@@ -74,6 +76,8 @@ if (cohort=="Metabric") {
         METABRIC_ID, Age, Grade, TumSize,
         LN, PAM50, OS, OSbin, RFI, RFIbin, 
         Treatment)
+    
+    save(svdata, file=paste0(source_dat_path,"Figure_2_Metabric.RData")) # Save 
     
 # for SCANB cohort
 } else if (cohort=="SCANB") {
@@ -111,6 +115,8 @@ if (cohort=="Metabric") {
     mutate(Grade = factor(Grade, levels = c("1","2","3"))) %>% 
     mutate(PAM50 = factor(PAM50, levels = c("LumA","LumB","Her2"))) %>% 
     mutate(LN = factor(LN, levels = c("N0","N+")))
+  
+  save(svdata.rel4, file=paste0(source_dat_path,"Figure_2_SCANB.RData")) # Save 
   
 }
 

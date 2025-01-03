@@ -51,6 +51,11 @@ corr.data <- corr.data %>%
   filter(sampleID %in% anno$sampleID) %>% 
   distinct(sampleID,.keep_all=TRUE)
 
+# source file export
+corr.sf <- corr.data[c("sampleID","majorityClass","meanBasal",
+                       "meanHer2","meanLumA","meanLumB","meanNormal")]
+save(corr.sf, file="./output/source_data/R_objects/Figure_3_PAM50corr.RData")
+
 #######################################################################
 # Plot
 #######################################################################

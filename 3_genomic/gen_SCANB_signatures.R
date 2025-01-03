@@ -124,6 +124,13 @@ sign.dat <- rbind(sign.scanb,sign.basis)
 #View(sign.dat)
 row.names(sign.dat)[1:length(rownames.her2e)] <- rownames.her2e
 
+# export to source file
+sign.dat.sf <- sign.dat
+sign.dat.sf$sampleID <- rownames(sign.dat.sf)
+rownames(sign.dat.sf) <- NULL
+sign.dat.sf <- sign.dat.sf[c("sampleID","PAM50","S1","S2","S5","S13","RS2")]
+sign.dat.sf <- sign.dat.sf[!is.na(sign.dat.sf$PAM50),]
+save(sign.dat.sf, file="./output/source_data/R_objects/Figure_4_sigs.RData")
 
 #######################################################################
 # plot

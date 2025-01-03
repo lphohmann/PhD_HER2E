@@ -157,6 +157,10 @@ mutation.priority <- c("amplified","Missense_Mutation","Nonsense_Mutation","Fram
 Her2p.samples <- anno %>% filter(Group=="HER2p_HER2E") %>% pull(sample)
 mut.data.her2p <- mut.data %>% filter(sample %in% Her2p.samples)
 
+## source dat exprot
+save(mut.data.her2p,file="./output/source_data/R_objects/Figure_5_wfHER2p.RData")
+##
+
 pdf(file = "output/plots/3_genomic/METABRIC_HER2pHER2E_WF.pdf", onefile = TRUE,height = 10, width = 20)#, height = 10, width = 15)
 
 
@@ -199,6 +203,36 @@ mut.data$Group <- anno$Group[match(mut.data$sample,anno$sample)]
 # adapt colnames 
 mut.data <- mut.data %>% 
   dplyr::rename(Sample=sample,Gene=gene)
+
+## source file export
+# mut.data.sf <- mut.data
+# mut.data.sf <- mut.data.sf[which(mut.data.sf$Gene %in% c("TP53","ERBB2")),]
+# mut.data.sf <- mut.data.sf[!(mut.data.sf$Gene=="ERBB2" & mut.data.sf$variant_class == "amplified"),]
+# mut.data.sf <- mut.data.sf %>% 
+#   distinct(Sample,Gene, .keep_all = TRUE)
+# mut.data.sf$variant_class <- NULL
+# 
+# # Create a new data frame with unique samples
+# mut.data.sf.binary <- unique(mut.data.sf[, c("Sample", "Group")])
+# 
+# # Create binary columns for ERBB2 and TP53 mutations
+# mut.data.sf.binary$ERBB2mut <- as.integer(mut.data.sf.binary$Sample %in% mut.data.sf$Sample[mut.data.sf$Gene == "ERBB2"])
+# mut.data.sf.binary$TP53mut  <- as.integer(mut.data.sf.binary$Sample %in% mut.data.sf$Sample[mut.data.sf$Gene == "TP53"])
+# 
+# anno.sf <- anno
+# colnames(anno.sf)[colnames(anno.sf) == "sample"] <- "Sample"
+# # Merge mut.data.sf.binary and anno
+# mut.data.sf.binary.all <- merge(anno.sf, mut.data.sf.binary, by = c("Sample", "Group"), all.x = TRUE)
+
+# Replace NA values in ERBB2mut and TP53mut with 0 for samples not in mut.data.sf.binary
+#mut.data.sf.binary.all$ERBB2mut[is.na(mut.data.sf.binary.all$ERBB2mut)] <- 0
+#mut.data.sf.binary.all$TP53mut[is.na(mut.data.sf.binary.all$TP53mut)] <- 0
+#save(mut.data.sf.binary.all, file="./output/source_data/R_objects/Figure_5_mutfreqsHER2p.RData")
+#total_samples <- table(mut.data.sf.binary.all$Group)
+#tapply(mut.data.sf.binary.all$ERBB2mut, mut.data.sf.binary.all$Group, mean)*100
+#tapply(mut.data.sf.binary.all$TP53mut, mut.data.sf.binary.all$Group, mean)*100
+
+##
 
 # sample numbers
 group.n <- table(

@@ -120,6 +120,19 @@ umap.gex$Group <- factor(umap.gex$Group,levels = c("HER2p_nonHER2E",
 
 # run umap
 umap <- umap(umap.gex[1:(ncol(umap.gex)-2)],n_neighbors=50) 
+
+## export source dat
+umap.sourcefile <- umap.gex[c("Group")]
+umap.sourcefile$sampleID <- rownames(umap.sourcefile)
+rownames(umap.sourcefile) <- NULL
+umap.sourcefile <- umap.sourcefile[c("sampleID","Group")]
+umap.sourcefile$UMAP1 <- umap$layout[,1]
+umap.sourcefile$UMAP2 <- umap$layout[,2]
+save(umap.sourcefile, file="./output/source_data/R_objects/Figure_5_umapHER2p.RData")
+##
+
+
+
 df <- data.frame(x = umap$layout[,1],
                  y = umap$layout[,2],
                  Group = umap.gex["Group"],

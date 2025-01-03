@@ -105,6 +105,44 @@ genes.BG.diff <- abs(genes.BG$freqgain.her2e - genes.BG$freqgain.LumB)
 genes.BL.diff <- abs(genes.BL$freqloss.her2e - genes.BL$freqloss.LumB)
 lumb.dat <- c(genes.BG.diff,genes.BL.diff)
 
+## save source dat
+# Create the LumA and LumB dataframes as before
+# LumA genes - Gain and Loss differences
+# lumA_gain_df <- data.frame(Gene = genes.AG$gene, LumA.diff = genes.AG.diff)
+# lumA_loss_df <- data.frame(Gene = genes.AL$gene, LumA.diff = genes.AL.diff)
+# # LumB genes - Gain and Loss differences
+# lumB_gain_df <- data.frame(Gene = genes.BG$gene, LumB.diff = genes.BG.diff)
+# lumB_loss_df <- data.frame(Gene = genes.BL$gene, LumB.diff = genes.BL.diff)
+# # Merge LumA gains and losses (preferring losses, if both exist)
+# lumA_df <- merge(lumA_gain_df, lumA_loss_df, by = "Gene", all = TRUE)
+# # If both gain and loss exist for LumA, prefer loss, else use whichever is available
+# lumA_df$LumA.diff <- ifelse(!is.na(lumA_df$LumA.diff.y), lumA_df$LumA.diff.y, lumA_df$LumA.diff.x)
+# # Select only the Gene and LumA.diff columns
+# lumA_df <- lumA_df[, c("Gene", "LumA.diff")]
+# # Add Group as LumA
+# lumA_df$Group <- "LumA"
+# # Merge LumB gains and losses (preferring losses, if both exist)
+# lumB_df <- merge(lumB_gain_df, lumB_loss_df, by = "Gene", all = TRUE)
+# # If both gain and loss exist for LumB, prefer loss, else use whichever is available
+# lumB_df$LumB.diff <- ifelse(!is.na(lumB_df$LumB.diff.y), lumB_df$LumB.diff.y, lumB_df$LumB.diff.x)
+# # Select only the Gene and LumB.diff columns
+# lumB_df <- lumB_df[, c("Gene", "LumB.diff")]
+# # Add Group as LumB
+# lumB_df$Group <- "LumB"
+# # Merge LumA and LumB dataframes by Gene, keeping all genes (use all = TRUE)
+# final_df <- merge(lumA_df, lumB_df, by = "Gene", all = TRUE)
+# # Create a new combined Group column
+# final_df$Group <- ifelse(!is.na(final_df$LumA.diff) & !is.na(final_df$LumB.diff), "both", 
+#                          ifelse(!is.na(final_df$LumA.diff), "LumA", "LumB"))
+# # Select only relevant columns
+# final_df <- final_df[, c("Gene", "LumA.diff", "LumB.diff", "Group")]
+# # View the final dataframe
+# final_df
+# save(final_df,file="./output/source_data/R_objects/Figure_4_genediff.RData")
+# mean(final_df$LumA.diff,na.rm=TRUE)
+# mean(final_df$LumB.diff,na.rm=TRUE)
+
+##
 mean(luma.dat)
 mean(lumb.dat)
 
@@ -150,6 +188,30 @@ luma.dat <-  as.vector(apply(cna.df[sample.ids$LumA],2,function(x) {
   (sum(x!=0)/length(x))*100}))
 lumb.dat <-  as.vector(apply(cna.df[sample.ids$LumB],2,function(x) {
   (sum(x!=0)/length(x))*100}))
+
+### source file export
+# Function to calculate % genome altered for a given subtype
+calc_percentage_altered <- function(samples, pam50_subtype) {
+  altered_percent <- as.vector(apply(cna.df[samples], 2, function(x) {
+    (sum(x != 0) / length(x)) * 100
+  }))
+  # Create a data frame for this subtype
+  data.frame(
+    SampleID = samples,
+    PAM50 = pam50_subtype,
+    GenomeAltered = altered_percent
+  )
+}
+# Apply this function to each subtype and bind the results into a single data frame
+her2e.dat.sf <- calc_percentage_altered(sample.ids$her2e, "HER2E")
+luma.dat.sf <- calc_percentage_altered(sample.ids$LumA, "LumA")
+lumb.dat.sf <- calc_percentage_altered(sample.ids$LumB, "LumB")
+# Combine all the subtypes into a single data frame
+genome_altered_df <- rbind(her2e.dat.sf, luma.dat.sf, lumb.dat.sf)
+# View the final result
+save(genome_altered_df, file= "./output/source_data/R_objects/Figure_4_genomealtered.RData")
+#aggregate(GenomeAltered ~ PAM50, data = genome_altered_df, mean)
+###
 
 ##
 txt.out <- append(txt.out, c("\nGenome altered (%) compared to her2e\n",

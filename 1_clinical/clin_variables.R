@@ -36,6 +36,8 @@ library(DescTools)
 library(openxlsx)
 library(writexl)
 
+source_dat_path <- "./output/source_data/R_objects/"  
+
 #######################################################################
 # Cohort-specific data preprocessing including selection of  
 # the clinical ER+Her2- subtyped samples
@@ -62,6 +64,8 @@ if (cohort=="Metabric") {
     
     # 
     anno$IC10 <- factor(anno$IC10, levels=c("1","2","3","4ER+","6","7","8","9","10"))
+    # save source data
+    save(anno, file=paste0(source_dat_path,"Table_1_Metabric.RData")) # Save 
     
 # for SCANB cohort
 } else if (cohort=="SCANB") {
@@ -88,6 +92,13 @@ if (cohort=="Metabric") {
     anno$NHG_Bosch <- as.factor(anno$NHG_Bosch)
     anno$LN_Bosch <- as.factor(anno$LN_Bosch)
     anno$PR[anno$PR == ""] <- NA
+    
+    # save source data
+    anno.export <- anno
+    names(anno.export)[names(anno.export) == "Bosch_RS1"] <- "Review_cohort"
+    colnames(anno.export) <- gsub("_Bosch", "_review", colnames(anno.export))
+    save(anno.export, file=paste0(source_dat_path,"Table_1_SCANB.RData")) # Save 
+    
 }
 
 # get correct data types

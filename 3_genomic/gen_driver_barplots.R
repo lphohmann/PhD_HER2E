@@ -67,6 +67,9 @@ mutation.sample.counts <- rbind(basis.muts,scanb.muts)
 #View(mutation.sample.counts)
 #View(basis.muts)
 
+# export source data
+save(mutation.sample.counts, file="./output/source_data/R_objects/Figure_4_TMB.RData")
+
 #######################################################################
 # plot TMB
 #######################################################################
@@ -206,12 +209,42 @@ basis.dmut <- merge(basis.anno,basis.dmut,by="Sample")
 # combined
 all.dmut <- rbind(basis.dmut,scanb.dmut)
 
+#all.dmut
+all.anno <- scanb.dmut[c("Sample")] %>% distinct(Sample, .keep_all = TRUE)
+all.anno$PAM50 <- "Her2e"
+all.anno <- rbind(basis.anno,all.anno)
+pam50.n <- table(all.anno$PAM50) 
+
+####
+# source file export
+dmut.sf <- all.dmut[which(all.dmut$Gene %in% c("TP53","ERBB2")),]
+
+dmut.sf <- dmut.sf %>% 
+  distinct(Sample,Gene, .keep_all = TRUE)
+dmut.sf$Mutation_Type <- NULL
+dmut.sf$Effect <- NULL
+# Create a new data frame with unique samples
+dmut.sf.binary <- unique(dmut.sf[, c("Sample", "PAM50")])
+
+# Create binary columns for ERBB2 and TP53 mutations
+dmut.sf.binary$ERBB2mut <- as.integer(dmut.sf.binary$Sample %in% dmut.sf$Sample[dmut.sf$Gene == "ERBB2"])
+dmut.sf.binary$TP53mut  <- as.integer(dmut.sf.binary$Sample %in% dmut.sf$Sample[dmut.sf$Gene == "TP53"])
+
+# Merge dmut.sf.binary and all.anno
+dmut.sf.binary.all <- merge(all.anno, dmut.sf.binary, by = c("Sample", "PAM50"), all.x = TRUE)
+
+# Replace NA values in ERBB2mut and TP53mut with 0 for samples not in dmut.sf.binary
+dmut.sf.binary.all$ERBB2mut[is.na(dmut.sf.binary.all$ERBB2mut)] <- 0
+dmut.sf.binary.all$TP53mut[is.na(dmut.sf.binary.all$TP53mut)] <- 0
+
+save(dmut.sf.binary.all, file="./output/source_data/R_objects/Figure_4_mutfreqs.RData")
+
 #######################################################################
 # plot genes of interest: mutation frequencies
 #######################################################################
 
-pam50.n <- table(
-  all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) 
+#pam50.n <- table(
+#  all.dmut[!duplicated(all.dmut[,c("Sample")]),]$PAM50) 
 
 # 1 mut per sample
 count.sample <- function(data,gene) {
@@ -269,7 +302,8 @@ dev.off()
 #######################################################################
 
 # need df in binary format with samples as columns and genes as rows
-sample.anno <- all.dmut[1:2] %>% distinct(Sample, .keep_all = TRUE)
+#sample.anno <- all.dmut[1:2] %>% distinct(Sample, .keep_all = TRUE)
+sample.anno <- all.anno
 all.dmut.binary <- all.dmut %>% 
   dplyr::select(-c(Mutation_Type, Effect, PAM50)) %>% 
   distinct(Sample,Gene, .keep_all = TRUE) %>% 
@@ -277,6 +311,21 @@ all.dmut.binary <- all.dmut %>%
   pivot_wider(names_from = Sample, values_from = Mutation) %>% 
   replace(is.na(.), 0) %>% 
   filter(Gene %in% gene.vec)
+
+## fix frequencies
+# Step 1: Get the sample IDs from df2 that are not in df1
+missing_samples <- setdiff(all.anno$Sample, colnames(all.dmut.binary))
+
+# Step 2: Add missing sample columns to df1, initializing them with 0
+for (sample in missing_samples) {
+  all.dmut.binary[[sample]] <- 0  # Add the new column with 0 values
+}
+
+# Step 3: Optionally reorder columns if you want the new columns in a specific order
+all.dmut.binary <- all.dmut.binary %>% relocate(Gene, .before = everything())
+##
+
+#View(all.dmut.binary)
 
 res.df <- data.frame()
 

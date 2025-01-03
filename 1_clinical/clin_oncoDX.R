@@ -32,8 +32,8 @@ plot.file <- paste0(output.path,cohort,"_oncoDX&ROR.pdf")
 txt.file <- paste0(output.path,cohort,"_oncoDX&ROR.txt")
 #-------------------
 # storing objects 
-plot.list <- list() # object to store plots
-plot.parameters <- list() # object to store parameters to plot base R plots again later
+plot.list <- list() # object to store plots 
+plot.parameters <- list() # object to store parameters to plot base R plots again later 
 txt.out <- c() # object to store text output, if the output is not in string format use capture.output()
 
 #######################################################################
@@ -81,9 +81,12 @@ ror.dat <- read_excel(infile.5)
 ror.dat <- ror.dat[ror.dat$Follow.up.cohort == TRUE & 
                      ror.dat$Sample %in% anno$Sample,
                    c("Sample","NCN.PAM50","NCN.ROR.risk.cat",
-                     "NCN.ROR.binary.risk.cat",
+                     "NCN.ROR.binary.risk.cat","Size.mm",
                      "NCN.ROR.asT0","NCN.ROR.asT1")]
 ror.dat <- ror.dat[!is.na(ror.dat$NCN.ROR.risk.cat), ]
+ror.dat$NCN.ROR.comb <- ifelse(ror.dat$Size.mm <= 20,
+                               ror.dat$NCN.ROR.asT0,
+                               ror.dat$NCN.ROR.asT1)
 
 # keep only samples present within both
 anno <- anno[anno$Sample %in% ror.dat$Sample,]
@@ -137,6 +140,22 @@ res <- oncotypedx(data=t.gex, annot=annot.dat,
 # summarize results: score 
 #######################################################################
 dat <- res$score
+
+#### save source data ####
+source_dat_path <- "./output/source_data/R_objects/"  
+groups <- c("Her2", "LumA", "LumB")
+results.OncoDX.score <- setNames(
+  lapply(groups, function(group) {
+    # Get the sample indices for the current group
+    indices <- anno$Sample[anno$NCN.PAM50 == group]
+    # Create the data vector and sample IDs
+    list(data_vector = as.vector(dat[indices]),
+         sample_ids = indices)
+  }), 
+  groups)
+#saveRDS(results.OncoDX.score, paste0(source_dat_path,"OncoDX_score.RData")) # Save 
+#### exported source data ####
+
 # subtype data
 her2.dat <- as.numeric(as.vector(
   dat[anno$Sample[anno$NCN.PAM50 =="Her2"]]))
@@ -178,6 +197,23 @@ plot.parameters <- append(plot.parameters, list(plot.par))
 #######################################################################
 
 dat <- res$risk
+
+#### save source data ####
+#source_dat_path <- "./output/source_data/R_objects/"  
+#groups <- c("Her2", "LumA", "LumB")
+results.OncoDX.group <- setNames(
+  lapply(groups, function(group) {
+    # Get the sample indices for the current group
+    indices <- anno$Sample[anno$NCN.PAM50 == group]
+    # Create the data vector and sample IDs
+    list(data_vector = as.vector(dat[indices]),
+         sample_ids = indices)
+  }), 
+  groups)
+#saveRDS(results.OncoDX.group, paste0(source_dat_path,"OncoDX_group.RData")) # Save 
+#### exported source data ####
+
+
 # subtype data
 # her2.dat <- as.numeric(as.vector(
 #   dat[anno$Sample[anno$NCN.PAM50 =="Her2"]]))
@@ -233,11 +269,28 @@ txt.out <- append(txt.out, c(capture.output(ot.df), "\n#########################
 #######################################################################
 # summarize results: score 
 #######################################################################
-#dat <- ror.dat$NCN.ROR.asT0
+dat <- setNames(ror.dat$NCN.ROR.comb, ror.dat$Sample)
+
+#### save source data ####
+#source_dat_path <- "./output/source_data/R_objects/"  
+#groups <- c("Her2", "LumA", "LumB")
+results.ROR.score <- setNames(
+  lapply(groups, function(group) {
+    # Get the sample indices for the current group
+    indices <- anno$Sample[anno$NCN.PAM50 == group]
+    # Create the data vector and sample IDs
+    list(data_vector = as.vector(dat[indices]),
+         sample_ids = indices)
+  }), 
+  groups)
+#saveRDS(results.ROR.score, paste0(source_dat_path,"ROR_score.RData")) # Save 
+#### exported source data ####
+
+
 # subtype data
-her2.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="Her2",]$NCN.ROR.asT0)
-luma.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="LumA",]$NCN.ROR.asT0)
-lumb.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="LumB",]$NCN.ROR.asT0)
+her2.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="Her2",]$NCN.ROR.comb)
+luma.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="LumA",]$NCN.ROR.comb)
+lumb.dat <- as.numeric(ror.dat[ror.dat$NCN.PAM50 =="LumB",]$NCN.ROR.comb)
 
 # summary statistics
 her2.stats <- get_stats(her2.dat)
@@ -264,6 +317,24 @@ txt.out <- append(txt.out, c(capture.output(lumb.res), "\n######################
 #######################################################################
 # summarize results: risk
 #######################################################################
+
+dat <- setNames(ror.dat$NCN.ROR.risk.cat, ror.dat$Sample)
+
+#### save source data ####
+#source_dat_path <- "./output/source_data/R_objects/"  
+#groups <- c("Her2", "LumA", "LumB")
+results.ROR.group <- setNames(
+  lapply(groups, function(group) {
+    # Get the sample indices for the current group
+    indices <- anno$Sample[anno$NCN.PAM50 == group]
+    # Create the data vector and sample IDs
+    list(data_vector = as.vector(dat[indices]),
+         sample_ids = indices)
+  }), 
+  groups)
+#saveRDS(results.ROR.group, paste0(source_dat_path,"ROR_group.RData")) # Save 
+#### exported source data ####
+
 # comp to oncodx class
 her2e.ids <- anno$Sample[anno$NCN.PAM50=="Her2"]
 ror.high <- ror.dat[which(ror.dat$NCN.ROR.risk.cat=="High"),][["Sample"]]
@@ -317,6 +388,33 @@ txt.out <- append(txt.out, c(capture.output(ot.df), "\n#########################
 
 #######################################################################
 #######################################################################
+
+# save source data, make 1 df out of it
+df1 <- data.frame(SampleID = unlist(lapply(results.OncoDX.group, function(x) x$sample_ids)),
+                  OncoDX.group = unlist(lapply(results.OncoDX.group, function(x) x$data_vector)))
+
+df2 <- data.frame(SampleID = unlist(lapply(results.OncoDX.score, function(x) x$sample_ids)),
+                  OncoDX.score = unlist(lapply(results.OncoDX.score, function(x) x$data_vector)))
+
+df3 <- data.frame(SampleID = unlist(lapply(results.ROR.group, function(x) x$sample_ids)),
+                  ROR.group = unlist(lapply(results.ROR.group, function(x) x$data_vector)))
+
+df4 <- data.frame(SampleID = unlist(lapply(results.ROR.score, function(x) x$sample_ids)),
+                  ROR.score = unlist(lapply(results.ROR.score, function(x) x$data_vector)))
+
+# Merge the data frames on SampleID
+combined_df <- Reduce(function(x, y) merge(x, y, by = "SampleID", all = TRUE), 
+                      list(df1, df2, df3, df4))
+
+combined_df$PAM50 <- anno$NCN.PAM50[match(combined_df$SampleID,anno$Sample)] 
+#table(combined_df$PAM50)
+combined_df <- combined_df[, c("SampleID", "PAM50", 
+                               "OncoDX.group", "OncoDX.score", 
+                               "ROR.group", "ROR.score")]
+
+#View(combined_df)
+saveRDS(combined_df, paste0(source_dat_path,"Table_S3.RData")) # Save 
+
 
 # save plots
 pdf(file = plot.file, onefile = TRUE) 
